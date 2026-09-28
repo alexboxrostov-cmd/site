@@ -1,1 +1,56 @@
 @import "tailwindcss";
+
+/* Tooltip animation */
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.tooltip-animate {
+  animation: tooltipFadeIn 0.15s ease-out;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Table sticky header fix */
+.table-wrapper {
+  position: relative;
+  overflow: auto;
+  max-height: calc(100vh - 200px);
+}
+
+.table-wrapper thead {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+/* Accordion transition */
+.accordion-content {
+  transition: max-height 0.3s ease-out;
+  overflow: hidden;
+}
