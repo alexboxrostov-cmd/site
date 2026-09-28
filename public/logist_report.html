@@ -29,37 +29,43 @@ body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; margin: 10px 20
 .btn-connected-routes { background: #8e44ad; color: white; border-color: #8e44ad; margin-left: 5px; }
 .btn-connected-routes:hover { background: #7d3c98; }
 
+/* === НОВОЕ: Кнопка Заполнить КМ === */
+.btn-fill-km { background: #16a085; color: white; border-color: #16a085; margin-left: 5px; }
+.btn-fill-km:hover { background: #138d75; }
+.btn-fill-km:disabled { background: #95a5a6; border-color: #95a5a6; cursor: not-allowed; }
+
+/* === НОВОЕ: Аккордеон соединённых маршрутов === */
+.connected-accordion { margin-top: 20px; border: 1px solid #8e44ad; border-radius: 5px; }
+.connected-accordion .route-header { background-color: #8e44ad; }
+.connected-accordion .route-header:hover { background-color: #7d3c98; }
+
 .route-accordion { margin-top: 20px; border: 1px solid #bdc3c7; border-radius: 5px; }
 .route-header { background-color: #34495e; color: white; padding: 10px 12px; cursor: pointer; font-size: 13pt; font-weight: bold; border-radius: 5px 5px 0 0; position: sticky; top: 48px; z-index: 40; }
 .route-header:hover { background-color: #2c3e50; }
 .route-content { display: none; padding: 10px; background: #f8f9fa; border-top: 1px solid #bdc3c7; }
 .route-content.active { display: block; }
 
-/* === НОВОЕ: Сводка в свёрнутом аккордеоне === */
-.route-collapsed-summary { display: none; padding: 8px 15px; background: linear-gradient(135deg, #f8f9fa 0%, #eef2f7 100%); border-top: 1px solid #dee2e6; }
-.route-collapsed-summary.visible { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-.summary-card { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; background: white; border: 1px solid #dee2e6; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-.summary-card .sc-label { font-size: 9pt; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
-.summary-card .sc-value { font-size: 11pt; font-weight: bold; }
-.summary-card.sc-nds-current .sc-value { color: #2980b9; }
-.summary-card.sc-nds-prev .sc-value { color: #7f8c8d; }
-.summary-card.sc-cost .sc-value { color: #e67e22; }
-.summary-card.sc-dohod .sc-value { color: #27ae60; }
-.summary-card.sc-dynamic .sc-value { font-size: 10pt; }
-.summary-card.sc-dynamic.positive { border-color: #27ae60; background: #f0fff4; }
-.summary-card.sc-dynamic.negative { border-color: #e74c3c; background: #fff5f5; }
-.summary-card.sc-dynamic.positive .sc-value { color: #27ae60; }
-.summary-card.sc-dynamic.negative .sc-value { color: #e74c3c; }
+/* === НОВОЕ: Сводка в свёрнутом аккордеоне (компактная) === */
+.route-collapsed-summary { display: none; padding: 6px 15px; background: #f8f9fa; border-top: 1px solid #dee2e6; font-size: 10pt; }
+.route-collapsed-summary.visible { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
+.summary-inline { display: inline-flex; align-items: center; gap: 4px; }
+.summary-inline .si-label { color: #6c757d; font-size: 9pt; }
+.summary-inline .si-value { font-weight: bold; font-size: 10.5pt; }
+.summary-inline.si-nds .si-value { color: #2980b9; }
+.summary-inline.si-cost .si-value { color: #e67e22; }
+.summary-inline.si-dohod .si-value { color: #27ae60; }
+.summary-inline .si-month { color: #95a5a6; font-size: 8.5pt; margin-right: 3px; }
 
 .route-km-avg { padding: 4px 10px; background: #eaf4ff; color: #2980b9; border-radius: 3px; font-weight: bold; font-size: 10.5pt; cursor: help; white-space: nowrap; }
 
 /* === ИСПРАВЛЕНО: Обёртка таблицы для sticky header === */
-.table-wrapper { overflow-x: auto; max-height: calc(100vh - 220px); border: 1px solid #aaa; border-radius: 3px; position: relative; }
+.table-wrapper { overflow: auto; max-height: 70vh; border: 1px solid #aaa; border-radius: 3px; position: relative; }
 table { border-collapse: collapse; width: 100%; }
 .table-wrapper table { min-width: max-content; }
-.table-wrapper thead { position: sticky; top: 0; z-index: 20; }
-.table-wrapper thead th { box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
-th, td { border: 1px solid #aaa; padding: 5px; text-align: center; vertical-align: middle; white-space: nowrap; }
+.table-wrapper thead { position: sticky; top: 0; z-index: 20; background: #2c3e50; }
+.table-wrapper thead th { box-shadow: 0 2px 4px rgba(0,0,0,0.2); position: sticky; top: 0; }
+th, td { border: 1px solid #aaa; padding: 3px 4px; text-align: center; vertical-align: middle; white-space: nowrap; font-size: 10pt; }
+th { padding: 4px 6px; font-size: 9.5pt; }
 .popup-box th, .popup-box td { white-space: normal; }
 th { background-color: #2c3e50; color: white; font-weight: bold; }
 tbody tr:nth-child(even) { background-color: #f9f9f9; }
@@ -301,6 +307,7 @@ td[data-col-key="km"].km-has-value::after { content: " ✕"; color: #e74c3c; fon
         </div>
     </span>
     <button class="btn-reload" id="btnReload">🔄 Обновить</button>
+    <button class="btn-fill-km" id="btnFillKm" type="button">🚗 Заполнить КМ</button>
     <button class="btn-connected-routes" id="btnConnectedRoutes" type="button">🔗 Соединённые маршруты</button>
 </div>
 
@@ -841,7 +848,8 @@ function updateHiddenColsIndicator(content) {
     if (hiddenGroups.length > 0) {
         var groupLabels = { avg: 'Ср.знач.', sum: 'Суммы', cost: 'Расходы', dohod: 'Доход' };
         var names = hiddenGroups.map(function(g) { return groupLabels[g]; });
-        indicator.textContent = '👁 Скрыто: ' + names.join(', ') + ' (наведите на строку)';
+        var hint = hiddenGroups.indexOf('avg') !== -1 ? ' (наведите на кол-во клиентов)' : '';
+        indicator.textContent = '👁 Скрыто: ' + names.join(', ') + hint;
         indicator.style.display = 'inline-block';
     } else {
         indicator.style.display = 'none';
@@ -1066,10 +1074,8 @@ function updateRouteSummary(routeName) {
     var now = new Date();
     var currentMonth = now.getMonth();
     var currentYear = now.getFullYear();
-    var prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-    var prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
     
-    var currentMonthNds = 0, prevMonthNds = 0, totalCost = 0, totalDohod = 0;
+    var currentMonthNds = 0, totalCost = 0, totalDohod = 0;
     
     rows.forEach(function(row) {
         var dateKey = row.getAttribute('data-date-key') || '';
@@ -1086,122 +1092,77 @@ function updateRouteSummary(routeName) {
         if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
             currentMonthNds += sumWNDS;
         }
-        if (d.getMonth() === prevMonth && d.getFullYear() === prevYear) {
-            prevMonthNds += sumWNDS;
-        }
     });
     
-    // Обновляем DOM
-    var elCurNds = summaryEl.querySelector('.sc-nds-current .sc-value');
-    var elPrevNds = summaryEl.querySelector('.sc-nds-prev .sc-value');
-    var elCost = summaryEl.querySelector('.sc-cost .sc-value');
-    var elDohod = summaryEl.querySelector('.sc-dohod .sc-value');
-    var elDynamic = summaryEl.querySelector('.sc-dynamic');
-    var elDynamicValue = summaryEl.querySelector('.sc-dynamic .sc-value');
+    // Обновляем DOM (компактная сводка)
+    var ndsEl = summaryEl.querySelector('.si-nds .si-value');
+    var costEl = summaryEl.querySelector('.si-cost .si-value');
+    var dohodEl = summaryEl.querySelector('.si-dohod .si-value');
     
-    if (elCurNds) elCurNds.textContent = fmt(currentMonthNds) + ' ₽';
-    if (elPrevNds) elPrevNds.textContent = fmt(prevMonthNds) + ' ₽';
-    if (elCost) elCost.textContent = fmt(totalCost) + ' ₽';
-    if (elDohod) elDohod.textContent = fmt(totalDohod) + ' ₽';
-    
-    if (elDynamic && elDynamicValue) {
-        var diff = currentMonthNds - prevMonthNds;
-        var pct = prevMonthNds > 0 ? ((diff / prevMonthNds) * 100).toFixed(1) : '0';
-        var isPositive = diff >= 0;
-        elDynamic.classList.remove('positive', 'negative');
-        elDynamic.classList.add(isPositive ? 'positive' : 'negative');
-        elDynamicValue.textContent = (isPositive ? '▲ +' : '▼ ') + pct + '%';
-    }
+    if (ndsEl) ndsEl.textContent = fmt(currentMonthNds) + ' ₽';
+    if (costEl) costEl.textContent = fmt(totalCost) + ' ₽';
+    if (dohodEl) dohodEl.textContent = fmt(totalDohod) + ' ₽';
 }
 
 // ============================================================
-// === НОВОЕ: TOOLTIP СКРЫТЫХ КОЛОНОК ===
+// === НОВОЕ: TOOLTIP СКРЫТЫХ КОЛОНОК (только для "Кол-во контрагентов") ===
 // ============================================================
 function setupRowTooltips() {
     document.addEventListener('mouseover', function(e) {
-        var row = e.target.closest('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+        // Проверяем, навели ли на ячейку "Кол-во контрагентов"
+        var cell = e.target.closest('td[data-col-key="clients"]');
+        if (!cell) { hideRowTooltip(); return; }
+        
+        var row = cell.closest('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
         if (!row) { hideRowTooltip(); return; }
         
         var content = row.closest('.route-content');
         if (!content) return;
         
-        // Проверяем, есть ли скрытые колонки
-        var hasHidden = content.classList.contains('collapsed-avg') || 
-                       content.classList.contains('collapsed-sum') || 
-                       content.classList.contains('collapsed-cost') || 
-                       content.classList.contains('collapsed-dohod');
-        if (!hasHidden) { hideRowTooltip(); return; }
+        // Показываем tooltip только если группа avg свёрнута
+        if (!content.classList.contains('collapsed-avg')) { hideRowTooltip(); return; }
         
-        showRowTooltip(e, row, content);
+        showClientsTooltip(e, row);
     });
     
     document.addEventListener('mouseout', function(e) {
-        var row = e.target.closest('tbody tr');
-        if (row) {
+        var cell = e.target.closest('td[data-col-key="clients"]');
+        if (cell) {
             var related = e.relatedTarget;
-            if (!related || !row.contains(related)) {
+            if (!related || !cell.contains(related)) {
                 hideRowTooltip();
             }
         }
     });
 }
 
-function showRowTooltip(e, row, content) {
+function showClientsTooltip(e, row) {
     var tooltip = document.getElementById('rowTooltip');
     if (!tooltip) return;
     
-    var hiddenCols = [];
+    var avgDay = row.querySelector('td[data-col-key="avg-day"]');
+    var avgWeek = row.querySelector('td[data-col-key="avg-week"]');
+    var clientsCount = row.querySelector('td[data-col-key="clients"]');
     
-    if (content.classList.contains('collapsed-avg')) {
-        var avgDay = row.querySelector('td[data-col-key="avg-day"]');
-        var avgWeek = row.querySelector('td[data-col-key="avg-week"]');
-        if (avgDay) hiddenCols.push({ label: 'Ср. клиентов день', value: avgDay.textContent });
-        if (avgWeek) hiddenCols.push({ label: 'Ср. клиентов неделя', value: avgWeek.textContent });
-    }
-    if (content.classList.contains('collapsed-sum')) {
-        var sumDay = row.querySelector('td[data-col-key="sum-day"]');
-        var sumWeek = row.querySelector('td[data-col-key="sum-week"]');
-        if (sumDay) hiddenCols.push({ label: 'Сумма день', value: sumDay.textContent + ' ₽' });
-        if (sumWeek) hiddenCols.push({ label: 'Сумма неделя', value: sumWeek.textContent + ' ₽' });
-    }
-    if (content.classList.contains('collapsed-cost')) {
-        var costCum = row.querySelector('td[data-col-key="cost-cum"]');
-        if (costCum) hiddenCols.push({ label: 'Расходы накопит.', value: costCum.textContent + ' ₽' });
-    }
-    if (content.classList.contains('collapsed-dohod')) {
-        var dohodItog = row.querySelector('td[data-col-key="dohod-itog"]');
-        var dohodCum = row.querySelector('td[data-col-key="dohod-cum"]');
-        if (dohodItog) hiddenCols.push({ label: 'Доходность нед.', value: dohodItog.textContent + ' ₽' });
-        if (dohodCum) hiddenCols.push({ label: 'Доходность мес.', value: dohodCum.textContent + ' ₽' });
-    }
-    
-    if (hiddenCols.length === 0) { hideRowTooltip(); return; }
-    
-    var dateStr = row.querySelector('td[data-col-key="date"]');
-    var queueStr = row.querySelector('td[data-col-key="queue"]');
-    var sumRoute = row.querySelector('td[data-col-key="sum-route"]');
-    
-    var html = '<div class="tt-title">📋 Скрытые данные</div>';
-    hiddenCols.forEach(function(col) {
-        html += '<div class="tt-row"><span class="tt-label">' + col.label + ':</span><span class="tt-value">' + col.value + '</span></div>';
-    });
-    html += '<div class="tt-footer">' + (dateStr ? dateStr.textContent : '') + ' • ' + (queueStr ? queueStr.textContent : '') + ' • Сумма: ' + (sumRoute ? sumRoute.textContent : '') + ' ₽</div>';
+    var html = '<div class="tt-title">📊 Средняя нагрузка</div>';
+    if (avgDay) html += '<div class="tt-row"><span class="tt-label">Ср. клиентов/день:</span><span class="tt-value">' + avgDay.textContent + '</span></div>';
+    if (avgWeek) html += '<div class="tt-row"><span class="tt-label">Ср. клиентов/неделя:</span><span class="tt-value">' + avgWeek.textContent + '</span></div>';
+    if (clientsCount) html += '<div class="tt-footer">В этом рейсе: ' + clientsCount.textContent + ' клиентов</div>';
     
     tooltip.innerHTML = html;
     tooltip.style.display = 'block';
     
-    // Позиционирование
-    var rect = row.getBoundingClientRect();
+    // Позиционирование рядом с ячейкой
+    var rect = cell.getBoundingClientRect();
     var left = rect.right + 10;
     var top = rect.top;
     
-    // Проверяем, не выходит ли за правый край
-    if (left + 350 > window.innerWidth) {
-        left = rect.left - 360;
+    if (left + 250 > window.innerWidth) {
+        left = rect.left - 260;
     }
     if (left < 10) left = 10;
-    if (top + 200 > window.innerHeight) {
-        top = window.innerHeight - 210;
+    if (top + 120 > window.innerHeight) {
+        top = window.innerHeight - 130;
     }
     
     tooltip.style.left = left + 'px';
@@ -1218,7 +1179,7 @@ function hideRowTooltip() {
 // ============================================================
 function loadConnectedRoutes() {
     // Пробуем загрузить с сервера, если нет — из localStorage
-    fetch('save_route_data.php?action=getConnectedRoutes&base=' + encodeURIComponent(currentBase) + '&' + cacheBust())
+    return fetch('save_route_data.php?action=getConnectedRoutes&base=' + encodeURIComponent(currentBase) + '&' + cacheBust())
     .then(function(r) { return r.text(); })
     .then(function(t) {
         try {
@@ -1254,6 +1215,8 @@ function saveConnectedRoutesToServer() {
     });
     // Также всегда сохраняем в localStorage как резерв
     localStorage.setItem('connectedRoutes_' + currentBase, JSON.stringify(connectedRoutesStore));
+    // Перерендериваем аккордеоны
+    renderConnectedAccordions();
 }
 
 function openConnectedRoutes() {
@@ -1399,6 +1362,7 @@ function deleteConnectedRoute(idx) {
     connectedRoutesStore.splice(idx, 1);
     saveConnectedRoutesToServer();
     renderConnectedRoutesList();
+    renderConnectedAccordions();
 }
 
 // ============================================================
@@ -1766,6 +1730,8 @@ function refreshData() {
             warn.innerHTML = '⚠️ Не найдены файлы: <code>' + d._missingFiles.join('</code>, <code>') + '</code>';
         }
         if (warn) container.insertBefore(warn, container.firstChild);
+        // Перерендериваем аккордеоны соединённых маршрутов
+        setTimeout(function() { renderConnectedAccordions(); }, 200);
     }).catch(function(err) {
         console.error('Ошибка загрузки данных:', err);
         container.innerHTML =
@@ -2182,6 +2148,9 @@ window.addEventListener('message', function(event) {
         }
         enableCalcButtons(calcStats.currentRoute, true);
         calcInProgress = false;
+        // Разблокируем кнопку "Заполнить КМ"
+        var btnFillKm = document.getElementById('btnFillKm');
+        if (btnFillKm) btnFillKm.disabled = false;
         return;
     }
 });
@@ -2314,16 +2283,16 @@ function render(data) {
         header.textContent = routeName + ' ▼';
         acc.appendChild(header);
 
-        // === НОВОЕ: Сводка в свёрнутом аккордеоне ===
+        // === НОВОЕ: Сводка в свёрнутом аккордеоне (компактная) ===
         var summaryDiv = document.createElement('div');
         summaryDiv.className = 'route-collapsed-summary visible';
         summaryDiv.setAttribute('data-route', routeName);
+        var monthNames = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+        var curMonth = monthNames[new Date().getMonth()] + ' ' + new Date().getFullYear();
         summaryDiv.innerHTML = 
-            '<div class="summary-card sc-nds-current"><div><div class="sc-label">Без НДС (тек. мес.)</div><div class="sc-value">—</div></div></div>' +
-            '<div class="summary-card sc-nds-prev"><div><div class="sc-label">Без НДС (пред. мес.)</div><div class="sc-value">—</div></div></div>' +
-            '<div class="summary-card sc-dynamic"><div><div class="sc-label">Динамика</div><div class="sc-value">—</div></div></div>' +
-            '<div class="summary-card sc-cost"><div><div class="sc-label">Затраты итого</div><div class="sc-value">—</div></div></div>' +
-            '<div class="summary-card sc-dohod"><div><div class="sc-label">Доходность</div><div class="sc-value">—</div></div></div>';
+            '<span class="summary-inline si-nds"><span class="si-month">(' + curMonth + ')</span><span class="si-label">Продажи БезНДС:</span><span class="si-value">—</span></span>' +
+            '<span class="summary-inline si-cost"><span class="si-label">Затраты:</span><span class="si-value">—</span></span>' +
+            '<span class="summary-inline si-dohod"><span class="si-label">Доходность:</span><span class="si-value">—</span></span>';
         acc.appendChild(summaryDiv);
 
         var content = document.createElement('div');
@@ -2609,6 +2578,221 @@ function toggleRecalcBtn(cb) {
 }
 
 // ============================================================
+// === НОВОЕ: ЗАПОЛНИТЬ КМ ДЛЯ ВСЕХ МАРШРУТОВ ===
+// ============================================================
+async function fillAllKm() {
+    if (calcInProgress) { alert('Идёт расчёт, подождите...'); return; }
+    if (!routeCalcIframeReady) { alert('Страница расчёта ещё загружается, подождите пару секунд.'); return; }
+    
+    var method = await getRouteMethodFromConfig();
+    ROUTE_CALC_METHOD = method;
+    
+    var allTasks = [];
+    var baseAddr = BASE_ADDRESSES[currentBase] || '';
+    
+    // Собираем задачи со всех маршрутов
+    document.querySelectorAll('.route-extra[data-route]').forEach(function(extra) {
+        var routeName = extra.getAttribute('data-route');
+        var rc = extra.closest('.route-content');
+        if (!rc) return;
+        
+        var userStart = getAddressStart(routeName);
+        var userEnd = getAddressEnd(routeName);
+        
+        var parentRows = rc.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+        parentRows.forEach(function(row) {
+            var timeKey = row.getAttribute('data-time-key') || '';
+            if (!timeKey) return;
+            var existing = (routeData[routeName] && routeData[routeName].routeCalcResults) ? routeData[routeName].routeCalcResults[timeKey] : null;
+            if (existing) return; // Уже рассчитано
+            var clientsJson = row.getAttribute('data-clients-addresses') || '';
+            if (!clientsJson) return;
+            var clientAddresses = clientsJson.split('||').filter(function(a){ return a.trim() !== ''; });
+            if (clientAddresses.length === 0) return;
+            
+            var startAddr = userStart || baseAddr;
+            var endAddr = userEnd || baseAddr;
+            var addresses = [];
+            if (startAddr) addresses.push(startAddr);
+            clientAddresses.forEach(function(a){ addresses.push(a); });
+            if (endAddr) addresses.push(endAddr);
+            
+            allTasks.push({ taskId: routeName + '|||' + timeKey, addresses: addresses });
+        });
+    });
+    
+    if (allTasks.length === 0) { alert('Нет строк для расчёта (все уже рассчитаны)'); return; }
+    
+    var msgText = 'Рассчитать КМ для ВСЕХ маршрутов?\nВсего строк: ' + allTasks.length + '\nМетод расчёта: ' + method.toUpperCase();
+    if (allTasks.length > 20) msgText += '\nЭто может занять ~' + Math.round(allTasks.length * 3 / 60) + ' мин.';
+    if (!confirm(msgText)) return;
+    
+    calcInProgress = true;
+    calcStats = { done: 0, total: allTasks.length, errors: 0, currentRoute: '_all' };
+    
+    // Блокируем кнопку
+    var btn = document.getElementById('btnFillKm');
+    if (btn) btn.disabled = true;
+    
+    var iframe = document.getElementById('routeCalcFrame');
+    iframe.contentWindow.postMessage({ type: 'calc', method: ROUTE_CALC_METHOD, tasks: allTasks }, '*');
+}
+
+// ============================================================
+// === НОВОЕ: СОЕДИНЁННЫЕ МАРШРУТЫ КАК АККОРДЕОНЫ ===
+// ============================================================
+function renderConnectedAccordions() {
+    // Удаляем старые аккордеоны соединённых маршрутов
+    document.querySelectorAll('.connected-accordion').forEach(function(el) { el.remove(); });
+    
+    if (connectedRoutesStore.length === 0) return;
+    
+    var container = document.getElementById('container');
+    var routesWrap = container.querySelector('div');
+    if (!routesWrap) return;
+    
+    connectedRoutesStore.forEach(function(cr) {
+        var acc = document.createElement('div');
+        acc.className = 'route-accordion connected-accordion';
+        acc.setAttribute('data-connected-id', cr.id);
+        
+        var header = document.createElement('div');
+        header.className = 'route-header';
+        header.setAttribute('onclick', 'toggleConnectedRoute(\'' + cr.id + '\')');
+        header.innerHTML = '🔗 ' + cr.name + ' <span style="font-size:10pt;font-weight:normal;opacity:0.8;">(' + cr.routeNames.join(' + ') + ')</span> ▼';
+        acc.appendChild(header);
+        
+        // Сводка
+        var summaryDiv = document.createElement('div');
+        summaryDiv.className = 'route-collapsed-summary visible';
+        summaryDiv.setAttribute('data-connected', cr.id);
+        var monthNames = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+        var curMonth = monthNames[new Date().getMonth()] + ' ' + new Date().getFullYear();
+        summaryDiv.innerHTML = 
+            '<span class="summary-inline si-nds"><span class="si-month">(' + curMonth + ')</span><span class="si-label">Продажи БезНДС:</span><span class="si-value">—</span></span>' +
+            '<span class="summary-inline si-cost"><span class="si-label">Затраты:</span><span class="si-value">—</span></span>' +
+            '<span class="summary-inline si-dohod"><span class="si-label">Доходность:</span><span class="si-value">—</span></span>';
+        acc.appendChild(summaryDiv);
+        
+        // Контент
+        var content = document.createElement('div');
+        content.id = 'connected_' + cr.id;
+        content.className = 'route-content';
+        
+        // Таблица с объединёнными данными
+        var tableWrapper = document.createElement('div');
+        tableWrapper.className = 'table-wrapper';
+        
+        var table = document.createElement('table');
+        var thead = document.createElement('thead');
+        thead.appendChild(buildThead());
+        table.appendChild(thead);
+        
+        var tbody = document.createElement('tbody');
+        
+        // Собираем строки из всех маршрутов
+        cr.routeNames.forEach(function(routeName) {
+            var sourceAcc = findAccordionByRouteName(routeName);
+            if (!sourceAcc) return;
+            var sourceContent = sourceAcc.querySelector('.route-content');
+            if (!sourceContent) return;
+            
+            var sourceRows = sourceContent.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+            sourceRows.forEach(function(row) {
+                var newRow = row.cloneNode(true);
+                // Добавляем метку маршрута
+                var routeLabel = document.createElement('td');
+                routeLabel.style.fontWeight = 'bold';
+                routeLabel.style.color = '#8e44ad';
+                routeLabel.style.fontSize = '9pt';
+                routeLabel.textContent = routeName;
+                newRow.insertBefore(routeLabel, newRow.firstChild);
+                tbody.appendChild(newRow);
+            });
+        });
+        
+        table.appendChild(tbody);
+        tableWrapper.appendChild(table);
+        content.appendChild(tableWrapper);
+        acc.appendChild(content);
+        
+        routesWrap.appendChild(acc);
+        
+        // Обновляем сводку
+        updateConnectedSummary(cr.id);
+    });
+}
+
+function updateConnectedSummary(crId) {
+    var cr = connectedRoutesStore.find(function(c) { return c.id === crId; });
+    if (!cr) return;
+    
+    var summaryEl = document.querySelector('.route-collapsed-summary[data-connected="' + crId + '"]');
+    if (!summaryEl) return;
+    
+    var now = new Date();
+    var currentMonth = now.getMonth();
+    var currentYear = now.getFullYear();
+    
+    var currentMonthNds = 0, totalCost = 0, totalDohod = 0;
+    
+    cr.routeNames.forEach(function(routeName) {
+        var sourceAcc = findAccordionByRouteName(routeName);
+        if (!sourceAcc) return;
+        var sourceContent = sourceAcc.querySelector('.route-content');
+        if (!sourceContent) return;
+        
+        var rows = sourceContent.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+        rows.forEach(function(row) {
+            var dateKey = row.getAttribute('data-date-key') || '';
+            if (!dateKey) return;
+            var d = new Date(dateKey);
+            var sum = parseFloat(row.getAttribute('data-original-sum')) || 0;
+            var sumWNDS = sum * 100 / 122;
+            var dohod = parseFloat(row.getAttribute('data-dohod')) || 0;
+            var cost = parseFloat(row.getAttribute('data-total-cost')) || 0;
+            
+            totalCost += cost;
+            totalDohod += dohod;
+            
+            if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                currentMonthNds += sumWNDS;
+            }
+        });
+    });
+    
+    var ndsEl = summaryEl.querySelector('.si-nds .si-value');
+    var costEl = summaryEl.querySelector('.si-cost .si-value');
+    var dohodEl = summaryEl.querySelector('.si-dohod .si-value');
+    
+    if (ndsEl) ndsEl.textContent = fmt(currentMonthNds) + ' ₽';
+    if (costEl) costEl.textContent = fmt(totalCost) + ' ₽';
+    if (dohodEl) dohodEl.textContent = fmt(totalDohod) + ' ₽';
+}
+
+function toggleConnectedRoute(crId) {
+    var elem = document.getElementById('connected_' + crId);
+    if (elem) {
+        if (!elem.classList.contains('active')) {
+            elem.classList.add('active');
+            var acc = elem.closest('.route-accordion');
+            if (acc) {
+                var summary = acc.querySelector('.route-collapsed-summary');
+                if (summary) summary.classList.remove('visible');
+            }
+        } else {
+            elem.classList.remove('active');
+            var acc = elem.closest('.route-accordion');
+            if (acc) {
+                var summary = acc.querySelector('.route-collapsed-summary');
+                if (summary) summary.classList.add('visible');
+                updateConnectedSummary(crId);
+            }
+        }
+    }
+}
+
+// ============================================================
 // ИНИЦИАЛИЗАЦИЯ
 // ============================================================
 document.querySelectorAll('.date-filter button[data-range]').forEach(function(btn) {
@@ -2616,6 +2800,9 @@ document.querySelectorAll('.date-filter button[data-range]').forEach(function(bt
 });
 
 document.getElementById('btnReload').addEventListener('click', function() { refreshData(); });
+
+// === НОВОЕ: Кнопка Заполнить КМ ===
+document.getElementById('btnFillKm').addEventListener('click', function() { fillAllKm(); });
 
 // === НОВОЕ: Кнопка соединённых маршрутов ===
 document.getElementById('btnConnectedRoutes').addEventListener('click', function() { openConnectedRoutes(); });
@@ -2626,7 +2813,10 @@ initRouteCalcIframe();
 
 // === НОВОЕ: Инициализация tooltip и загрузка соединённых маршрутов ===
 setupRowTooltips();
-loadConnectedRoutes();
+loadConnectedRoutes().then(function() {
+    // После загрузки данных рендерим аккордеоны соединённых маршрутов
+    setTimeout(function() { renderConnectedAccordions(); }, 500);
+});
 
 </script>
 </body>
