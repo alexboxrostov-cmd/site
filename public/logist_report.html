@@ -10,12 +10,12 @@
 <meta http-equiv="Expires" content="0">
 <style>
 body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; margin: 10px 20px; }
-.header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 15px; background: #f0f2f5; padding: 6px 15px; border-radius: 5px; margin-bottom: 10px; position: sticky; top: 0; z-index: 50; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 15px; background: #f0f2f5; padding: 6px 15px; border-radius: 5px; margin-bottom: 10px; }
 .header h2 { margin: 0; font-size: 16pt; }
 .header .info { display: flex; flex-wrap: wrap; gap: 10px 20px; font-size: 10pt; }
 .header .info span { white-space: nowrap; }
 .header .info .label { font-weight: bold; }
-.date-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: #fff; padding: 8px 15px; border: 1px solid #dcdcdc; border-radius: 5px; margin-bottom: 15px; position: sticky; top: 44px; z-index: 49; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+.date-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: #fff; padding: 8px 15px; border: 1px solid #dcdcdc; border-radius: 5px; margin-bottom: 15px; }
 .date-filter .df-label { font-weight: bold; }
 .date-filter button { padding: 5px 12px; font-size: 10.5pt; border: 1px solid #aaa; background: #f8f9fa; border-radius: 4px; cursor: pointer; }
 .date-filter button:hover { background: #e9ecef; }
@@ -24,42 +24,19 @@ body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; margin: 10px 20
 .date-filter .divider { color: #999; }
 .date-filter .btn-reload { margin-left: auto; background: #3498db; color: white; border-color: #3498db; }
 .date-filter .btn-reload:hover { background: #2980b9; }
-.btn-connected-routes { background: #8e44ad; color: white; border-color: #8e44ad; }
-.btn-connected-routes:hover { background: #7d3c98; }
 
 .route-accordion { margin-top: 20px; border: 1px solid #bdc3c7; border-radius: 5px; }
-.route-header { background-color: #34495e; color: white; padding: 10px 12px; cursor: pointer; font-size: 13pt; font-weight: bold; border-radius: 5px 5px 0 0; position: sticky; top: 90px; z-index: 20; }
+.route-header { background-color: #34495e; color: white; padding: 10px 12px; cursor: pointer; font-size: 13pt; font-weight: bold; border-radius: 5px 5px 0 0; position: sticky; top: 0; z-index: 10; }
 .route-header:hover { background-color: #2c3e50; }
-.route-content { display: none; padding: 10px; background: #f8f9fa; border-top: 1px solid #bdc3c7; overflow-x: auto; }
-.route-content.active { display: block; }
 
-/* === НОВОЕ: Сводка маршрута при свёрнутом аккордеоне === */
-.route-collapsed-summary { display: none; padding: 8px 12px; background: linear-gradient(135deg, #f8f9fa 0%, #eef2f7 100%); border-top: 1px solid #d5dbdb; gap: 10px; flex-wrap: wrap; align-items: center; }
-.route-collapsed-summary.visible { display: flex; }
-.summary-card { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 5px; font-size: 10pt; border: 1px solid #dcdcdc; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-.summary-card .sc-label { font-size: 8.5pt; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.3px; }
-.summary-card .sc-value { font-weight: bold; font-size: 11pt; }
-.summary-card.sc-current { border-color: #3498db; }
-.summary-card.sc-current .sc-value { color: #2c3e50; }
-.summary-card.sc-prev { border-color: #95a5a6; }
-.summary-card.sc-prev .sc-value { color: #7f8c8d; }
-.summary-card.sc-delta-up { border-color: #27ae60; background: #eafaf1; }
-.summary-card.sc-delta-up .sc-value { color: #27ae60; }
-.summary-card.sc-delta-down { border-color: #e74c3c; background: #fdedec; }
-.summary-card.sc-delta-down .sc-value { color: #e74c3c; }
-.summary-card.sc-cost { border-color: #e67e22; }
-.summary-card.sc-cost .sc-value { color: #e67e22; }
-.summary-card.sc-dohod { border-color: #27ae60; background: #eafaf1; }
-.summary-card.sc-dohod .sc-value { color: #27ae60; }
+/* === ИЗМЕНЕНИЕ 1: Sticky header таблицы === */
+.route-content { display: none; padding: 10px; background: #f8f9fa; border-top: 1px solid #bdc3c7; }
+.route-content.active { display: block; max-height: calc(100vh - 140px); overflow: auto; }
+.route-content thead { position: sticky; top: 0; z-index: 10; }
+.route-top-bar { position: sticky; top: 0; z-index: 11; background: #f8f9fa; border-bottom: 2px solid #bdc3c7; }
 
-.route-km-avg { padding: 4px 10px; background: #eaf4ff; color: #2980b9; border-radius: 3px; font-weight: bold; font-size: 10.5pt; cursor: help; white-space: nowrap; }
-
-/* === УЛУЧШЕНИЕ: Sticky thead при прокрутке внутри route-content === */
 table { border-collapse: collapse; width: 100%; }
 .route-content table { min-width: max-content; }
-.route-content thead { position: sticky; top: 0; z-index: 15; }
-.route-content thead th { box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
-
 th, td { border: 1px solid #aaa; padding: 5px; text-align: center; vertical-align: middle; white-space: nowrap; }
 .popup-box th, .popup-box td { white-space: normal; }
 th { background-color: #2c3e50; color: white; font-weight: bold; }
@@ -228,98 +205,176 @@ td[data-col-key="km"].km-has-value::after { content: " ✕"; color: #e74c3c; fon
 .period-warn { font-size: 10pt; color: #c0392b; margin-bottom: 8px; display: none; }
 .period-warn.show { display: block; }
 
-/* === НОВОЕ: Tooltip для скрытых колонок === */
+/* === ИЗМЕНЕНИЕ 2: Tooltip для скрытых столбцов === */
 .hidden-cols-tooltip {
     position: fixed;
-    z-index: 3000;
+    z-index: 5000;
     background: #2c3e50;
     color: white;
     border-radius: 6px;
     padding: 10px 14px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.35);
-    font-size: 9.5pt;
+    font-size: 10pt;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.35);
     pointer-events: none;
-    max-width: 380px;
-    display: none;
-    animation: ttFadeIn 0.15s ease-out;
+    max-width: 420px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
 }
-.hidden-cols-tooltip.visible { display: block; }
-.hidden-cols-tooltip .tt-header {
+.hidden-cols-tooltip.visible { opacity: 1; }
+.hidden-cols-tooltip .tt-title {
     font-weight: bold;
     color: #f1c40f;
-    border-bottom: 1px solid #4a6274;
-    padding-bottom: 4px;
     margin-bottom: 6px;
-    font-size: 9pt;
+    border-bottom: 1px solid #4a6278;
+    padding-bottom: 4px;
+    font-size: 9.5pt;
 }
 .hidden-cols-tooltip .tt-row {
     display: flex;
     justify-content: space-between;
-    gap: 12px;
+    gap: 15px;
     padding: 2px 0;
+    font-size: 10pt;
 }
-.hidden-cols-tooltip .tt-label { color: #95a5a6; }
-.hidden-cols-tooltip .tt-value { font-weight: bold; text-align: right; }
-.hidden-cols-tooltip .tt-footer {
+.hidden-cols-tooltip .tt-label { color: #bdc3c7; }
+.hidden-cols-tooltip .tt-value { font-weight: bold; color: #fff; }
+.hidden-cols-tooltip .tt-hint {
     margin-top: 6px;
     padding-top: 4px;
-    border-top: 1px solid #4a6274;
-    font-size: 8pt;
+    border-top: 1px solid #4a6278;
+    font-size: 8.5pt;
     color: #7f8c8d;
 }
-@keyframes ttFadeIn {
-    from { opacity: 0; transform: translateX(-5px); }
-    to { opacity: 1; transform: translateX(0); }
-}
 
-/* Индикатор скрытых колонок в заголовке таблицы */
-.th-hidden-indicator {
-    background: #4a6274 !important;
-    color: #f1c40f !important;
+/* === ИЗМЕНЕНИЕ 3: Сводка в свёрнутом аккордеоне === */
+.route-summary {
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+    background: linear-gradient(to right, #eaf4ff, #f0f7ff);
+    border-top: 1px solid #d4e6f1;
+    font-size: 10pt;
+    align-items: center;
+}
+.route-summary.visible { display: flex; }
+.route-summary .summary-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: white;
+    border-radius: 5px;
+    border: 1px solid #d4e6f1;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.route-summary .summary-icon { font-size: 14pt; }
+.route-summary .summary-info { display: flex; flex-direction: column; }
+.route-summary .summary-label {
     font-size: 8.5pt;
-    cursor: help;
-    text-align: center;
-    min-width: 50px;
+    color: #7f8c8d;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
+.route-summary .summary-value {
+    font-weight: bold;
+    font-size: 11pt;
+}
+.route-summary .summary-value.positive { color: #27ae60; }
+.route-summary .summary-value.negative { color: #e74c3c; }
+.route-summary .summary-value.neutral { color: #2c3e50; }
+.route-summary .summary-diff {
+    font-size: 9pt;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: bold;
+}
+.route-summary .summary-diff.up { background: #e8f8f0; color: #27ae60; }
+.route-summary .summary-diff.down { background: #fdf0f0; color: #e74c3c; }
 
-/* === НОВОЕ: Модалка соединённых маршрутов === */
-.cr-route-item {
+/* === ИЗМЕНЕНИЕ 4: Кнопка соединённых маршрутов === */
+.btn-connected-routes {
+    background: #8e44ad;
+    color: white;
+    border: none;
+    padding: 5px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10.5pt;
+    font-weight: bold;
+    margin-left: 8px;
+}
+.btn-connected-routes:hover { background: #7d3c98; }
+
+/* Модалка соединённых маршрутов */
+.cr-list { max-height: 300px; overflow-y: auto; }
+.cr-item {
+    border: 1px solid #d5d8dc;
+    border-radius: 5px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: #fafafa;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.cr-item:hover { border-color: #8e44ad; background: #f5f0ff; }
+.cr-item.selected { border-color: #8e44ad; background: #f0e6ff; box-shadow: 0 0 0 2px rgba(142,68,173,0.2); }
+.cr-item .cr-name { font-weight: bold; font-size: 11pt; color: #2c3e50; margin-bottom: 3px; }
+.cr-item .cr-routes { color: #7f8c8d; font-size: 9.5pt; margin-bottom: 6px; }
+.cr-item .cr-stats { display: flex; gap: 8px; flex-wrap: wrap; }
+.cr-item .cr-stat {
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 9pt;
+    font-weight: bold;
+}
+.cr-item .cr-stat.nds { background: #d4e6f1; color: #1a5276; }
+.cr-item .cr-stat.cost { background: #fdebd0; color: #935116; }
+.cr-item .cr-stat.dohod { background: #d5f5e3; color: #1e8449; }
+.cr-item .cr-stat.rows { background: #e8daef; color: #6c3483; }
+
+.cr-create-area {
+    border: 2px dashed #bdc3c7;
+    border-radius: 5px;
+    padding: 12px;
+    margin-top: 10px;
+    background: #fafafa;
+}
+.cr-create-area.active { border-color: #8e44ad; background: #f9f5ff; }
+.cr-route-check {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    margin-bottom: 4px;
+    padding: 4px 8px;
+    border-radius: 3px;
     cursor: pointer;
-    background: white;
-    transition: all 0.15s;
 }
-.cr-route-item:hover { border-color: #8e44ad; background: #faf5ff; }
-.cr-route-item.selected { border-color: #8e44ad; background: #f4ecf7; }
-.cr-route-item input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
-.cr-route-item .cr-name { font-weight: bold; font-size: 10.5pt; }
-.cr-route-item .cr-info { font-size: 9pt; color: #888; margin-left: auto; }
+.cr-route-check:hover { background: #f0f0f0; }
+.cr-route-check input { width: 16px; height: 16px; cursor: pointer; }
+.cr-route-check label { cursor: pointer; font-size: 10.5pt; }
 
-.cr-saved-item {
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    padding: 10px 14px;
-    margin-bottom: 8px;
-    background: #fafafa;
+/* Объединённая таблица */
+.connected-view-header {
+    background: linear-gradient(to right, #8e44ad, #6c3483);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
-.cr-saved-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-.cr-saved-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.cr-saved-header .cr-saved-name { font-weight: bold; font-size: 11pt; color: #2c3e50; }
-.cr-saved-header .cr-saved-delete { background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 14pt; padding: 2px 6px; border-radius: 3px; }
-.cr-saved-header .cr-saved-delete:hover { background: #fdedec; }
-.cr-saved-routes { font-size: 9.5pt; color: #555; margin-bottom: 8px; }
-.cr-saved-stats { display: flex; gap: 8px; flex-wrap: wrap; }
-.cr-stat { padding: 3px 8px; border-radius: 3px; font-size: 9pt; }
-.cr-stat-nds { background: #eaf2f8; color: #2c3e50; }
-.cr-stat-cost { background: #fef5e7; color: #e67e22; }
-.cr-stat-dohod { background: #eafaf1; color: #27ae60; }
-.cr-stat-rows { background: #f4ecf7; color: #8e44ad; }
+.connected-view-header h3 { margin: 0; font-size: 13pt; }
+.connected-view-header .cv-close {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10pt;
+}
+.connected-view-header .cv-close:hover { background: rgba(255,255,255,0.3); }
 
 </style>
 </head>
@@ -362,20 +417,17 @@ td[data-col-key="km"].km-has-value::after { content: " ✕"; color: #e74c3c; fon
             </div>
         </div>
     </span>
+    <!-- === ИЗМЕНЕНИЕ 4: Кнопка соединённых маршрутов === -->
     <button class="btn-connected-routes" id="btnConnectedRoutes" type="button">🔗 Соединённые маршруты</button>
     <button class="btn-reload" id="btnReload">🔄 Обновить</button>
 </div>
 
 <div id="container"></div>
 
-<!-- Tooltip для скрытых колонок -->
-<div class="hidden-cols-tooltip" id="hiddenColsTooltip">
-    <div class="tt-header">📋 Скрытые данные</div>
-    <div id="ttContent"></div>
-    <div class="tt-footer" id="ttFooter"></div>
-</div>
+<!-- Контейнер для tooltip скрытых столбцов -->
+<div class="hidden-cols-tooltip" id="hiddenColsTooltip"></div>
 
-<!-- Модалка соединённых маршрутов -->
+<!-- === ИЗМЕНЕНИЕ 4: Модалка соединённых маршрутов === -->
 <div class="modal-overlay" id="connectedRoutesOverlay">
     <div class="modal-box" style="min-width:650px;">
         <div class="modal-header">
@@ -383,23 +435,42 @@ td[data-col-key="km"].km-has-value::after { content: " ✕"; color: #e74c3c; fon
             <button class="modal-close" onclick="closeConnectedRoutes()">✕</button>
         </div>
         <div class="modal-body">
-            <div class="modal-section">
-                <label>Сохранённые комбинации</label>
-                <div id="crSavedList"></div>
+            <p style="color:#7f8c8d;font-size:10pt;margin-bottom:10px;">
+                Выберите сохранённую комбинацию или создайте новую. Объединённые маршруты показывают общую экономику по плановым доставкам.
+            </p>
+            <div class="cr-list" id="crList">
+                <p style="text-align:center;color:#aaa;padding:20px;">Загрузка...</p>
             </div>
-            <div class="modal-section">
-                <label>Создать новую комбинацию</label>
-                <div class="settings-row" style="margin-bottom:10px;">
+            <div class="cr-create-area" id="crCreateArea">
+                <div style="font-weight:bold;margin-bottom:8px;">➕ Создать новую комбинацию:</div>
+                <div class="settings-row" style="margin-bottom:8px;">
                     <label>Название:</label>
-                    <input type="text" id="crNewName" placeholder="Например: Азов+Батайск" style="min-width:200px;">
+                    <input type="text" id="crNewName" placeholder="Напр. АЗОВ + БАТАЙСК" style="min-width:200px;">
                 </div>
-                <p style="font-size:9.5pt;color:#888;margin-bottom:8px;">Выберите маршруты для объединения (минимум 2):</p>
-                <div id="crRoutesList"></div>
+                <div style="font-size:10pt;color:#7f8c8d;margin-bottom:6px;">Выберите маршруты (минимум 2):</div>
+                <div id="crRouteChecks"></div>
                 <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end;">
-                    <button class="modal-btn cancel" onclick="closeConnectedRoutes()">Закрыть</button>
-                    <button class="modal-btn save" onclick="saveConnectedRoute()" style="background:#8e44ad;">💾 Сохранить комбинацию</button>
+                    <button class="modal-btn cancel" onclick="cancelCreateCR()">Отмена</button>
+                    <button class="modal-btn save" onclick="saveNewCR()">💾 Сохранить</button>
                 </div>
             </div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn cancel" onclick="closeConnectedRoutes()">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модалка просмотра объединённого маршрута -->
+<div class="modal-overlay" id="connectedViewOverlay">
+    <div class="modal-box" style="min-width:80vw;max-width:95vw;">
+        <div class="modal-header">
+            <span id="cvTitle">🔗 Объединённый маршрут</span>
+            <button class="modal-close" onclick="closeConnectedView()">✕</button>
+        </div>
+        <div class="modal-body" id="cvBody" style="overflow-x:auto;"></div>
+        <div class="modal-footer">
+            <button class="modal-btn cancel" onclick="closeConnectedView()">Закрыть</button>
         </div>
     </div>
 </div>
@@ -521,6 +592,9 @@ var ROUTE_CALC_METHOD = 'pso';
 var calcInProgress = false;
 var routeCalcIframeReady = false;
 var calcStats = { done: 0, total: 0, errors: 0, currentRoute: '' };
+
+// === ИЗМЕНЕНИЕ 4: Глобальные для соединённых маршрутов ===
+var connectedRoutesData = [];
 
 // Определение колонок таблицы
 var COLUMNS = [
@@ -908,11 +982,15 @@ function updateKmAvgBadge(routeName, content) {
         var tk = row.getAttribute('data-time-key') || '';
         if (!tk) return;
         var res = (routeData[routeName] && routeData[routeName].routeCalcResults)
-            ? routeData[routeName].routeCalcResults[tk] : null;
+            ? routeData[routeName].routeCalcResults[tk]
+            : null;
         if (!res) return;
         var v = parseFloat(res.km);
         if (!isNaN(v) && v > 0) kmVals.push(v);
-        if (res.time) { var pm = parseTimeToMin(res.time); if (pm > 0) timeMins.push(pm); }
+        if (res.time) {
+            var pm = parseTimeToMin(res.time);
+            if (pm > 0) timeMins.push(pm);
+        }
     });
     if (kmVals.length > 0) {
         var avgKm = kmVals.reduce(function(a,b){ return a+b; }, 0) / kmVals.length;
@@ -1051,11 +1129,18 @@ function recalcCumulativeTotals() {
             }
             currentWeek = weekNum;
             visibleWeeks.add(weekNum);
-            if (dateKey !== currentDayKey) { currentDayKey = dateKey; daySum = 0; }
+            if (dateKey !== currentDayKey) {
+                currentDayKey = dateKey;
+                daySum = 0;
+            }
             var s  = parseFloat(row.getAttribute('data-original-sum')) || 0;
             var d  = parseFloat(row.getAttribute('data-dohod')) || 0;
             var tc = parseFloat(row.getAttribute('data-total-cost')) || 0;
-            daySum += s; weekSum += s; weekDohod += d; cumCost += tc; cumDohod += d;
+            daySum    += s;
+            weekSum   += s;
+            weekDohod += d;
+            cumCost   += tc;
+            cumDohod  += d;
             var cDay = row.querySelector('td[data-col-key="sum-day"]');
             if (cDay) cDay.textContent = fmt(daySum);
             var cWeek = row.querySelector('td[data-col-key="sum-week"]');
@@ -1222,7 +1307,10 @@ function applyFilters(rc) {
         if (show && dayF) { var c = row.querySelector('.day-cell'); if (c && c.innerText.trim() !== dayF) show = false; }
         if (show && qF) {
             var c = row.querySelector('.queue-cell');
-            if (c) { var cq = c.getAttribute('data-queue') || c.innerText.trim(); if (cq !== qF) show = false; }
+            if (c) {
+                var cq = c.getAttribute('data-queue') || c.innerText.trim();
+                if (cq !== qF) show = false;
+            }
         }
         if (show && tF) {
             var c = row.querySelector('.time-cell');
@@ -1263,12 +1351,24 @@ function applyFilters(rc) {
 function setDateRangeFromBtn(range) {
     var today = new Date(); today.setHours(0,0,0,0);
     var from, to = today;
-    if (range === 'week') { from = getWeekStart(today); var to2 = new Date(from); to2.setDate(to2.getDate() + 6); to = to2; }
-    else if (range === '2weeks') { from = getWeekStart(today); from.setDate(from.getDate() - 7); var to2 = new Date(getWeekStart(today)); to2.setDate(to2.getDate() + 6); to = to2; }
-    else if (range === 'month') { from = new Date(today.getFullYear(), today.getMonth(), 1); to = today; }
-    else if (range === '2months') { from = new Date(today.getFullYear(), today.getMonth() - 1, 1); to = today; }
-    else if (range === '3months') { from = new Date(today.getFullYear(), today.getMonth() - 2, 1); to = today; }
-    else { from = new Date(today.getFullYear(), today.getMonth(), 1); }
+    if (range === 'week') {
+        from = getWeekStart(today);
+        var to2 = new Date(from); to2.setDate(to2.getDate() + 6); to = to2;
+    } else if (range === '2weeks') {
+        from = getWeekStart(today); from.setDate(from.getDate() - 7);
+        var to2 = new Date(getWeekStart(today)); to2.setDate(to2.getDate() + 6); to = to2;
+    } else if (range === 'month') {
+        from = new Date(today.getFullYear(), today.getMonth(), 1);
+        to = today;
+    } else if (range === '2months') {
+        from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        to = today;
+    } else if (range === '3months') {
+        from = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+        to = today;
+    } else {
+        from = new Date(today.getFullYear(), today.getMonth(), 1);
+    }
     dateFilter.from = getLocalDateKey(from);
     dateFilter.to = getLocalDateKey(to);
     dateFilter.activeBtn = range;
@@ -1331,12 +1431,19 @@ function setupPeriodPicker() {
     });
     periodPopup.addEventListener('click', function(e) { e.stopPropagation(); });
     document.addEventListener('click', function() {
-        if (periodPopup.classList.contains('open')) { periodPopup.classList.remove('open'); periodBtn.classList.remove('active'); }
+        if (periodPopup.classList.contains('open')) {
+            periodPopup.classList.remove('open');
+            periodBtn.classList.remove('active');
+        }
     });
     dateFromInput.addEventListener('change', function() {
-        var from = this.value; if (!from) return;
-        dateToInput.removeAttribute('max'); dateFromInput.removeAttribute('min'); refreshBounds();
-        var maxTo = dateToInput.max; var to = dateToInput.value;
+        var from = this.value;
+        if (!from) return;
+        dateToInput.removeAttribute('max');
+        dateFromInput.removeAttribute('min');
+        refreshBounds();
+        var maxTo = dateToInput.max;
+        var to = dateToInput.value;
         if (!to || to < from) { dateToInput.value = from; }
         else if (maxTo && to > maxTo) {
             dateToInput.value = maxTo;
@@ -1346,9 +1453,13 @@ function setupPeriodPicker() {
         }
     });
     dateToInput.addEventListener('change', function() {
-        var to = this.value; if (!to) return;
-        dateToInput.removeAttribute('max'); dateFromInput.removeAttribute('min'); refreshBounds();
-        var minFrom = dateFromInput.min; var from = dateFromInput.value;
+        var to = this.value;
+        if (!to) return;
+        dateToInput.removeAttribute('max');
+        dateFromInput.removeAttribute('min');
+        refreshBounds();
+        var minFrom = dateFromInput.min;
+        var from = dateFromInput.value;
         if (!from || from > to) { dateFromInput.value = to; }
         else if (minFrom && from < minFrom) {
             dateFromInput.value = minFrom;
@@ -1358,28 +1469,36 @@ function setupPeriodPicker() {
         }
     });
     document.getElementById('ppCancel').addEventListener('click', function() {
-        periodPopup.classList.remove('open'); periodBtn.classList.remove('active');
-        dateFromInput.value = dateFilter.from || ''; dateToInput.value = dateFilter.to || '';
+        periodPopup.classList.remove('open');
+        periodBtn.classList.remove('active');
+        dateFromInput.value = dateFilter.from || '';
+        dateToInput.value = dateFilter.to || '';
     });
     document.getElementById('ppApply').addEventListener('click', function() {
-        var from = dateFromInput.value; var to = dateToInput.value;
+        var from = dateFromInput.value;
+        var to = dateToInput.value;
         if (!from || !to) { alert('Выберите обе даты'); return; }
         if (from > to) { alert('Дата начала не может быть позже даты окончания'); return; }
-        if (monthsSpan(from, to) > 4) { alert('Максимум 4 календарных месяца за раз.'); return; }
-        dateFilter.from = from; dateFilter.to = to; dateFilter.activeBtn = null;
-        updatePeriodLabel(); updateDateBtnsActive();
-        periodPopup.classList.remove('open'); periodBtn.classList.remove('active');
+        if (monthsSpan(from, to) > 4) {
+            alert('Максимум 4 календарных месяца за раз.');
+            return;
+        }
+        dateFilter.from = from;
+        dateFilter.to = to;
+        dateFilter.activeBtn = null;
+        updatePeriodLabel();
+        updateDateBtnsActive();
+        periodPopup.classList.remove('open');
+        periodBtn.classList.remove('active');
         refreshData();
     });
 }
-
 function updateDateBtnsActive() {
     document.querySelectorAll('.date-filter button[data-range]').forEach(function(b) {
         if (b.getAttribute('data-range') === dateFilter.activeBtn) b.classList.add('active');
         else b.classList.remove('active');
     });
 }
-
 function applyAllFilters() {
     document.querySelectorAll('.route-content').forEach(function(rc) { applyFilters(rc); });
 }
@@ -1393,10 +1512,12 @@ function refreshData() {
         render(d);
         var warn = null;
         if (d._fallbackOldFormat) {
-            warn = document.createElement('div'); warn.className = 'data-warning';
+            warn = document.createElement('div');
+            warn.className = 'data-warning';
             warn.innerHTML = '⚠️ Помесячные файлы не найдены. Используется старый формат <b>data_' + currentBase + '.js</b> (скользящий месяц).';
         } else if (d._missingFiles && d._missingFiles.length > 0) {
-            warn = document.createElement('div'); warn.className = 'data-warning';
+            warn = document.createElement('div');
+            warn.className = 'data-warning';
             warn.innerHTML = '⚠️ Не найдены файлы: <code>' + d._missingFiles.join('</code>, <code>') + '</code>';
         }
         if (warn) container.insertBefore(warn, container.firstChild);
@@ -1517,7 +1638,7 @@ function captureUiState() {
     var state = { scrollY: window.scrollY, openRoutes: [], openGroups: [] };
     document.querySelectorAll('.route-content.active').forEach(function(c) { state.openRoutes.push(c.id); });
     document.querySelectorAll('.group-arrow').forEach(function(a) {
-        if (a.textContent === '▼') state.openGroups.push(a.getAttribute('data-parent-id'));
+        if (a.textContent === '▼') { state.openGroups.push(a.getAttribute('data-parent-id')); }
     });
     return state;
 }
@@ -1535,7 +1656,7 @@ function restoreUiState(state) {
             document.querySelectorAll('tr[data-parent-id="' + pid + '"]').forEach(function(tr) { tr.style.display = ''; });
         }
     });
-    if (typeof state.scrollY === 'number') window.scrollTo(0, state.scrollY);
+    if (typeof state.scrollY === 'number') { window.scrollTo(0, state.scrollY); }
 }
 
 function clusterSettingsChanged(oldS, newS) {
@@ -1635,7 +1756,12 @@ function closeHistory() { document.getElementById('historyOverlay').classList.re
 // ============================================================
 function showPopup(event, clients, dateStr, rowId, rowElement, queue, timeStr, driversStr, taskNumbers, routeName) {
     var ex = openPopups.find(function(p){ return p.rowId === rowId; });
-    if (ex) { closePopup(rowId); var pr = document.querySelector('tr[data-row-id="' + rowId + '"]'); if (pr) pr.classList.remove('active-row'); activeRowId = null; return; }
+    if (ex) {
+        closePopup(rowId);
+        var pr = document.querySelector('tr[data-row-id="' + rowId + '"]');
+        if (pr) pr.classList.remove('active-row');
+        activeRowId = null; return;
+    }
     var row = document.querySelector('tr[data-row-id="' + rowId + '"]');
     if (row) {
         if (activeRowId) { var old = document.querySelector('tr[data-row-id="' + activeRowId + '"]'); if (old) old.classList.remove('active-row'); }
@@ -1649,7 +1775,10 @@ function showPopup(event, clients, dateStr, rowId, rowElement, queue, timeStr, d
     hd.innerHTML = 'Грузополучатели на ' + dateStr + ' <button class="close-btn" onclick="closePopup(\'' + rowId + '\')">✕</button>';
     popup.appendChild(hd);
     var sub = document.createElement('div'); sub.className = 'popup-subtitle';
-    sub.textContent = 'Время: ' + (timeStr || '—') + ' | Номер задания: ' + (taskNumbers || '—') + ' | Очередь: ' + (queue || '—') + ' | Водитель: ' + (driversStr || '—');
+    sub.textContent = 'Время: ' + (timeStr || '—')
+                + ' | Номер задания: ' + (taskNumbers || '—')
+                + ' | Очередь: ' + (queue || '—')
+                + ' | Водитель: ' + (driversStr || '—');
     popup.appendChild(sub);
     popup.setAttribute('data-clients-json', JSON.stringify(clients || []));
     var rb = document.createElement('button');
@@ -1675,8 +1804,10 @@ function showPopup(event, clients, dateStr, rowId, rowElement, queue, timeStr, d
             tr.appendChild(t2);
             var t3 = document.createElement('td'); t3.textContent = c.ВремяПередачи || ''; tr.appendChild(t3);
             var t4 = document.createElement('td'); t4.style.textAlign = 'right'; t4.textContent = (c.Сумма || 0).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); tr.appendChild(t4);
-            var t5 = document.createElement('td'); t5.className = 'return-cell';
-            if (isReturnClient(c)) t5.textContent = '↩'; else t5.textContent = '';
+            var t5 = document.createElement('td');
+            t5.className = 'return-cell';
+            if (isReturnClient(c)) t5.textContent = '↩';
+            else t5.textContent = '';
             tr.appendChild(t5);
             tbody.appendChild(tr);
         });
@@ -1691,7 +1822,9 @@ function showPopup(event, clients, dateStr, rowId, rowElement, queue, timeStr, d
     if (left < window.scrollX + 10) left = window.scrollX + 10;
     if (left + pw > window.scrollX + window.innerWidth - 10) left = window.scrollX + window.innerWidth - pw - 10;
     var top = rect.bottom + window.scrollY + 5;
-    popup.style.left = left + 'px'; popup.style.top = top + 'px'; popup.style.width = pw + 'px';
+    popup.style.left = left + 'px';
+    popup.style.top = top + 'px';
+    popup.style.width = pw + 'px';
     popup.addEventListener('click', function(e){ e.stopPropagation(); });
     document.body.appendChild(popup);
     openPopups.push({ rowId: rowId, element: popup });
@@ -1717,22 +1850,31 @@ function openRouteCalc(btn) {
     var startAddr = userStart || base;
     var endAddr   = userEnd   || base;
     var items = [];
-    if (startAddr) items.push({ address: startAddr, label: userStart ? 'Начало маршрута' : 'Склад' });
+    if (startAddr) { items.push({ address: startAddr, label: userStart ? 'Начало маршрута' : 'Склад' }); }
     clients.forEach(function(c){
         if (isCancelledClient(c)) return;
-        var a = (c.Адрес || '').trim(); if (a === '') return;
+        var a = (c.Адрес || '').trim();
+        if (a === '') return;
         var name = (c.Наименование || '').trim();
         var sum  = parseFloat(c.Сумма) || 0;
         var label = name;
-        if (sum > 0) label += ' (' + fmt(sum) + ' ₽)';
+        if (sum > 0) { label += ' (' + fmt(sum) + ' ₽)'; }
         if (!label) label = 'Точка';
         items.push({ address: a, label: label });
     });
     if (endAddr) {
-        items.push({ address: endAddr, label: (userEnd || !userStart) && items.length > 1 && endAddr === startAddr ? 'Возврат на склад' : (userEnd ? 'Конец маршрута' : 'Возврат на склад') });
+        items.push({
+            address: endAddr,
+            label: (userEnd || !userStart) && items.length > 1 && endAddr === startAddr
+                ? 'Возврат на склад'
+                : (userEnd ? 'Конец маршрута' : 'Возврат на склад')
+        });
     }
     if (items.length < 2) { alert('Нет адресов для построения маршрута (все отменены или без адреса)'); return; }
-    sessionStorage.setItem('routeCalcPayload', JSON.stringify({ addresses: items.map(function(x){ return x.address; }), labels: items.map(function(x){ return x.label; }) }));
+    sessionStorage.setItem('routeCalcPayload', JSON.stringify({
+        addresses: items.map(function(x){ return x.address; }),
+        labels:    items.map(function(x){ return x.label; })
+    }));
     sessionStorage.setItem('routeCalcAddresses', JSON.stringify(items.map(function(x){ return x.address; })));
     window.open('route_calc.html?_=' + Date.now(), '_blank');
 }
@@ -1744,7 +1886,7 @@ document.addEventListener('click', function(e) {
     });
 });
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') { closeAllPopups(); closeModal(); closeHistory(); closeConnectedRoutes(); }
+    if (e.key === 'Escape') { closeAllPopups(); closeModal(); closeHistory(); closeConnectedRoutes(); closeConnectedView(); }
 });
 function copyAddress(btn) {
     var a = btn.getAttribute('data-address'); if (!a) return;
@@ -1788,7 +1930,8 @@ window.addEventListener('message', function(event) {
         return;
     }
     if (msg.type === 'progress') {
-        calcStats.done = msg.done; calcStats.total = msg.total;
+        calcStats.done = msg.done;
+        calcStats.total = msg.total;
         var el = document.querySelector('.calc-progress[data-route="' + calcStats.currentRoute + '"]');
         if (el) el.textContent = '🚗 ' + msg.done + ' / ' + msg.total;
         return;
@@ -1796,8 +1939,13 @@ window.addEventListener('message', function(event) {
     if (msg.type === 'done') {
         var el = document.querySelector('.calc-progress[data-route="' + calcStats.currentRoute + '"]');
         if (el) {
-            if (calcStats.errors > 0) { el.textContent = '✅ ' + calcStats.done + '/' + calcStats.total + ' (ошибок: ' + calcStats.errors + ')'; el.style.color = '#e67e22'; }
-            else { el.textContent = '✅ Готово: ' + calcStats.total + ' из ' + calcStats.total; el.style.color = '#27ae60'; }
+            if (calcStats.errors > 0) {
+                el.textContent = '✅ ' + calcStats.done + '/' + calcStats.total + ' (ошибок: ' + calcStats.errors + ')';
+                el.style.color = '#e67e22';
+            } else {
+                el.textContent = '✅ Готово: ' + calcStats.total + ' из ' + calcStats.total;
+                el.style.color = '#27ae60';
+            }
         }
         enableCalcButtons(calcStats.currentRoute, true);
         calcInProgress = false;
@@ -1818,7 +1966,6 @@ async function startCalc(routeName, recalcAll) {
     if (!routeCalcIframeReady) { alert('Страница расчёта ещё загружается, подождите пару секунд.'); return; }
     var method = await getRouteMethodFromConfig();
     ROUTE_CALC_METHOD = method;
-    console.log('Метод расчёта:', method);
     var extra = document.querySelector('.route-extra[data-route="' + routeName + '"]');
     if (!extra) return;
     var rc = extra.closest('.route-content');
@@ -1859,266 +2006,469 @@ async function startCalc(routeName, recalcAll) {
 }
 
 // ============================================================
-// НОВОЕ: TOOLTIP ДЛЯ СКРЫТЫХ КОЛОНОК
+// ИЗМЕНЕНИЕ 2: TOOLTIP ДЛЯ СКРЫТЫХ СТОЛБЦОВ
 // ============================================================
-function getHiddenColumns() {
+var tooltipEl = null;
+var tooltipTimeout = null;
+
+function getHiddenColumnsForContent(content) {
     var hidden = [];
-    var routeContent = document.querySelector('.route-content.active');
-    if (!routeContent) return hidden;
-    COLUMNS.forEach(function(col) {
-        if (col.key.startsWith('e')) return; // пустые колонки
-        if (col.cls === 'col-sum-real') return; // специальная
-        // Проверяем, скрыта ли колонка через collapsed-классы
-        if (col.cls === 'col-avg-day' || col.cls === 'col-avg-week') {
-            if (routeContent.classList.contains('collapsed-avg')) hidden.push(col);
-        } else if (col.cls === 'col-sum-day' || col.cls === 'col-sum-week') {
-            if (routeContent.classList.contains('collapsed-sum')) hidden.push(col);
-        } else if (col.cls === 'col-cost-cum') {
-            if (routeContent.classList.contains('collapsed-cost')) hidden.push(col);
-        } else if (col.cls === 'col-dohod-itog' || col.cls === 'col-dohod-cum') {
-            if (routeContent.classList.contains('collapsed-dohod')) hidden.push(col);
-        }
-    });
+    if (content.classList.contains('collapsed-avg')) {
+        hidden.push({key: 'avg-day', label: 'Ср. клиентов день'});
+        hidden.push({key: 'avg-week', label: 'Ср. клиентов неделя'});
+    }
+    if (content.classList.contains('collapsed-sum')) {
+        hidden.push({key: 'sum-day', label: 'Сумма день с НДС'});
+        hidden.push({key: 'sum-week', label: 'Сумма неделя с НДС'});
+    }
+    if (content.classList.contains('collapsed-cost')) {
+        hidden.push({key: 'cost-cum', label: 'Расходы накопительно'});
+    }
+    if (content.classList.contains('collapsed-dohod')) {
+        hidden.push({key: 'dohod-itog', label: 'Доходность накоп. нед.'});
+        hidden.push({key: 'dohod-cum', label: 'Доходность накоп. мес.'});
+    }
     return hidden;
 }
 
-function getCellValueFromRow(row, colKey) {
-    var td = row.querySelector('td[data-col-key="' + colKey + '"]');
-    return td ? td.textContent.trim() : '—';
+function showHiddenColsTooltip(e, tr, hiddenCols) {
+    if (!tooltipEl) tooltipEl = document.getElementById('hiddenColsTooltip');
+    if (!tooltipEl) return;
+
+    var html = '<div class="tt-title">📋 Скрытые данные (' + hiddenCols.length + ' столбцов)</div>';
+    hiddenCols.forEach(function(col) {
+        var td = tr.querySelector('td[data-col-key="' + col.key + '"]');
+        var val = td ? td.textContent.trim() : '—';
+        html += '<div class="tt-row"><span class="tt-label">' + col.label + ':</span><span class="tt-value">' + val + '</span></div>';
+    });
+
+    // Добавляем контекст строки
+    var dateStr = '', queueStr = '';
+    var dateTd = tr.querySelector('td[data-col-key="date"]');
+    var queueTd = tr.querySelector('td[data-col-key="queue"]');
+    if (dateTd) dateStr = dateTd.textContent.trim();
+    if (queueTd) queueStr = queueTd.textContent.trim();
+    if (dateStr || queueStr) {
+        html += '<div class="tt-hint">' + dateStr + ' • ' + queueStr + '</div>';
+    }
+
+    tooltipEl.innerHTML = html;
+
+    // Позиционирование
+    var rect = tr.getBoundingClientRect();
+    var ttWidth = 350;
+    var left = rect.right + 10;
+    var top = rect.top;
+
+    if (left + ttWidth > window.innerWidth - 20) {
+        left = rect.left - ttWidth - 10;
+    }
+    if (left < 10) left = 10;
+    if (top + 200 > window.innerHeight) {
+        top = window.innerHeight - 220;
+    }
+    if (top < 10) top = 10;
+
+    tooltipEl.style.left = left + 'px';
+    tooltipEl.style.top = top + 'px';
+    tooltipEl.classList.add('visible');
+}
+
+function hideHiddenColsTooltip() {
+    if (!tooltipEl) tooltipEl = document.getElementById('hiddenColsTooltip');
+    if (tooltipEl) tooltipEl.classList.remove('visible');
 }
 
 function setupHiddenColsTooltip() {
-    var tooltip = document.getElementById('hiddenColsTooltip');
-    var ttContent = document.getElementById('ttContent');
-    var ttFooter = document.getElementById('ttFooter');
-
     document.addEventListener('mouseover', function(e) {
-        var row = e.target.closest('tbody tr:not(.week-separator):not(.group-child):not(.client-detail)');
-        if (!row) { tooltip.classList.remove('visible'); return; }
+        var tr = e.target.closest('tbody tr:not(.week-separator):not(.group-child):not(.client-detail)');
+        if (!tr) { hideHiddenColsTooltip(); return; }
+        var rc = tr.closest('.route-content');
+        if (!rc || !rc.classList.contains('active')) { hideHiddenColsTooltip(); return; }
 
-        var hidden = getHiddenColumns();
-        if (hidden.length === 0) { tooltip.classList.remove('visible'); return; }
+        var hiddenCols = getHiddenColumnsForContent(rc);
+        if (hiddenCols.length === 0) { hideHiddenColsTooltip(); return; }
 
-        // Проверяем, что мы навели на сумму маршрута (sum-route) — триггер
-        var td = e.target.closest('td');
-        if (!td) return;
-        var colKey = td.getAttribute('data-col-key');
-        if (colKey !== 'sum-route' && colKey !== 'margin' && colKey !== 'dohod' && colKey !== 'cost') return;
-
-        var html = '';
-        hidden.forEach(function(col) {
-            var val = getCellValueFromRow(row, col.key);
-            html += '<div class="tt-row"><span class="tt-label">' + col.label + ':</span><span class="tt-value">' + val + '</span></div>';
-        });
-        ttContent.innerHTML = html;
-
-        var dateStr = getCellValueFromRow(row, 'date');
-        var queueStr = getCellValueFromRow(row, 'queue');
-        ttFooter.textContent = dateStr + ' • ' + queueStr;
-
-        var rect = row.getBoundingClientRect();
-        var left = rect.right + 10;
-        var top = rect.top;
-        if (left + 380 > window.innerWidth) left = rect.left - 390;
-        if (left < 10) left = 10;
-        if (top + 200 > window.innerHeight) top = window.innerHeight - 210;
-        if (top < 10) top = 10;
-
-        tooltip.style.left = left + 'px';
-        tooltip.style.top = top + 'px';
-        tooltip.classList.add('visible');
+        clearTimeout(tooltipTimeout);
+        tooltipTimeout = setTimeout(function() {
+            showHiddenColsTooltip(e, tr, hiddenCols);
+        }, 200);
     });
 
     document.addEventListener('mouseout', function(e) {
-        var row = e.target.closest('tbody tr');
-        if (row) {
-            var related = e.relatedTarget;
-            if (!related || !row.contains(related)) {
-                tooltip.classList.remove('visible');
-            }
-        }
+        var tr = e.target.closest('tbody tr');
+        if (!tr) return;
+        var related = e.relatedTarget;
+        if (related && tr.contains(related)) return;
+        clearTimeout(tooltipTimeout);
+        tooltipTimeout = setTimeout(hideHiddenColsTooltip, 150);
     });
 }
 
 // ============================================================
-// НОВОЕ: СОЕДИНЁННЫЕ МАРШРУТЫ
+// ИЗМЕНЕНИЕ 3: СВОДКА В СВЁРНУТОМ АККОРДЕОНЕ
 // ============================================================
-function loadConnectedRoutes() {
-    try {
-        var data = localStorage.getItem('connected_routes_' + currentBase);
-        return data ? JSON.parse(data) : [];
-    } catch(e) { return []; }
+function calculateRouteSummary(routeName, routeRows) {
+    var now = new Date();
+    var currentMonth = now.getMonth();
+    var currentYear = now.getFullYear();
+    var prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    var prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+    var currentNds = 0, prevNds = 0, totalCost = 0, totalDohod = 0;
+
+    routeRows.forEach(function(row) {
+        var d = new Date(row.ДатаВремя);
+        var sum = row.СуммаМаршрута || 0;
+        var sumWNDS = sum * 100 / 122;
+        var clientsCount = row.КолКлиентов || 0;
+
+        // Получаем стоимость из настроек
+        var settings = getLatestSettings(routeName);
+        var costsByDay = (settings && settings.costs) ? settings.costs : null;
+        var clientCostRate = getClientCost(routeName);
+        var dateKey = dayNames[d.getDay()];
+        var baseCost = 0;
+        if (costsByDay && costsByDay[dateKey]) {
+            baseCost = getCostForPlan(costsByDay[dateKey], 1);
+        }
+        var cost = baseCost + clientsCount * clientCostRate;
+        var margin = sumWNDS * 0.17;
+        var dohod = margin - cost;
+
+        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+            currentNds += sumWNDS;
+        }
+        if (d.getMonth() === prevMonth && d.getFullYear() === prevYear) {
+            prevNds += sumWNDS;
+        }
+        totalCost += cost;
+        totalDohod += dohod;
+    });
+
+    return {
+        currentNds: Math.round(currentNds),
+        prevNds: Math.round(prevNds),
+        totalCost: Math.round(totalCost),
+        totalDohod: Math.round(totalDohod)
+    };
 }
 
-function saveConnectedRoutesList(list) {
-    localStorage.setItem('connected_routes_' + currentBase, JSON.stringify(list));
+function buildRouteSummaryHtml(summary) {
+    var diff = summary.currentNds - summary.prevNds;
+    var diffPct = summary.prevNds > 0 ? ((diff / summary.prevNds) * 100).toFixed(1) : '0';
+    var isGrowth = diff >= 0;
+
+    return '<div class="route-summary visible">' +
+        '<div class="summary-item">' +
+            '<span class="summary-icon">💰</span>' +
+            '<div class="summary-info">' +
+                '<span class="summary-label">Без НДС (тек. мес.)</span>' +
+                '<span class="summary-value neutral">' + fmt(summary.currentNds) + ' ₽</span>' +
+            '</div>' +
+        '</div>' +
+        '<div class="summary-item">' +
+            '<span class="summary-icon">💰</span>' +
+            '<div class="summary-info">' +
+                '<span class="summary-label">Без НДС (пред. мес.)</span>' +
+                '<span class="summary-value neutral" style="color:#7f8c8d;">' + fmt(summary.prevNds) + ' ₽</span>' +
+            '</div>' +
+        '</div>' +
+        '<div class="summary-item">' +
+            '<span class="summary-icon">' + (isGrowth ? '📈' : '📉') + '</span>' +
+            '<div class="summary-info">' +
+                '<span class="summary-label">Динамика</span>' +
+                '<span class="summary-diff ' + (isGrowth ? 'up' : 'down') + '">' + (isGrowth ? '+' : '') + diffPct + '%</span>' +
+            '</div>' +
+        '</div>' +
+        '<div class="summary-item">' +
+            '<span class="summary-icon">🚗</span>' +
+            '<div class="summary-info">' +
+                '<span class="summary-label">Затраты итого</span>' +
+                '<span class="summary-value" style="color:#e67e22;">' + fmt(summary.totalCost) + ' ₽</span>' +
+            '</div>' +
+        '</div>' +
+        '<div class="summary-item">' +
+            '<span class="summary-icon">' + (summary.totalDohod >= 0 ? '✅' : '⚠️') + '</span>' +
+            '<div class="summary-info">' +
+                '<span class="summary-label">Доходность</span>' +
+                '<span class="summary-value ' + (summary.totalDohod >= 0 ? 'positive' : 'negative') + '">' + fmt(summary.totalDohod) + ' ₽</span>' +
+            '</div>' +
+        '</div>' +
+    '</div>';
+}
+
+// ============================================================
+// ИЗМЕНЕНИЕ 4: СОЕДИНЁННЫЕ МАРШРУТЫ
+// ============================================================
+function loadConnectedRoutes() {
+    return fetch('save_route_data.php?base=' + encodeURIComponent(currentBase) + '&action=getConnectedRoutes&' + cacheBust())
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+        .then(function(t) {
+            try {
+                var d = JSON.parse(t);
+                connectedRoutesData = d.connectedRoutes || [];
+                return connectedRoutesData;
+            } catch(e) { connectedRoutesData = []; return []; }
+        })
+        .catch(function(err) {
+            console.warn('Не удалось загрузить соединённые маршруты:', err);
+            connectedRoutesData = [];
+            return [];
+        });
+}
+
+function saveConnectedRoutesToServer() {
+    var payload = {
+        _connected_routes: {
+            action: 'saveConnectedRoutes',
+            routes: connectedRoutesData
+        }
+    };
+    return fetch('save_route_data.php?base=' + encodeURIComponent(currentBase) + '&' + cacheBust(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    }).then(function(r) { return r.text(); })
+    .then(function(t) { try { return JSON.parse(t); } catch(e) { return {}; } })
+    .catch(function(e) { console.error('Ошибка сохранения:', e); return {}; });
 }
 
 function openConnectedRoutes() {
-    renderConnectedRoutesList();
-    renderConnectedRoutesSelector();
     document.getElementById('connectedRoutesOverlay').classList.add('open');
+    loadConnectedRoutes().then(function() {
+        renderCRList();
+        renderCRRouteChecks();
+    });
+    document.getElementById('crCreateArea').classList.remove('active');
 }
 
 function closeConnectedRoutes() {
     document.getElementById('connectedRoutesOverlay').classList.remove('open');
 }
 
-function renderConnectedRoutesList() {
-    var list = loadConnectedRoutes();
-    var container = document.getElementById('crSavedList');
-    if (list.length === 0) {
-        container.innerHTML = '<p style="color:#888;font-size:10pt;text-align:center;padding:10px;">Нет сохранённых комбинаций</p>';
+function renderCRList() {
+    var list = document.getElementById('crList');
+    if (!connectedRoutesData || connectedRoutesData.length === 0) {
+        list.innerHTML = '<p style="text-align:center;color:#aaa;padding:20px;">Нет сохранённых комбинаций. Создайте первую!</p>';
         return;
     }
-    var allRoutes = window._allData ? window._allData.routes : [];
     var html = '';
-    list.forEach(function(cr, idx) {
-        var routeNames = cr.routeIds.map(function(id) {
-            var r = allRoutes.find(function(x){ return x.Маршрут === id; });
-            return r ? r.Маршрут : id;
-        });
-        // Подсчёт итогов
-        var totalSum = 0, totalCost = 0, totalDohod = 0, totalRows = 0;
-        cr.routeIds.forEach(function(id) {
-            var r = allRoutes.find(function(x){ return x.Маршрут === id; });
-            if (r && r.Строки) {
-                totalRows += r.Строки.length;
-                r.Строки.forEach(function(row) {
-                    totalSum += row.СуммаМаршрута || 0;
-                });
-            }
-        });
-        var sumWNDS = totalSum * 100 / 122;
-        var margin = sumWNDS * 0.17;
+    connectedRoutesData.forEach(function(cr, idx) {
+        var stats = calculateCRStats(cr);
+        html += '<div class="cr-item" onclick="viewConnectedRoute(' + idx + ')">' +
+            '<div class="cr-name">' + escapeAttr(cr.name) + '</div>' +
+            '<div class="cr-routes">' + (cr.routeNames || []).join(' + ') +
+            ' <button style="float:right;background:none;border:none;color:#e74c3c;cursor:pointer;font-size:12pt;" onclick="event.stopPropagation();deleteCR(' + idx + ')" title="Удалить">🗑</button></div>' +
+            '<div class="cr-stats">' +
+                '<span class="cr-stat nds">Без НДС: ' + fmt(stats.totalNds) + ' ₽</span>' +
+                '<span class="cr-stat cost">Затраты: ' + fmt(stats.totalCost) + ' ₽</span>' +
+                '<span class="cr-stat dohod">Доход: ' + fmt(stats.totalDohod) + ' ₽</span>' +
+                '<span class="cr-stat rows">Рейсов: ' + stats.totalRows + '</span>' +
+            '</div>' +
+        '</div>';
+    });
+    list.innerHTML = html;
+}
 
-        html += '<div class="cr-saved-item">';
-        html += '<div class="cr-saved-header">';
-        html += '<span class="cr-saved-name">' + cr.name + '</span>';
-        html += '<button class="cr-saved-delete" onclick="deleteConnectedRoute(' + idx + ')" title="Удалить">🗑</button>';
-        html += '</div>';
-        html += '<div class="cr-saved-routes">' + routeNames.join(' + ') + '</div>';
-        html += '<div class="cr-saved-stats">';
-        html += '<span class="cr-stat cr-stat-nds">Без НДС: ' + fmt(sumWNDS) + ' ₽</span>';
-        html += '<span class="cr-stat cr-stat-cost">Маржа: ' + fmt(margin) + ' ₽</span>';
-        html += '<span class="cr-stat cr-stat-rows">Рейсов: ' + totalRows + '</span>';
-        html += '</div>';
-        html += '</div>';
+function calculateCRStats(cr) {
+    var allData = window._allData;
+    if (!allData) return { totalNds: 0, totalCost: 0, totalDohod: 0, totalRows: 0 };
+    var totalNds = 0, totalCost = 0, totalDohod = 0, totalRows = 0;
+    var routeNames = cr.routeNames || [];
+
+    allData.routes.forEach(function(route) {
+        if (routeNames.indexOf(route.Маршрут) === -1) return;
+        var settings = getLatestSettings(route.Маршрут);
+        var sForAssign = settings ? (settings.settings || {}) : null;
+        var rowsCopy = route.Строки.map(function(r){ return Object.assign({}, r); });
+        assignPlansToRoute(rowsCopy, sForAssign);
+
+        rowsCopy.forEach(function(row) {
+            // Фильтр по датам
+            var d = new Date(row.ДатаВремя);
+            var dk = getLocalDateKey(d);
+            if (dateFilter.from && dk < dateFilter.from) return;
+            if (dateFilter.to && dk > dateFilter.to) return;
+
+            var sum = row.СуммаМаршрута || 0;
+            var sumWNDS = sum * 100 / 122;
+            var clientsCount = row.КолКлиентов || 0;
+            var dayKey = dayNames[d.getDay()];
+            var costsByDay = (settings && settings.costs) ? settings.costs : null;
+            var clientCostRate = getClientCost(route.Маршрут);
+            var planNum = row._planNumber || 1;
+            var baseCost = 0;
+            if (costsByDay && costsByDay[dayKey]) baseCost = getCostForPlan(costsByDay[dayKey], planNum);
+            var cost = baseCost + clientsCount * clientCostRate;
+            var margin = sumWNDS * 0.17;
+            var dohod = margin - cost;
+
+            totalNds += sumWNDS;
+            totalCost += cost;
+            totalDohod += dohod;
+            totalRows++;
+        });
+    });
+
+    return {
+        totalNds: Math.round(totalNds),
+        totalCost: Math.round(totalCost),
+        totalDohod: Math.round(totalDohod),
+        totalRows: totalRows
+    };
+}
+
+function renderCRRouteChecks() {
+    var container = document.getElementById('crRouteChecks');
+    var allData = window._allData;
+    if (!allData) { container.innerHTML = '<p style="color:#aaa;">Данные ещё не загружены</p>'; return; }
+    var html = '';
+    allData.routes.forEach(function(route) {
+        html += '<div class="cr-route-check">' +
+            '<input type="checkbox" id="cr_check_' + escapeAttr(route.Маршрут) + '" value="' + escapeAttr(route.Маршрут) + '">' +
+            '<label for="cr_check_' + escapeAttr(route.Маршрут) + '">' + route.Маршрут + ' (' + route.Строки.length + ' рейсов)</label>' +
+        '</div>';
     });
     container.innerHTML = html;
 }
 
-function renderConnectedRoutesSelector() {
-    var allRoutes = window._allData ? window._allData.routes : [];
-    var container = document.getElementById('crRoutesList');
-    var html = '';
-    allRoutes.forEach(function(r) {
-        html += '<label class="cr-route-item" onclick="toggleCrItem(this)">';
-        html += '<input type="checkbox" value="' + escapeAttr(r.Маршрут) + '">';
-        html += '<span class="cr-name">' + r.Маршрут + '</span>';
-        html += '<span class="cr-info">' + r.Строки.length + ' рейсов</span>';
-        html += '</label>';
-    });
-    container.innerHTML = html;
+function cancelCreateCR() {
+    document.getElementById('crCreateArea').classList.remove('active');
+    document.getElementById('crNewName').value = '';
+    document.querySelectorAll('#crRouteChecks input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
 }
 
-function toggleCrItem(label) {
-    var cb = label.querySelector('input[type="checkbox"]');
-    // Клик по label уже переключает checkbox, поэтому просто обновляем стиль
-    setTimeout(function() {
-        if (cb.checked) label.classList.add('selected');
-        else label.classList.remove('selected');
-    }, 0);
-}
-
-function saveConnectedRoute() {
+function saveNewCR() {
     var name = document.getElementById('crNewName').value.trim();
     if (!name) { alert('Введите название комбинации'); return; }
-    var checkboxes = document.querySelectorAll('#crRoutesList input[type="checkbox"]:checked');
-    if (checkboxes.length < 2) { alert('Выберите минимум 2 маршрута'); return; }
-    var routeIds = [];
-    checkboxes.forEach(function(cb) { routeIds.push(cb.value); });
-    var list = loadConnectedRoutes();
-    list.push({ name: name, routeIds: routeIds, createdAt: new Date().toISOString() });
-    saveConnectedRoutesList(list);
-    document.getElementById('crNewName').value = '';
-    checkboxes.forEach(function(cb) { cb.checked = false; cb.closest('.cr-route-item').classList.remove('selected'); });
-    renderConnectedRoutesList();
+    var selected = [];
+    document.querySelectorAll('#crRouteChecks input[type="checkbox"]:checked').forEach(function(cb) {
+        selected.push(cb.value);
+    });
+    if (selected.length < 2) { alert('Выберите минимум 2 маршрута'); return; }
+
+    var newCR = {
+        id: 'cr_' + Date.now(),
+        name: name,
+        routeNames: selected,
+        createdAt: new Date().toISOString().slice(0, 19)
+    };
+    connectedRoutesData.push(newCR);
+    saveConnectedRoutesToServer().then(function() {
+        renderCRList();
+        cancelCreateCR();
+    });
 }
 
-function deleteConnectedRoute(idx) {
-    if (!confirm('Удалить эту комбинацию?')) return;
-    var list = loadConnectedRoutes();
-    list.splice(idx, 1);
-    saveConnectedRoutesList(list);
-    renderConnectedRoutesList();
+function deleteCR(idx) {
+    if (!confirm('Удалить комбинацию "' + connectedRoutesData[idx].name + '"?')) return;
+    connectedRoutesData.splice(idx, 1);
+    saveConnectedRoutesToServer().then(function() {
+        renderCRList();
+    });
 }
 
-// ============================================================
-// НОВОЕ: СВОДКА МАРШРУТА (при свёрнутом аккордеоне)
-// ============================================================
-function buildRouteSummary(routeDataItem) {
-    var rows = routeDataItem.Строки || [];
-    if (rows.length === 0) return '';
+function viewConnectedRoute(idx) {
+    var cr = connectedRoutesData[idx];
+    if (!cr) return;
+    closeConnectedRoutes();
 
-    var now = new Date();
-    var curMonth = now.getMonth();
-    var curYear = now.getFullYear();
-    var prevMonth = curMonth === 0 ? 11 : curMonth - 1;
-    var prevYear = curMonth === 0 ? curYear - 1 : curYear;
+    var allData = window._allData;
+    if (!allData) return;
 
-    var curSum = 0, prevSum = 0, totalCost = 0, totalDohod = 0;
+    var stats = calculateCRStats(cr);
+    document.getElementById('cvTitle').textContent = '🔗 ' + cr.name + ' — ' + cr.routeNames.join(' + ');
 
-    rows.forEach(function(r) {
-        var d = new Date(r.ДатаВремя);
-        var sum = r.СуммаМаршрута || 0;
-        var sumWNDS = sum * 100 / 122;
-        var margin = sumWNDS * 0.17;
+    var body = document.getElementById('cvBody');
+    var html = '<div class="connected-view-header">' +
+        '<h3>' + cr.name + '</h3>' +
+        '<div style="display:flex;gap:15px;font-size:10pt;">' +
+            '<span>Без НДС: <b>' + fmt(stats.totalNds) + ' ₽</b></span>' +
+            '<span>Затраты: <b>' + fmt(stats.totalCost) + ' ₽</b></span>' +
+            '<span>Доход: <b>' + fmt(stats.totalDohod) + ' ₽</b></span>' +
+            '<span>Рейсов: <b>' + stats.totalRows + '</b></span>' +
+        '</div>' +
+    '</div>';
 
-        if (d.getMonth() === curMonth && d.getFullYear() === curYear) {
-            curSum += sumWNDS;
-        }
-        if (d.getMonth() === prevMonth && d.getFullYear() === prevYear) {
-            prevSum += sumWNDS;
-        }
-        totalCost += 0; // затраты зависят от настроек
-        totalDohod += margin;
+    // Строим объединённую таблицу
+    html += '<div style="overflow-x:auto;"><table style="border-collapse:collapse;width:100%;font-size:10pt;">';
+    html += '<thead><tr>';
+    html += '<th style="border:1px solid #aaa;padding:5px;background:#2c3e50;color:white;">Маршрут</th>';
+    html += '<th style="border:1px solid #aaa;padding:5px;background:#2c3e50;color:white;">Дата</th>';
+    html += '<th style="border:1px solid #aaa;padding:5px;background:#2c3e50;color:white;">День</th>';
+    html += '<th style="border:1px solid #aaa;padding:5px;background:#2c3e50;color:white;">Время</th>';
+    html += '<th style="border:1px solid #aaa;padding:5px;background:#2c3e50;color:white;">Плановая</th>';
+    html += '<th style="border:1px solid #aaa;padding:5px;background:#2c3e50;color:white;">Клиенты</th>';
+    html += '<th style="border:1px solid #aaa;padding:5px;background:#2c3e50;color:white;">Сумма с НДС</th>';
+    html += '<th style="border:1px solid #aaa;padding:5px;background:#2c3e50;color:white;">Без НДС</th>';
+    html += '<th style="border:1px solid #aaa;padding:5px;background:#2c3e50;color:white;">Расходы</th>';
+    html += '<th style="border:1px solid #aaa;padding:5px;background:#2c3e50;color:white;">Доходность</th>';
+    html += '</tr></thead><tbody>';
+
+    var rowIdx = 0;
+    allData.routes.forEach(function(route) {
+        if (cr.routeNames.indexOf(route.Маршрут) === -1) return;
+        var settings = getLatestSettings(route.Маршрут);
+        var sForAssign = settings ? (settings.settings || {}) : null;
+        var rowsCopy = route.Строки.map(function(r){ return Object.assign({}, r); });
+        assignPlansToRoute(rowsCopy, sForAssign);
+        var groups = groupRowsByPlan(rowsCopy);
+
+        groups.forEach(function(group) {
+            var firstRow = group.rows[0];
+            var d = new Date(firstRow.ДатаВремя);
+            var dk = getLocalDateKey(d);
+            if (dateFilter.from && dk < dateFilter.from) return;
+            if (dateFilter.to && dk > dateFilter.to) return;
+
+            var groupSum = 0, groupClients = 0;
+            group.rows.forEach(function(r) {
+                groupSum += r.СуммаМаршрута || 0;
+                groupClients += r.КолКлиентов || 0;
+            });
+
+            var sumWNDS = groupSum * 100 / 122;
+            var dayKey = dayNames[d.getDay()];
+            var costsByDay = (settings && settings.costs) ? settings.costs : null;
+            var clientCostRate = getClientCost(route.Маршрут);
+            var baseCost = 0;
+            if (costsByDay && costsByDay[dayKey]) baseCost = getCostForPlan(costsByDay[dayKey], group.plan);
+            var cost = baseCost + groupClients * clientCostRate;
+            var margin = sumWNDS * 0.17;
+            var dohod = margin - cost;
+
+            var bgClass = '';
+            var dayIdx = d.getDay();
+            var bgColors = ['#FFE6E6','#E6F2FF','#E6FFE6','#FFF9E6','#F0E6FF','#E6F7FF','#FFE6F0'];
+            bgClass = 'background:' + bgColors[dayIdx] + ';';
+
+            var dateStr = formatDate(d);
+            var timeStr = padZero(d.getHours()) + ':' + padZero(d.getMinutes());
+
+            html += '<tr style="' + bgClass + '">';
+            html += '<td style="border:1px solid #aaa;padding:4px;font-weight:bold;font-size:9pt;">' + route.Маршрут + '</td>';
+            html += '<td style="border:1px solid #aaa;padding:4px;text-align:center;">' + dateStr + '</td>';
+            html += '<td style="border:1px solid #aaa;padding:4px;text-align:center;">' + dayNames[d.getDay()] + '</td>';
+            html += '<td style="border:1px solid #aaa;padding:4px;text-align:center;">' + timeStr + '</td>';
+            html += '<td style="border:1px solid #aaa;padding:4px;text-align:center;">' + group.plan + '-я пл.</td>';
+            html += '<td style="border:1px solid #aaa;padding:4px;text-align:center;font-weight:bold;">' + groupClients + '</td>';
+            html += '<td style="border:1px solid #aaa;padding:4px;text-align:right;font-weight:bold;">' + fmt(groupSum) + '</td>';
+            html += '<td style="border:1px solid #aaa;padding:4px;text-align:right;">' + fmt(sumWNDS) + '</td>';
+            html += '<td style="border:1px solid #aaa;padding:4px;text-align:right;">' + fmt(cost) + '</td>';
+            html += '<td style="border:1px solid #aaa;padding:4px;text-align:right;font-weight:bold;color:' + (dohod >= 0 ? '#27ae60' : '#e74c3c') + ';">' + fmt(dohod) + '</td>';
+            html += '</tr>';
+            rowIdx++;
+        });
     });
 
-    // Получаем реальные затраты из routeData
-    var settings = getLatestSettings(routeDataItem.Маршрут);
-    var costsByDay = (settings && settings.costs) ? settings.costs : null;
-    var clientCostRate = getClientCost(routeDataItem.Маршрут);
+    html += '</tbody></table></div>';
+    body.innerHTML = html;
+    document.getElementById('connectedViewOverlay').classList.add('open');
+}
 
-    // Пересчитываем затраты по строкам текущего периода
-    var testRows = rows.map(function(r){ return Object.assign({}, r); });
-    var sf = settings ? (settings.settings || {}) : null;
-    assignPlansToRoute(testRows, sf);
-
-    testRows.forEach(function(r) {
-        var d = new Date(r.ДатаВремя);
-        var dateKey = getLocalDateKey(d);
-        var planNumber = r._planNumber || 1;
-        var clientsCount = r.КолКлиентов || 0;
-        var baseCost = 0;
-        if (costsByDay && costsByDay[dateKey]) baseCost = getCostForPlan(costsByDay[dateKey], planNumber);
-        totalCost += baseCost + clientsCount * clientCostRate;
-    });
-
-    totalDohod = totalDohod - totalCost;
-
-    var delta = curSum - prevSum;
-    var deltaPct = prevSum > 0 ? ((delta / prevSum) * 100).toFixed(1) : '—';
-    var isGrowth = delta >= 0;
-
-    var html = '<div class="route-collapsed-summary visible">';
-    html += '<div class="summary-card sc-current"><div><div class="sc-label">Без НДС (тек. мес.)</div><div class="sc-value">' + fmt(curSum) + ' ₽</div></div></div>';
-    html += '<div class="summary-card sc-prev"><div><div class="sc-label">Без НДС (пред. мес.)</div><div class="sc-value">' + fmt(prevSum) + ' ₽</div></div></div>';
-    html += '<div class="summary-card ' + (isGrowth ? 'sc-delta-up' : 'sc-delta-down') + '"><div><div class="sc-label">Динамика</div><div class="sc-value">' + (isGrowth ? '+' : '') + deltaPct + '%</div></div></div>';
-    html += '<div class="summary-card sc-cost"><div><div class="sc-label">Затраты итого</div><div class="sc-value">' + fmt(totalCost) + ' ₽</div></div></div>';
-    html += '<div class="summary-card sc-dohod"><div><div class="sc-label">Доходность</div><div class="sc-value">' + fmt(totalDohod) + ' ₽</div></div></div>';
-    html += '</div>';
-    return html;
+function closeConnectedView() {
+    document.getElementById('connectedViewOverlay').classList.remove('open');
 }
 
 // ============================================================
@@ -2197,10 +2547,20 @@ function render(data) {
         header.textContent = routeName + ' ▼';
         acc.appendChild(header);
 
-        // НОВОЕ: Сводка при свёрнутом состоянии
+        // === ИЗМЕНЕНИЕ 3: Сводка в свёрнутом аккордеоне ===
+        var summary = calculateRouteSummary(routeName, routeDataItem.Строки);
         var summaryDiv = document.createElement('div');
-        summaryDiv.id = 'summary_' + routeId;
-        summaryDiv.innerHTML = buildRouteSummary(routeDataItem);
+        summaryDiv.className = 'route-summary visible';
+        summaryDiv.id = 'summary_' + routeIndex;
+        summaryDiv.innerHTML = buildRouteSummaryHtml(summary).replace('<div class="route-summary visible">', '').replace(/<\/div>$/, '');
+        // Пересоздаём правильно
+        summaryDiv.innerHTML = '';
+        var tempDiv = document.createElement('div');
+        tempDiv.innerHTML = buildRouteSummaryHtml(summary);
+        var innerSummary = tempDiv.querySelector('.route-summary');
+        if (innerSummary) {
+            while (innerSummary.firstChild) summaryDiv.appendChild(innerSummary.firstChild);
+        }
         acc.appendChild(summaryDiv);
 
         var content = document.createElement('div');
@@ -2311,7 +2671,9 @@ function render(data) {
                 groupReturns += r.Возвраты || 0;
                 groupCancelled += r.Отменено || 0;
                 if (r.Водитель && r.Водитель.ФИО) groupDrivers[r.Водитель.ФИО] = true;
-                if (r.НомерЗадания && groupTaskNumbers.indexOf(r.НомерЗадания) === -1) groupTaskNumbers.push(r.НомерЗадания);
+                if (r.НомерЗадания && groupTaskNumbers.indexOf(r.НомерЗадания) === -1) {
+                    groupTaskNumbers.push(r.НомерЗадания);
+                }
                 if (r.Клиенты && r.Клиенты.length > 0) {
                     r.Клиенты.forEach(function(c) {
                         allGroupClients.push(c);
@@ -2432,18 +2794,16 @@ function render(data) {
 function toggleRoute(id) {
     var elem = document.getElementById(id);
     if (elem) {
+        var acc = elem.closest('.route-accordion');
+        var summary = acc ? acc.querySelector('.route-summary') : null;
         if (!elem.classList.contains('active')) {
             elem.classList.add('active');
+            if (summary) summary.classList.remove('visible');
             applyFilters(elem);
-            // Скрываем сводку при раскрытии
-            var summary = document.getElementById('summary_' + id);
-            if (summary) summary.style.display = 'none';
         } else {
             elem.classList.remove('active');
+            if (summary) summary.classList.add('visible');
             closeAllPopups();
-            // Показываем сводку при сворачивании
-            var summary = document.getElementById('summary_' + id);
-            if (summary) summary.style.display = '';
         }
     }
 }
@@ -2466,14 +2826,14 @@ document.querySelectorAll('.date-filter button[data-range]').forEach(function(bt
 
 document.getElementById('btnReload').addEventListener('click', function() { refreshData(); });
 
-// НОВОЕ: Кнопка соединённых маршрутов
+// === ИЗМЕНЕНИЕ 4: Кнопка соединённых маршрутов ===
 document.getElementById('btnConnectedRoutes').addEventListener('click', function() { openConnectedRoutes(); });
 
 setupPeriodPicker();
 setDateRangeFromBtn('month');
 initRouteCalcIframe();
 
-// НОВОЕ: Инициализация tooltip для скрытых колонок
+// === ИЗМЕНЕНИЕ 2: Инициализация tooltip ===
 setupHiddenColsTooltip();
 
 </script>
