@@ -1,20 +1,19 @@
 name: Auto-merge Qwen PRs
 
 on:
-  pull_request_target: # Используем pull_request_target для безопасности
+  pull_request_target:
     types: [opened, synchronize, reopened]
 
 jobs:
   auto-merge:
     runs-on: ubuntu-latest
-    # Условие: выполняем только для PR, созданных Qwen
-    if: github.event.pull_request.user.login == 'qwen-intl' || github.event.pull_request.user.login == 'qwen-code[bot]'
+    # НОВОЕ УСЛОВИЕ: Проверяем, что ветка начинается с fix-page- (так Qwen называет свои ветки)
+    if: startsWith(github.event.pull_request.head.ref, 'fix-page-')
     permissions:
       contents: write
       pull-requests: write
     steps:
       - name: Enable auto-merge
-        # Используем gh cli для включения авто-слияния
         run: gh pr merge --auto --squash "${{ github.event.pull_request.html_url }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
