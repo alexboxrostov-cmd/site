@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main  # Срабатывает при изменениях в ветке main
-
+workflow_dispatch:
 jobs:
   web-deploy:
     name: 🎉 Deploy
