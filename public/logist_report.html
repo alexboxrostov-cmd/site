@@ -26,13 +26,13 @@ body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; margin: 10px 20
 .date-filter .btn-reload:hover { background: #2980b9; }
 
 /* === НОВОЕ: Кнопка соединённых маршрутов === */
-.btn-connected-routes { background: #6c3483; color: white; border: 1px solid #6c3483; margin-left: 5px; font-weight: bold; }
-.btn-connected-routes:hover { background: #5b2c6f; }
+.btn-connected-routes { background: #8e44ad; color: #ffffff; border: 2px solid #6c3483; margin-left: 5px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+.btn-connected-routes:hover { background: #7d3c98; }
 
 /* === НОВОЕ: Кнопка Заполнить КМ === */
-.btn-fill-km { background: #117a65; color: white; border: 1px solid #117a65; margin-left: 5px; font-weight: bold; }
-.btn-fill-km:hover { background: #0e6655; }
-.btn-fill-km:disabled { background: #95a5a6; border-color: #95a5a6; cursor: not-allowed; }
+.btn-fill-km { background: #16a085; color: #ffffff; border: 2px solid #117a65; margin-left: 5px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+.btn-fill-km:hover { background: #138d75; }
+.btn-fill-km:disabled { background: #95a5a6; border-color: #7f8c8d; cursor: not-allowed; }
 
 /* === НОВОЕ: Аккордеон соединённых маршрутов === */
 .connected-accordion { margin-top: 20px; border: 1px solid #8e44ad; border-radius: 5px; }
@@ -305,6 +305,20 @@ td[data-col-key="km"].km-has-value::after { content: " ✕"; color: #e74c3c; fon
 </div>
 
 <div id="container"></div>
+
+<!-- === НОВОЕ: AI Анализ === -->
+<div id="aiAnalysisSection" style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white;">
+    <h2 style="margin: 0 0 15px 0; font-size: 18pt;">🤖 AI Анализ логистики</h2>
+    <div id="aiControls" style="margin-bottom: 15px;">
+        <button id="btnAnalyze" onclick="runAIAnalysis()" style="padding: 10px 20px; background: #ffffff; color: #667eea; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 11pt;">
+            📊 Проанализировать данные
+        </button>
+        <span id="aiStatus" style="margin-left: 15px; font-size: 10pt;"></span>
+    </div>
+    <div id="aiResult" style="background: rgba(255,255,255,0.95); color: #2c3e50; padding: 20px; border-radius: 8px; min-height: 100px; display: none;">
+        <div id="aiContent"></div>
+    </div>
+</div>
 
 <div class="modal-overlay" id="modalOverlay">
     <div class="modal-box">
@@ -2587,7 +2601,24 @@ function renderConnectedAccordions() {
         table.style.borderCollapse = 'collapse';
         
         var thead = document.createElement('thead');
-        thead.appendChild(buildThead());
+        // Создаём заголовок с дополнительным столбцом "Маршруты"
+        var trh = document.createElement('tr');
+        var thRoute = document.createElement('th');
+        thRoute.textContent = 'Маршруты';
+        thRoute.style.fontWeight = 'bold';
+        trh.appendChild(thRoute);
+        COLUMNS.forEach(function(col) {
+            var th = document.createElement('th');
+            if (col.cls) th.className = col.cls;
+            th.setAttribute('data-col-key', col.key);
+            if (col.toggle) {
+                th.innerHTML = col.label + ' <span class="col-toggle" data-group="' + col.toggle + '" onclick="event.stopPropagation(); toggleExpand(this)">▸</span>';
+            } else {
+                th.textContent = col.label;
+            }
+            trh.appendChild(th);
+        });
+        thead.appendChild(trh);
         table.appendChild(thead);
         
         var tbody = document.createElement('tbody');
@@ -2645,15 +2676,27 @@ function renderConnectedAccordions() {
             
             // Создаём новую строку
             var newRow = firstRow.cloneNode(true);
+            var sumWNDS = totalSum * 100 / 122;
+            var margin = sumWNDS * 0.17;
+            
             newRow.setAttribute('data-original-sum', totalSum);
             newRow.setAttribute('data-clients-count', totalClients);
             newRow.setAttribute('data-clients', allClients.join('|'));
             newRow.setAttribute('data-total-cost', totalCost);
             newRow.setAttribute('data-dohod', totalDohod);
             
-            // Обновляем ячейки
+            // Обновляем все числовые ячейки
             var sumCell = newRow.querySelector('td[data-col-key="sum-route"]');
             if (sumCell) sumCell.textContent = fmt(totalSum);
+            
+            var sumNdsCell = newRow.querySelector('td[data-col-key="sum-nds"]');
+            if (sumNdsCell) sumNdsCell.textContent = fmt(sumWNDS);
+            
+            var marginCell = newRow.querySelector('td[data-col-key="margin"]');
+            if (marginCell) marginCell.textContent = fmt(margin);
+            
+            var expRouteCell = newRow.querySelector('td[data-col-key="exp-route"]');
+            if (expRouteCell) expRouteCell.textContent = fmt(totalCost);
             
             var clientsCell = newRow.querySelector('td[data-col-key="clients"]');
             if (clientsCell) clientsCell.textContent = totalClients;
@@ -2689,6 +2732,11 @@ function renderConnectedAccordions() {
         
         // Обновляем сводку
         updateConnectedSummary(cr.id);
+        
+        // Пересчитываем накопительные итоги
+        setTimeout(function() {
+            recalcCumulativeTotals();
+        }, 100);
     });
 }
 
@@ -2785,6 +2833,168 @@ loadConnectedRoutes().then(function() {
     // После загрузки данных рендерим аккордеоны соединённых маршрутов
     setTimeout(function() { renderConnectedAccordions(); }, 500);
 });
+
+// === НОВОЕ: AI Анализ ===
+async function runAIAnalysis() {
+    var statusEl = document.getElementById('aiStatus');
+    var resultEl = document.getElementById('aiResult');
+    var contentEl = document.getElementById('aiContent');
+    var btnEl = document.getElementById('btnAnalyze');
+    
+    btnEl.disabled = true;
+    statusEl.textContent = '⏳ Анализирую данные...';
+    resultEl.style.display = 'block';
+    contentEl.innerHTML = '<p style="text-align:center; color:#888;">Пожалуйста, подождите...</p>';
+    
+    try {
+        // Собираем данные по маршрутам
+        var routesData = [];
+        var now = new Date();
+        var currentMonth = now.getMonth();
+        var currentYear = now.getFullYear();
+        
+        document.querySelectorAll('.route-accordion:not(.connected-accordion)').forEach(function(acc) {
+            var routeName = acc.querySelector('.route-header').textContent.replace(' ▼', '').trim();
+            var content = acc.querySelector('.route-content');
+            if (!content) return;
+            
+            var rows = content.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+            var monthRevenue = 0, monthCost = 0, monthProfit = 0, totalRows = 0;
+            
+            rows.forEach(function(row) {
+                var dateKey = row.getAttribute('data-date-key') || '';
+                if (!dateKey) return;
+                var d = new Date(dateKey);
+                
+                if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                    var sum = parseFloat(row.getAttribute('data-original-sum')) || 0;
+                    var revenue = sum * 100 / 122; // Без НДС
+                    var cost = parseFloat(row.getAttribute('data-total-cost')) || 0;
+                    var profit = parseFloat(row.getAttribute('data-dohod')) || 0;
+                    
+                    monthRevenue += revenue;
+                    monthCost += cost;
+                    monthProfit += profit;
+                    totalRows++;
+                }
+            });
+            
+            if (totalRows > 0) {
+                routesData.push({
+                    name: routeName,
+                    revenue: Math.round(monthRevenue),
+                    cost: Math.round(monthCost),
+                    profit: Math.round(monthProfit),
+                    trips: totalRows,
+                    avgRevenue: Math.round(monthRevenue / totalRows),
+                    avgProfit: Math.round(monthProfit / totalRows),
+                    margin: monthRevenue > 0 ? ((monthProfit / monthRevenue) * 100).toFixed(1) : 0
+                });
+            }
+        });
+        
+        if (routesData.length === 0) {
+            contentEl.innerHTML = '<p style="color:#e74c3c;">❌ Нет данных для анализа</p>';
+            statusEl.textContent = '';
+            btnEl.disabled = false;
+            return;
+        }
+        
+        // Генерируем анализ
+        var analysis = generateAIAnalysis(routesData);
+        contentEl.innerHTML = analysis;
+        statusEl.textContent = '✅ Анализ завершён';
+        
+    } catch (error) {
+        console.error('Ошибка анализа:', error);
+        contentEl.innerHTML = '<p style="color:#e74c3c;">❌ Ошибка при анализе: ' + error.message + '</p>';
+        statusEl.textContent = '❌ Ошибка';
+    }
+    
+    btnEl.disabled = false;
+}
+
+function generateAIAnalysis(routesData) {
+    var totalRevenue = routesData.reduce(function(s, r) { return s + r.revenue; }, 0);
+    var totalCost = routesData.reduce(function(s, r) { return s + r.cost; }, 0);
+    var totalProfit = routesData.reduce(function(s, r) { return s + r.profit; }, 0);
+    var totalTrips = routesData.reduce(function(s, r) { return s + r.trips; }, 0);
+    
+    var bestRoute = routesData.reduce(function(best, r) { 
+        return r.profit > best.profit ? r : best; 
+    }, routesData[0]);
+    
+    var worstRoute = routesData.reduce(function(worst, r) { 
+        return r.profit < worst.profit ? r : worst; 
+    }, routesData[0]);
+    
+    var mostEfficient = routesData.reduce(function(best, r) { 
+        var margin = parseFloat(r.margin);
+        var bestMargin = parseFloat(best.margin);
+        return margin > bestMargin ? r : best; 
+    }, routesData[0]);
+    
+    var html = '<div style="font-size: 10.5pt; line-height: 1.6;">';
+    
+    // Общая статистика
+    html += '<h3 style="color:#667eea; margin-top:0;">📈 Общая статистика</h3>';
+    html += '<p><strong>Всего маршрутов:</strong> ' + routesData.length + '</p>';
+    html += '<p><strong>Общий оборот (без НДС):</strong> ' + fmt(totalRevenue) + ' ₽</p>';
+    html += '<p><strong>Общие затраты:</strong> ' + fmt(totalCost) + ' ₽</p>';
+    html += '<p><strong>Общая прибыль:</strong> ' + fmt(totalProfit) + ' ₽</p>';
+    html += '<p><strong>Всего рейсов:</strong> ' + totalTrips + '</p>';
+    html += '<p><strong>Средняя маржинальность:</strong> ' + (totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : 0) + '%</p>';
+    
+    // Лучший маршрут
+    html += '<h3 style="color:#27ae60;">🏆 Самый прибыльный маршрут</h3>';
+    html += '<p><strong>' + bestRoute.name + '</strong></p>';
+    html += '<p>Прибыль: ' + fmt(bestRoute.profit) + ' ₽ | Маржа: ' + bestRoute.margin + '% | Рейсов: ' + bestRoute.trips + '</p>';
+    
+    // Самый эффективный
+    if (mostEfficient.name !== bestRoute.name) {
+        html += '<h3 style="color:#3498db;">💎 Самый эффективный маршрут</h3>';
+        html += '<p><strong>' + mostEfficient.name + '</strong></p>';
+        html += '<p>Маржинальность: ' + mostEfficient.margin + '% | Прибыль: ' + fmt(mostEfficient.profit) + ' ₽</p>';
+    }
+    
+    // Проблемные маршруты
+    var problemRoutes = routesData.filter(function(r) { return r.profit < 0; });
+    if (problemRoutes.length > 0) {
+        html += '<h3 style="color:#e74c3c;">⚠️ Убыточные маршруты</h3>';
+        problemRoutes.forEach(function(r) {
+            html += '<p><strong>' + r.name + ':</strong> убыток ' + fmt(Math.abs(r.profit)) + ' ₽ (маржа: ' + r.margin + '%)</p>';
+        });
+    }
+    
+    // Рекомендации
+    html += '<h3 style="color:#f39c12;">💡 Рекомендации</h3>';
+    html += '<ul style="margin-left: 20px;">';
+    
+    if (problemRoutes.length > 0) {
+        html += '<li>Пересмотрите ценообразование на убыточных маршрутах: ' + problemRoutes.map(function(r) { return r.name; }).join(', ') + '</li>';
+    }
+    
+    if (parseFloat(mostEfficient.margin) > 30) {
+        html += '<li>Маршрут "' + mostEfficient.name + '" показывает высокую эффективность - рассмотрите возможность масштабирования</li>';
+    }
+    
+    var avgTripsPerRoute = totalTrips / routesData.length;
+    if (avgTripsPerRoute < 10) {
+        html += '<li>Низкая интенсивность рейсов (' + avgTripsPerRoute.toFixed(1) + ' рейсов/маршрут) - возможна оптимизация графика</li>';
+    }
+    
+    var avgMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+    if (avgMargin < 15) {
+        html += '<li>Средняя маржинальность ниже 15% - рекомендуется пересмотреть затраты и ценообразование</li>';
+    } else if (avgMargin > 25) {
+        html += '<li>Высокая маржинальность (' + avgMargin.toFixed(1) + '%) - отличные показатели эффективности</li>';
+    }
+    
+    html += '</ul>';
+    html += '</div>';
+    
+    return html;
+}
 
 </script>
 </body>
