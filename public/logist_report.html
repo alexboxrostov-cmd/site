@@ -1049,10 +1049,22 @@ function recalcCumulativeTotals() {
 // === НОВОЕ: СВОДКА МАРШРУТА (для свёрнутого аккордеона) ===
 // ============================================================
 function updateRouteSummary(routeName) {
-    var summaryEl = document.querySelector('.route-collapsed-summary[data-route="' + routeName + '"]');
-    if (!summaryEl) return;
+    var headerSummaryEl = document.querySelector('[data-route-header="' + routeName + '"]');
     
-    var content = summaryEl.closest('.route-accordion').querySelector('.route-content');
+    var content = document.querySelector('.route-accordion .route-content');
+    if (!content) return;
+    
+    // Находим контент для конкретного маршрута
+    var routeAccordion = null;
+    document.querySelectorAll('.route-accordion:not(.connected-accordion)').forEach(function(acc) {
+        var header = acc.querySelector('.route-header');
+        if (header && header.textContent.indexOf(routeName) !== -1) {
+            routeAccordion = acc;
+        }
+    });
+    
+    if (!routeAccordion) return;
+    content = routeAccordion.querySelector('.route-content');
     if (!content) return;
     
     var rows = content.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
@@ -1060,6 +1072,8 @@ function updateRouteSummary(routeName) {
     var now = new Date();
     var currentMonth = now.getMonth();
     var currentYear = now.getFullYear();
+    var monthNames = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+    var curMonthStr = monthNames[currentMonth] + ' ' + currentYear;
     
     var currentMonthNds = 0, currentMonthCost = 0, currentMonthDohod = 0;
     
@@ -1081,14 +1095,13 @@ function updateRouteSummary(routeName) {
         }
     });
     
-    // Обновляем DOM (компактная сводка)
-    var ndsEl = summaryEl.querySelector('.si-nds .si-value');
-    var costEl = summaryEl.querySelector('.si-cost .si-value');
-    var dohodEl = summaryEl.querySelector('.si-dohod .si-value');
-    
-    if (ndsEl) ndsEl.textContent = fmt(currentMonthNds) + ' ₽';
-    if (costEl) costEl.textContent = fmt(currentMonthCost) + ' ₽';
-    if (dohodEl) dohodEl.textContent = fmt(currentMonthDohod) + ' ₽';
+    // Обновляем сводку в заголовке
+    if (headerSummaryEl) {
+        headerSummaryEl.innerHTML = 
+            '<span style="color: #3498db;">(' + curMonthStr + ') Продажи БезНДС: ' + fmt(currentMonthNds) + ' ₽</span> | ' +
+            '<span style="color: #e74c3c;">Затраты: ' + fmt(currentMonthCost) + ' ₽</span> | ' +
+            '<span style="color: #27ae60;">Доходность: ' + fmt(currentMonthDohod) + ' ₽</span>';
+    }
 }
 
 
@@ -2220,19 +2233,30 @@ function render(data) {
         var header = document.createElement('div');
         header.className = 'route-header';
         header.setAttribute('onclick', 'toggleRoute(\'' + routeId + '\')');
-        header.textContent = routeName + ' ▼';
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'center';
+        
+        var headerLeft = document.createElement('span');
+        headerLeft.textContent = routeName + ' ▼';
+        
+        var headerRight = document.createElement('span');
+        headerRight.className = 'route-header-summary';
+        headerRight.setAttribute('data-route-header', routeName);
+        headerRight.style.fontSize = '10pt';
+        headerRight.style.fontWeight = 'normal';
+        headerRight.style.opacity = '0.9';
+        headerRight.textContent = 'Загрузка...';
+        
+        header.appendChild(headerLeft);
+        header.appendChild(headerRight);
         acc.appendChild(header);
 
-        // === НОВОЕ: Сводка в свёрнутом аккордеоне (компактная) ===
+        // Сводка (скрыта, данные только в заголовке)
         var summaryDiv = document.createElement('div');
-        summaryDiv.className = 'route-collapsed-summary visible';
+        summaryDiv.className = 'route-collapsed-summary';
         summaryDiv.setAttribute('data-route', routeName);
-        var monthNames = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
-        var curMonth = monthNames[new Date().getMonth()] + ' ' + new Date().getFullYear();
-        summaryDiv.innerHTML = 
-            '<span class="summary-inline si-nds"><span class="si-month">(' + curMonth + ')</span><span class="si-label">Продажи БезНДС:</span><span class="si-value">—</span></span>' +
-            '<span class="summary-inline si-cost"><span class="si-label">Затраты:</span><span class="si-value">—</span></span>' +
-            '<span class="summary-inline si-dohod"><span class="si-label">Доходность:</span><span class="si-value">—</span></span>';
+        summaryDiv.style.display = 'none';
         acc.appendChild(summaryDiv);
 
         var content = document.createElement('div');
@@ -2609,16 +2633,11 @@ function renderConnectedAccordions() {
         header.appendChild(headerRight);
         acc.appendChild(header);
         
-        // Сводка
+        // Сводка (скрыта, данные только в заголовке)
         var summaryDiv = document.createElement('div');
-        summaryDiv.className = 'route-collapsed-summary visible';
+        summaryDiv.className = 'route-collapsed-summary';
         summaryDiv.setAttribute('data-connected', cr.id);
-        var monthNames = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
-        var curMonth = monthNames[new Date().getMonth()] + ' ' + new Date().getFullYear();
-        summaryDiv.innerHTML = 
-            '<span class="summary-inline si-nds"><span class="si-month">(' + curMonth + ')</span><span class="si-label">Продажи БезНДС:</span><span class="si-value">—</span></span>' +
-            '<span class="summary-inline si-cost"><span class="si-label">Затраты:</span><span class="si-value">—</span></span>' +
-            '<span class="summary-inline si-dohod"><span class="si-label">Доходность:</span><span class="si-value">—</span></span>';
+        summaryDiv.style.display = 'none';
         acc.appendChild(summaryDiv);
         
         // Контент
@@ -2786,10 +2805,22 @@ function renderConnectedAccordions() {
             if (dohodCell) dohodCell.textContent = fmt(totalDohod);
             
             var returnsCell = newRow.querySelector('td[data-col-key="returns"]');
-            if (returnsCell) returnsCell.textContent = totalReturns;
+            if (returnsCell) {
+                returnsCell.textContent = totalReturns;
+                if (totalReturns > 0) {
+                    returnsCell.style.color = '#e74c3c';
+                    returnsCell.style.fontWeight = 'bold';
+                }
+            }
             
             var cancelledCell = newRow.querySelector('td[data-col-key="cancelled"]');
-            if (cancelledCell) cancelledCell.textContent = totalCancelled;
+            if (cancelledCell) {
+                cancelledCell.textContent = totalCancelled;
+                if (totalCancelled > 0) {
+                    cancelledCell.style.color = '#e74c3c';
+                    cancelledCell.style.fontWeight = 'bold';
+                }
+            }
             
             // Добавляем метку маршрутов
             var routeLabel = document.createElement('td');
@@ -2808,21 +2839,35 @@ function renderConnectedAccordions() {
                         e.stopPropagation();
                         var dt = this.getAttribute('data-date') || group.dateKey;
                         
-                        // Собираем клиентов из исходных строк
+                        // Собираем клиентов из исходных строк с полными данными
                         var clientsObjects = [];
                         group.rows.forEach(function(sourceRow) {
                             var clientNames = (sourceRow.getAttribute('data-clients') || '').split('|').filter(Boolean);
                             var clientSums = (sourceRow.getAttribute('data-client-sums') || '').split('|');
                             var clientAddresses = (sourceRow.getAttribute('data-clients-addresses') || '').split('||').filter(Boolean);
                             
+                            // Получаем данные о клиентах из исходной строки
+                            var sourceClientsJson = sourceRow.getAttribute('data-clients-json') || '[]';
+                            var sourceClients = [];
+                            try {
+                                sourceClients = JSON.parse(sourceClientsJson);
+                            } catch(err) {
+                                sourceClients = [];
+                            }
+                            
                             clientNames.forEach(function(name, idx) {
+                                // Ищем соответствующего клиента в исходных данных
+                                var sourceClient = sourceClients.find(function(sc) {
+                                    return sc.Наименование === name.trim();
+                                });
+                                
                                 clientsObjects.push({
                                     Наименование: name.trim(),
                                     Сумма: parseFloat(clientSums[idx]) || 0,
                                     Адрес: clientAddresses[idx] || '',
-                                    ВремяПередачи: '',
-                                    Отменён: false,
-                                    Возврат: false
+                                    ВремяПередачи: sourceClient ? (sourceClient.ВремяПередачи || '') : '',
+                                    Отменён: sourceClient ? (sourceClient.Отменён || false) : false,
+                                    Возврат: sourceClient ? (sourceClient.Возврат || false) : false
                                 });
                             });
                         });
@@ -3079,22 +3124,82 @@ function generateAIAnalysis(routesData) {
     html += '</div></div>';
     
     // Визуальное сравнение маршрутов
+    var maxCost = Math.max.apply(null, routesData.map(function(r) { return r.cost; }));
+    
     html += '<div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #667eea;">';
-    html += '<h4 style="margin: 0 0 10px 0; color: #2c3e50;">📈 Сравнение маршрутов по обороту</h4>';
+    html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">';
+    html += '<h4 style="margin: 0; color: #2c3e50;">📈 Сравнение маршрутов</h4>';
+    html += '<select id="aiSortSelect" onchange="sortAIComparison(this.value)" style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 9pt;">';
+    html += '<option value="revenue">По обороту</option>';
+    html += '<option value="profit">По прибыли</option>';
+    html += '<option value="cost">По расходам</option>';
+    html += '<option value="margin">По марже</option>';
+    html += '</select>';
+    html += '</div>';
+    
+    html += '<div id="aiComparisonContainer">';
     routesData.sort(function(a, b) { return b.revenue - a.revenue; }).forEach(function(r) {
         var widthPct = maxRevenue > 0 ? (r.revenue / maxRevenue * 100) : 0;
+        var profitWidthPct = maxProfit > 0 ? (Math.abs(r.profit) / maxProfit * 100) : 0;
+        var costWidthPct = maxCost > 0 ? (r.cost / maxCost * 100) : 0;
         var barColor = r.profit >= 0 ? '#27ae60' : '#e74c3c';
-        html += '<div style="margin-bottom: 6px;">';
-        html += '<div style="display: flex; justify-content: space-between; font-size: 9pt; margin-bottom: 2px;">';
+        
+        html += '<div style="margin-bottom: 10px; padding: 8px; background: white; border-radius: 4px;">';
+        html += '<div style="display: flex; justify-content: space-between; font-size: 9pt; margin-bottom: 4px;">';
         html += '<span style="font-weight: 600;">' + r.name + '</span>';
-        html += '<span>' + fmt(r.revenue) + ' ₽</span>';
+        html += '<span style="color: #666;">Маржа: ' + parseFloat(r.margin).toFixed(1) + '%</span>';
         html += '</div>';
-        html += '<div style="background: #e0e0e0; height: 8px; border-radius: 4px; overflow: hidden;">';
-        html += '<div style="background: ' + barColor + '; width: ' + widthPct + '%; height: 100%; transition: width 0.3s;"></div>';
+        
+        // Оборот
+        html += '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px;">';
+        html += '<span style="font-size: 8pt; color: #666; min-width: 60px;">Оборот:</span>';
+        html += '<div style="flex: 1; background: #e0e0e0; height: 6px; border-radius: 3px; overflow: hidden;">';
+        html += '<div style="background: #3498db; width: ' + widthPct + '%; height: 100%;"></div>';
         html += '</div>';
+        html += '<span style="font-size: 8pt; font-weight: 600; min-width: 80px; text-align: right;">' + fmt(r.revenue) + ' ₽</span>';
+        html += '</div>';
+        
+        // Расходы
+        html += '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px;">';
+        html += '<span style="font-size: 8pt; color: #666; min-width: 60px;">Расходы:</span>';
+        html += '<div style="flex: 1; background: #e0e0e0; height: 6px; border-radius: 3px; overflow: hidden;">';
+        html += '<div style="background: #e74c3c; width: ' + costWidthPct + '%; height: 100%;"></div>';
+        html += '</div>';
+        html += '<span style="font-size: 8pt; font-weight: 600; min-width: 80px; text-align: right; color: #e74c3c;">' + fmt(r.cost) + ' ₽</span>';
+        html += '</div>';
+        
+        // Прибыль
+        html += '<div style="display: flex; align-items: center; gap: 8px;">';
+        html += '<span style="font-size: 8pt; color: #666; min-width: 60px;">Прибыль:</span>';
+        html += '<div style="flex: 1; background: #e0e0e0; height: 6px; border-radius: 3px; overflow: hidden;">';
+        html += '<div style="background: ' + barColor + '; width: ' + profitWidthPct + '%; height: 100%;"></div>';
+        html += '</div>';
+        html += '<span style="font-size: 8pt; font-weight: 600; min-width: 80px; text-align: right; color: ' + barColor + ';">' + fmt(r.profit) + ' ₽</span>';
+        html += '</div>';
+        
         html += '</div>';
     });
     html += '</div>';
+    html += '</div>';
+    
+    // JavaScript для сортировки
+    html += '<script>';
+    html += 'function sortAIComparison(criteria) {';
+    html += '  var container = document.getElementById("aiComparisonContainer");';
+    html += '  if (!container) return;';
+    html += '  var items = Array.from(container.children);';
+    html += '  items.sort(function(a, b) {';
+    html += '    var aData = JSON.parse(a.getAttribute("data-route") || "{}");';
+    html += '    var bData = JSON.parse(b.getAttribute("data-route") || "{}");';
+    html += '    if (criteria === "revenue") return bData.revenue - aData.revenue;';
+    html += '    if (criteria === "profit") return bData.profit - aData.profit;';
+    html += '    if (criteria === "cost") return bData.cost - aData.cost;';
+    html += '    if (criteria === "margin") return parseFloat(bData.margin) - parseFloat(aData.margin);';
+    html += '    return 0;';
+    html += '  });';
+    html += '  items.forEach(function(item) { container.appendChild(item); });';
+    html += '}';
+    html += '</script>';
     
     // Лучший маршрут
     html += '<h3 style="color:#27ae60;">🏆 Самый прибыльный маршрут</h3>';
@@ -3290,14 +3395,6 @@ function generateAIAnalysis(routesData) {
             html += '</div>';
             html += '</div>';
             html += '</div>';
-            
-            html += '<tr>';
-            html += '<td style="padding:8px; border:1px solid #ddd;"><strong>' + route.name + '</strong></td>';
-            html += '<td style="padding:8px; border:1px solid #ddd; text-align:right;">' + fmt(route.lastWeekRevenue) + ' ₽</td>';
-            html += '<td style="padding:8px; border:1px solid #ddd; text-align:right;">' + fmt(route.lastWeekProfit) + ' ₽</td>';
-            html += '<td style="padding:8px; border:1px solid #ddd; text-align:right;">';
-            html += '<span style="color:' + revColor + ';">Оборот: ' + (revenueChange === 'N/A' ? '—' : (parseFloat(revenueChange) >= 0 ? '+' : '') + revenueChange + '%') + '</span><br>';
-            html += '<span style="color:' + profColor + ';">Прибыль: ' + (profitChange === 'N/A' ? '—' : (parseFloat(profitChange) >= 0 ? '+' : '') + profitChange + '%') + '</span>';
         });
         
         html += '</div></div>';
