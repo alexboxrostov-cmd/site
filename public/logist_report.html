@@ -2937,16 +2937,7 @@ function updateConnectedSummary(crId) {
         });
     });
     
-    // Обновляем сводку в контенте
-    if (summaryEl) {
-        var ndsEl = summaryEl.querySelector('.si-nds .si-value');
-        var costEl = summaryEl.querySelector('.si-cost .si-value');
-        var dohodEl = summaryEl.querySelector('.si-dohod .si-value');
-        
-        if (ndsEl) ndsEl.textContent = fmt(currentMonthNds) + ' ₽';
-        if (costEl) costEl.textContent = fmt(currentMonthCost) + ' ₽';
-        if (dohodEl) dohodEl.textContent = fmt(currentMonthDohod) + ' ₽';
-    }
+    // Сводка в контенте скрыта, данные только в заголовке
     
     // Обновляем сводку в заголовке
     if (headerSummaryEl) {
@@ -3081,7 +3072,34 @@ async function runAIAnalysis() {
     btnEl.disabled = false;
 }
 
+function sortAIComparison(criteria) {
+    var container = document.getElementById('aiComparisonContainer');
+    if (!container) return;
+    
+    var items = Array.from(container.children);
+    items.sort(function(a, b) {
+        var aName = a.getAttribute('data-route-name');
+        var bName = b.getAttribute('data-route-name');
+        
+        var aData = routesDataCache.find(function(r) { return r.name === aName; });
+        var bData = routesDataCache.find(function(r) { return r.name === bName; });
+        
+        if (!aData || !bData) return 0;
+        
+        if (criteria === 'revenue') return bData.revenue - aData.revenue;
+        if (criteria === 'profit') return bData.profit - aData.profit;
+        if (criteria === 'cost') return bData.cost - aData.cost;
+        if (criteria === 'margin') return parseFloat(bData.margin) - parseFloat(aData.margin);
+        return 0;
+    });
+    
+    items.forEach(function(item) { container.appendChild(item); });
+}
+
+var routesDataCache = [];
+
 function generateAIAnalysis(routesData) {
+    routesDataCache = routesData;
     var totalRevenue = routesData.reduce(function(s, r) { return s + r.revenue; }, 0);
     var totalCost = routesData.reduce(function(s, r) { return s + r.cost; }, 0);
     var totalProfit = routesData.reduce(function(s, r) { return s + r.profit; }, 0);
@@ -3144,7 +3162,7 @@ function generateAIAnalysis(routesData) {
         var costWidthPct = maxCost > 0 ? (r.cost / maxCost * 100) : 0;
         var barColor = r.profit >= 0 ? '#27ae60' : '#e74c3c';
         
-        html += '<div style="margin-bottom: 10px; padding: 8px; background: white; border-radius: 4px;">';
+        html += '<div data-route-name="' + r.name + '" style="margin-bottom: 10px; padding: 8px; background: white; border-radius: 4px;">';
         html += '<div style="display: flex; justify-content: space-between; font-size: 9pt; margin-bottom: 4px;">';
         html += '<span style="font-weight: 600;">' + r.name + '</span>';
         html += '<span style="color: #666;">Маржа: ' + parseFloat(r.margin).toFixed(1) + '%</span>';
@@ -3181,25 +3199,6 @@ function generateAIAnalysis(routesData) {
     });
     html += '</div>';
     html += '</div>';
-    
-    // JavaScript для сортировки
-    html += '<script>';
-    html += 'function sortAIComparison(criteria) {';
-    html += '  var container = document.getElementById("aiComparisonContainer");';
-    html += '  if (!container) return;';
-    html += '  var items = Array.from(container.children);';
-    html += '  items.sort(function(a, b) {';
-    html += '    var aData = JSON.parse(a.getAttribute("data-route") || "{}");';
-    html += '    var bData = JSON.parse(b.getAttribute("data-route") || "{}");';
-    html += '    if (criteria === "revenue") return bData.revenue - aData.revenue;';
-    html += '    if (criteria === "profit") return bData.profit - aData.profit;';
-    html += '    if (criteria === "cost") return bData.cost - aData.cost;';
-    html += '    if (criteria === "margin") return parseFloat(bData.margin) - parseFloat(aData.margin);';
-    html += '    return 0;';
-    html += '  });';
-    html += '  items.forEach(function(item) { container.appendChild(item); });';
-    html += '}';
-    html += '</script>';
     
     // Лучший маршрут
     html += '<h3 style="color:#27ae60;">🏆 Самый прибыльный маршрут</h3>';
