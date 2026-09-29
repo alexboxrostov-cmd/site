@@ -3283,6 +3283,52 @@ function generateAIAnalysis(routesData) {
     html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Маржа</div><div style="font-size: 16pt; font-weight: bold;">' + avgMargin.toFixed(1) + '%</div></div>';
     html += '</div></div>';
     
+    // Расчёт стоимости километра и клиентских
+    html += '<div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ffc107;">';
+    html += '<h4 style="margin: 0 0 12px 0; color: #856404; font-size: 11pt;">💰 Анализ стоимости километра и клиентских</h4>';
+    
+    var totalKm = routesData.reduce(function(s, r) { return s + (r.km || 0); }, 0);
+    var totalClientsCount = routesData.reduce(function(s, r) { return s + (r.clients || 0); }, 0);
+    var avgCostPerKm = totalKm > 0 ? (totalCost / totalKm) : 0;
+    var avgCostPerClient = totalClientsCount > 0 ? (totalCost / totalClientsCount) : 0;
+    
+    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">';
+    
+    html += '<div style="background: white; padding: 12px; border-radius: 6px; border-left: 3px solid #3498db;">';
+    html += '<div style="font-size: 9pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Средняя стоимость км</div>';
+    html += '<div style="font-size: 14pt; font-weight: bold; color: #3498db;">' + avgCostPerKm.toFixed(2) + ' ₽/км</div>';
+    html += '<div style="font-size: 8pt; color: #95a5a6; margin-top: 4px;">Всего км: ' + totalKm + '</div>';
+    html += '</div>';
+    
+    html += '<div style="background: white; padding: 12px; border-radius: 6px; border-left: 3px solid #e67e22;">';
+    html += '<div style="font-size: 9pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Стоимость на клиента</div>';
+    html += '<div style="font-size: 14pt; font-weight: bold; color: #e67e22;">' + avgCostPerClient.toFixed(2) + ' ₽</div>';
+    html += '<div style="font-size: 8pt; color: #95a5a6; margin-top: 4px;">Всего клиентов: ' + totalClientsCount + '</div>';
+    html += '</div>';
+    
+    html += '<div style="background: white; padding: 12px; border-radius: 6px; border-left: 3px solid #9b59b6;">';
+    html += '<div style="font-size: 9pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Общие затраты</div>';
+    html += '<div style="font-size: 14pt; font-weight: bold; color: #9b59b6;">' + fmt(totalCost) + ' ₽</div>';
+    html += '<div style="font-size: 8pt; color: #95a5a6; margin-top: 4px;">Включая клиентские и маршрут</div>';
+    html += '</div>';
+    
+    html += '</div>';
+    
+    // Рекомендации по оптимизации
+    if (avgCostPerKm > 50) {
+        html += '<div style="margin-top: 12px; padding: 10px; background: #fadbd8; border-radius: 4px; font-size: 9pt; color: #721c24;">';
+        html += '⚠️ <strong>Высокая стоимость километра:</strong> ' + avgCostPerKm.toFixed(2) + ' ₽/км превышает оптимальное значение (50 ₽/км). Рекомендуется оптимизировать маршруты или пересмотреть затраты.';
+        html += '</div>';
+    }
+    
+    if (avgCostPerClient > 500) {
+        html += '<div style="margin-top: 8px; padding: 10px; background: #fef5e7; border-radius: 4px; font-size: 9pt; color: #7d6608;">';
+        html += '⚡ <strong>Высокая стоимость клиента:</strong> ' + avgCostPerClient.toFixed(2) + ' ₽ превышает оптимальное значение (500 ₽). Рассмотрите увеличение количества клиентов на рейс.';
+        html += '</div>';
+    }
+    
+    html += '</div>';
+    
     // Визуальное сравнение маршрутов
     var maxCost = Math.max.apply(null, routesData.map(function(r) { return r.cost; }));
     
