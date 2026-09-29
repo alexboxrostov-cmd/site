@@ -906,13 +906,27 @@ function updateRouteCosts(routeName) {
     if (kmInput) { var rd = routeData[routeName] || {}; if (kmInput !== document.activeElement) kmInput.value = rd.km || ''; }
     updateKmAvgBadge(routeName, content);
     var rows = content.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+    
+    // Проверяем, является ли маршрут соединённым
+    var isConnectedRoute = routeName.indexOf('connected_') === 0;
+    
     rows.forEach(function(row) {
         var planNumber = parseInt(row.getAttribute('data-plan')) || 0;
         var dayKey = row.getAttribute('data-day-key') || '';
         var clientsCount = parseInt(row.getAttribute('data-clients-count')) || 0;
         var baseCost = 0;
-        if (costsByDay && costsByDay[dayKey]) baseCost = getCostForPlan(costsByDay[dayKey], planNumber);
-        var clientCosts = clientsCount * clientCostRate;
+        var clientCosts = 0;
+        
+        // Для соединённых маршрутов сохраняем исходные значения
+        if (isConnectedRoute) {
+            baseCost = parseFloat(row.getAttribute('data-base-cost')) || 0;
+            clientCosts = parseFloat(row.getAttribute('data-client-cost')) || 0;
+        } else {
+            // Для обычных маршрутов пересчитываем
+            if (costsByDay && costsByDay[dayKey]) baseCost = getCostForPlan(costsByDay[dayKey], planNumber);
+            clientCosts = clientsCount * clientCostRate;
+        }
+        
         var totalCost = baseCost + clientCosts;
         row.setAttribute('data-base-cost', baseCost);
         row.setAttribute('data-client-cost', clientCosts);
@@ -2723,9 +2737,35 @@ function renderConnectedAccordions() {
         });
         
         // Создаём объединённые строки
+        var currentWeek = null;
+        var separatorShown = false;
+        
         Object.keys(groupedRows).sort().forEach(function(key) {
             var group = groupedRows[key];
             var firstRow = group.rows[0];
+            
+            // Определяем номер недели
+            var dateObj = new Date(group.dateKey);
+            var weekNumber = getWeekNumber(dateObj);
+            
+            // Добавляем разделитель недели при смене недели
+            if (currentWeek === null || weekNumber !== currentWeek) {
+                currentWeek = weekNumber;
+                separatorShown = false;
+            }
+            
+            if (!separatorShown) {
+                var weekStartDate = getWeekStart(dateObj);
+                var wr = document.createElement('tr');
+                wr.className = 'week-separator';
+                wr.setAttribute('data-week-num', String(weekNumber));
+                var tdW = document.createElement('td');
+                tdW.colSpan = COLUMNS.length + 1; // +1 для столбца "Маршруты"
+                tdW.textContent = 'Неделя с ' + formatDate(weekStartDate);
+                wr.appendChild(tdW);
+                tbody.appendChild(wr);
+                separatorShown = true;
+            }
             
             // Суммируем показатели
             var totalSum = 0, totalClients = 0, totalReturns = 0, totalCancelled = 0;
@@ -2799,6 +2839,8 @@ function renderConnectedAccordions() {
             newRow.setAttribute('data-total-cost', totalCost);
             newRow.setAttribute('data-dohod', totalDohod);
             newRow.setAttribute('data-clients-json', clientsJsonStr); // Сохраняем полные данные клиентов
+            newRow.setAttribute('data-base-cost', totalRouteCost); // Сохраняем стоимость маршрута
+            newRow.setAttribute('data-client-cost', totalClientCost); // Сохраняем клиентские расходы
             
             // Обновляем все числовые ячейки
             var sumCell = newRow.querySelector('td[data-col-key="sum-route"]');
@@ -3317,8 +3359,8 @@ function generateAIAnalysis(routesData) {
     }
     
     // Детальный анализ по каждому маршруту с визуализацией
-    html += '<div style="background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #dee2e6;">';
-    html += '<h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 12pt;">📋 Детальный анализ маршрутов</h4>';
+    html += '<div style="background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #dee2e6;">';
+    html += '<h4 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 11pt;">📋 Детальный анализ маршрутов</h4>';
     
     routesData.forEach(function(r, idx) {
         var margin = parseFloat(r.margin);
@@ -3350,53 +3392,46 @@ function generateAIAnalysis(routesData) {
             statusIcon = '👍';
         }
         
-        html += '<div style="background: ' + statusBg + '; padding: 15px; border-radius: 6px; border-left: 4px solid ' + statusColor + '; margin-bottom: 12px;">';
+        html += '<div style="background: ' + statusBg + '; padding: 8px 10px; border-radius: 5px; border-left: 3px solid ' + statusColor + '; margin-bottom: 8px;">';
         
         // Заголовок маршрута
-        html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.1);">';
-        html += '<strong style="font-size: 11pt; color: #2c3e50;">' + r.name + '</strong>';
-        html += '<span style="font-size: 9pt; color: ' + statusColor + '; font-weight: 600; background: white; padding: 3px 8px; border-radius: 12px;">' + statusIcon + ' ' + status + '</span>';
+        html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">';
+        html += '<strong style="font-size: 10pt; color: #2c3e50;">' + r.name + '</strong>';
+        html += '<span style="font-size: 8pt; color: ' + statusColor + '; font-weight: 600; background: white; padding: 2px 6px; border-radius: 10px;">' + statusIcon + ' ' + status + '</span>';
         html += '</div>';
         
-        // Основные показатели в две колонки
-        html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">';
+        // Основные показатели в компактной сетке
+        html += '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 6px;">';
         
-        // Левая колонка
-        html += '<div style="background: white; padding: 10px; border-radius: 4px;">';
-        html += '<div style="font-size: 8pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Оборот</div>';
-        html += '<div style="font-size: 12pt; font-weight: bold; color: #3498db;">' + fmt(r.revenue) + ' ₽</div>';
-        html += '<div style="font-size: 8pt; color: #95a5a6; margin-top: 2px;">Ср. за рейс: ' + fmt(r.avgRevenue) + ' ₽</div>';
+        html += '<div style="background: white; padding: 6px 8px; border-radius: 3px;">';
+        html += '<div style="font-size: 7pt; color: #7f8c8d; text-transform: uppercase;">Оборот</div>';
+        html += '<div style="font-size: 10pt; font-weight: bold; color: #3498db;">' + fmt(r.revenue) + ' ₽</div>';
         html += '</div>';
         
-        html += '<div style="background: white; padding: 10px; border-radius: 4px;">';
-        html += '<div style="font-size: 8pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Затраты</div>';
-        html += '<div style="font-size: 12pt; font-weight: bold; color: #e74c3c;">' + fmt(r.cost) + ' ₽</div>';
-        html += '<div style="font-size: 8pt; color: #95a5a6; margin-top: 2px;">Ср. за рейс: ' + fmt(r.cost / r.trips) + ' ₽</div>';
+        html += '<div style="background: white; padding: 6px 8px; border-radius: 3px;">';
+        html += '<div style="font-size: 7pt; color: #7f8c8d; text-transform: uppercase;">Затраты</div>';
+        html += '<div style="font-size: 10pt; font-weight: bold; color: #e74c3c;">' + fmt(r.cost) + ' ₽</div>';
         html += '</div>';
         
-        html += '<div style="background: white; padding: 10px; border-radius: 4px;">';
-        html += '<div style="font-size: 8pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Прибыль</div>';
-        html += '<div style="font-size: 12pt; font-weight: bold; color: ' + (r.profit >= 0 ? '#27ae60' : '#e74c3c') + ';">' + fmt(r.profit) + ' ₽</div>';
-        html += '<div style="font-size: 8pt; color: #95a5a6; margin-top: 2px;">Ср. за рейс: ' + fmt(r.profit / r.trips) + ' ₽</div>';
+        html += '<div style="background: white; padding: 6px 8px; border-radius: 3px;">';
+        html += '<div style="font-size: 7pt; color: #7f8c8d; text-transform: uppercase;">Прибыль</div>';
+        html += '<div style="font-size: 10pt; font-weight: bold; color: ' + (r.profit >= 0 ? '#27ae60' : '#e74c3c') + ';">' + fmt(r.profit) + ' ₽</div>';
         html += '</div>';
         
-        html += '<div style="background: white; padding: 10px; border-radius: 4px;">';
-        html += '<div style="font-size: 8pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Маржа</div>';
-        html += '<div style="font-size: 12pt; font-weight: bold; color: ' + statusColor + ';">' + margin.toFixed(1) + '%</div>';
-        html += '<div style="font-size: 8pt; color: #95a5a6; margin-top: 2px;">Рейсов: ' + r.trips + '</div>';
+        html += '<div style="background: white; padding: 6px 8px; border-radius: 3px;">';
+        html += '<div style="font-size: 7pt; color: #7f8c8d; text-transform: uppercase;">Маржа</div>';
+        html += '<div style="font-size: 10pt; font-weight: bold; color: ' + statusColor + ';">' + margin.toFixed(1) + '%</div>';
         html += '</div>';
         
         html += '</div>';
         
         // Прогресс-бар прибыли
-        html += '<div style="margin-top: 10px;">';
-        html += '<div style="display: flex; justify-content: space-between; font-size: 8pt; color: #7f8c8d; margin-bottom: 4px;">';
-        html += '<span>Прибыль относительно лучшего маршрута</span>';
-        html += '<span>' + profitWidth.toFixed(0) + '%</span>';
+        html += '<div style="display: flex; align-items: center; gap: 8px;">';
+        html += '<span style="font-size: 7pt; color: #7f8c8d; min-width: 80px;">Прибыль vs лучший:</span>';
+        html += '<div style="flex: 1; background: #e0e0e0; height: 5px; border-radius: 3px; overflow: hidden;">';
+        html += '<div style="background: ' + (r.profit >= 0 ? '#27ae60' : '#e74c3c') + '; width: ' + profitWidth + '%; height: 100%;"></div>';
         html += '</div>';
-        html += '<div style="background: #e0e0e0; height: 8px; border-radius: 4px; overflow: hidden;">';
-        html += '<div style="background: ' + (r.profit >= 0 ? '#27ae60' : '#e74c3c') + '; width: ' + profitWidth + '%; height: 100%; transition: width 0.3s;"></div>';
-        html += '</div>';
+        html += '<span style="font-size: 7pt; color: #7f8c8d; min-width: 30px;">' + profitWidth.toFixed(0) + '%</span>';
         html += '</div>';
         
         html += '</div>';
