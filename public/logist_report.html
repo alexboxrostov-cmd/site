@@ -26,13 +26,13 @@ body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; margin: 10px 20
 .date-filter .btn-reload:hover { background: #2980b9; }
 
 /* === НОВОЕ: Кнопка соединённых маршрутов === */
-.btn-connected-routes { background: #8e44ad; color: #ffffff; border: 2px solid #6c3483; margin-left: 5px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
-.btn-connected-routes:hover { background: #7d3c98; }
+.date-filter .btn-connected-routes { background: #8e44ad !important; color: #ffffff !important; border: 2px solid #6c3483 !important; margin-left: 5px; font-weight: bold !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+.date-filter .btn-connected-routes:hover { background: #7d3c98 !important; }
 
 /* === НОВОЕ: Кнопка Заполнить КМ === */
-.btn-fill-km { background: #16a085; color: #ffffff; border: 2px solid #117a65; margin-left: 5px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
-.btn-fill-km:hover { background: #138d75; }
-.btn-fill-km:disabled { background: #95a5a6; border-color: #7f8c8d; cursor: not-allowed; }
+.date-filter .btn-fill-km { background: #16a085 !important; color: #ffffff !important; border: 2px solid #117a65 !important; margin-left: 5px; font-weight: bold !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+.date-filter .btn-fill-km:hover { background: #138d75 !important; }
+.date-filter .btn-fill-km:disabled { background: #95a5a6 !important; border-color: #7f8c8d !important; cursor: not-allowed; }
 
 /* === НОВОЕ: Аккордеон соединённых маршрутов === */
 .connected-accordion { margin-top: 20px; border: 1px solid #8e44ad; border-radius: 5px; }
@@ -1488,6 +1488,10 @@ function setDateRangeFromBtn(range) {
     if (range === 'week') {
         from = getWeekStart(today);
         var to2 = new Date(from); to2.setDate(to2.getDate() + 6); to = to2;
+        // Убедимся, что конец недели не позже сегодня
+        if (to > today) to = today;
+        // Убедимся, что начало недели не позже конца
+        if (from > to) from = to;
     } else if (range === '2weeks') {
         from = getWeekStart(today); from.setDate(from.getDate() - 7);
         var to2 = new Date(getWeekStart(today)); to2.setDate(to2.getDate() + 6); to = to2;
@@ -1638,6 +1642,7 @@ function applyAllFilters() {
 }
 
 function refreshData() {
+    var scrollPos = window.scrollY;
     var container = document.getElementById('container');
     container.innerHTML = '<p style="text-align:center;color:#888;padding:20px;">⏳ Загрузка данных за период...</p>';
     return loadRouteDataFromServer().then(function() {
@@ -1654,9 +1659,18 @@ function refreshData() {
             warn.className = 'data-warning';
             warn.innerHTML = '⚠️ Не найдены файлы: <code>' + d._missingFiles.join('</code>, <code>') + '</code>';
         }
-        if (warn) container.insertBefore(warn, container.firstChild);
+        if (warn && d._loadedFiles.length === 0) {
+            // Показываем предупреждение только если ни один файл не загружен
+            container.insertBefore(warn, container.firstChild);
+        } else if (warn && d._loadedFiles.length > 0) {
+            // Если некоторые файлы загружены, показываем информацию о недостающих как次要
+            console.log('Не найдены файлы:', d._missingFiles);
+        }
         // Перерендериваем аккордеоны соединённых маршрутов
-        setTimeout(function() { renderConnectedAccordions(); }, 200);
+        setTimeout(function() { 
+            renderConnectedAccordions();
+            window.scrollTo(0, scrollPos);
+        }, 200);
     }).catch(function(err) {
         console.error('Ошибка загрузки данных:', err);
         container.innerHTML =
@@ -2660,6 +2674,7 @@ function renderConnectedAccordions() {
             // Суммируем показатели
             var totalSum = 0, totalClients = 0, totalReturns = 0, totalCancelled = 0;
             var totalCost = 0, totalDohod = 0;
+            var totalClientCost = 0, totalRouteCost = 0;
             var allClients = [];
             
             group.rows.forEach(function(row) {
@@ -2669,6 +2684,12 @@ function renderConnectedAccordions() {
                 totalCancelled += parseInt(row.getAttribute('data-cancelled')) || 0;
                 totalCost += parseFloat(row.getAttribute('data-total-cost')) || 0;
                 totalDohod += parseFloat(row.getAttribute('data-dohod')) || 0;
+                
+                // Суммируем клиентские и стоимость маршрута отдельно
+                var clientCostCell = row.querySelector('td[data-col-key="exp-client"]');
+                var routeCostCell = row.querySelector('td[data-col-key="exp-route"]');
+                if (clientCostCell) totalClientCost += parseFloat(clientCostCell.textContent.replace(/\s/g, '')) || 0;
+                if (routeCostCell) totalRouteCost += parseFloat(routeCostCell.textContent.replace(/\s/g, '')) || 0;
                 
                 var clients = row.getAttribute('data-clients') || '';
                 if (clients) allClients = allClients.concat(clients.split('|'));
@@ -2695,8 +2716,11 @@ function renderConnectedAccordions() {
             var marginCell = newRow.querySelector('td[data-col-key="margin"]');
             if (marginCell) marginCell.textContent = fmt(margin);
             
+            var expClientCell = newRow.querySelector('td[data-col-key="exp-client"]');
+            if (expClientCell) expClientCell.textContent = fmt(totalClientCost);
+            
             var expRouteCell = newRow.querySelector('td[data-col-key="exp-route"]');
-            if (expRouteCell) expRouteCell.textContent = fmt(totalCost);
+            if (expRouteCell) expRouteCell.textContent = fmt(totalRouteCost);
             
             var clientsCell = newRow.querySelector('td[data-col-key="clients"]');
             if (clientsCell) clientsCell.textContent = totalClients;
@@ -2934,6 +2958,9 @@ function generateAIAnalysis(routesData) {
         return margin > bestMargin ? r : best; 
     }, routesData[0]);
     
+    // Анализ по неделям
+    var weeklyAnalysis = calculateWeeklyTrend(routesData);
+    
     var html = '<div style="font-size: 10.5pt; line-height: 1.6;">';
     
     // Общая статистика
@@ -2991,9 +3018,97 @@ function generateAIAnalysis(routesData) {
     }
     
     html += '</ul>';
+    
+    // Тренд по неделям
+    if (weeklyAnalysis) {
+        html += '<h3 style="color:#e67e22;">📅 Тренд: Последняя неделя vs Предыдущая</h3>';
+        html += '<table style="width:100%; border-collapse:collapse; margin:10px 0; font-size:10pt;">';
+        html += '<tr style="background:#f8f9fa;"><th style="padding:8px; border:1px solid #ddd; text-align:left;">Маршрут</th>';
+        html += '<th style="padding:8px; border:1px solid #ddd; text-align:right;">Оборот (без НДС)</th>';
+        html += '<th style="padding:8px; border:1px solid #ddd; text-align:right;">Прибыль</th>';
+        html += '<th style="padding:8px; border:1px solid #ddd; text-align:right;">Изменение</th></tr>';
+        
+        weeklyAnalysis.forEach(function(route) {
+            var revenueChange = route.prevWeekRevenue > 0 
+                ? ((route.lastWeekRevenue - route.prevWeekRevenue) / route.prevWeekRevenue * 100).toFixed(1)
+                : 'N/A';
+            var profitChange = route.prevWeekProfit !== 0 
+                ? ((route.lastWeekProfit - route.prevWeekProfit) / Math.abs(route.prevWeekProfit) * 100).toFixed(1)
+                : 'N/A';
+            
+            var revColor = revenueChange === 'N/A' ? '#666' : (parseFloat(revenueChange) >= 0 ? '#27ae60' : '#e74c3c');
+            var profColor = profitChange === 'N/A' ? '#666' : (parseFloat(profitChange) >= 0 ? '#27ae60' : '#e74c3c');
+            
+            html += '<tr>';
+            html += '<td style="padding:8px; border:1px solid #ddd;"><strong>' + route.name + '</strong></td>';
+            html += '<td style="padding:8px; border:1px solid #ddd; text-align:right;">' + fmt(route.lastWeekRevenue) + ' ₽</td>';
+            html += '<td style="padding:8px; border:1px solid #ddd; text-align:right;">' + fmt(route.lastWeekProfit) + ' ₽</td>';
+            html += '<td style="padding:8px; border:1px solid #ddd; text-align:right;">';
+            html += '<span style="color:' + revColor + ';">Оборот: ' + (revenueChange === 'N/A' ? '—' : (parseFloat(revenueChange) >= 0 ? '+' : '') + revenueChange + '%') + '</span><br>';
+            html += '<span style="color:' + profColor + ';">Прибыль: ' + (profitChange === 'N/A' ? '—' : (parseFloat(profitChange) >= 0 ? '+' : '') + profitChange + '%') + '</span>';
+            html += '</td></tr>';
+        });
+        
+        html += '</table>';
+    }
+    
     html += '</div>';
     
     return html;
+}
+
+function calculateWeeklyTrend(routesData) {
+    var now = new Date();
+    var lastWeekStart = getWeekStart(now);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    var lastWeekEnd = new Date(lastWeekStart);
+    lastWeekEnd.setDate(lastWeekEnd.getDate() + 6);
+    
+    var prevWeekStart = new Date(lastWeekStart);
+    prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+    var prevWeekEnd = new Date(lastWeekStart);
+    prevWeekEnd.setDate(prevWeekEnd.getDate() - 1);
+    
+    var result = [];
+    
+    document.querySelectorAll('.route-accordion:not(.connected-accordion)').forEach(function(acc) {
+        var routeName = acc.querySelector('.route-header').textContent.replace(' ▼', '').trim();
+        var content = acc.querySelector('.route-content');
+        if (!content) return;
+        
+        var rows = content.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+        var lastWeekRevenue = 0, lastWeekProfit = 0;
+        var prevWeekRevenue = 0, prevWeekProfit = 0;
+        
+        rows.forEach(function(row) {
+            var dateKey = row.getAttribute('data-date-key') || '';
+            if (!dateKey) return;
+            var d = new Date(dateKey);
+            var sum = parseFloat(row.getAttribute('data-original-sum')) || 0;
+            var revenue = sum * 100 / 122;
+            var profit = parseFloat(row.getAttribute('data-dohod')) || 0;
+            
+            if (d >= lastWeekStart && d <= lastWeekEnd) {
+                lastWeekRevenue += revenue;
+                lastWeekProfit += profit;
+            } else if (d >= prevWeekStart && d <= prevWeekEnd) {
+                prevWeekRevenue += revenue;
+                prevWeekProfit += profit;
+            }
+        });
+        
+        if (lastWeekRevenue > 0 || prevWeekRevenue > 0) {
+            result.push({
+                name: routeName,
+                lastWeekRevenue: Math.round(lastWeekRevenue),
+                lastWeekProfit: Math.round(lastWeekProfit),
+                prevWeekRevenue: Math.round(prevWeekRevenue),
+                prevWeekProfit: Math.round(prevWeekProfit)
+            });
+        }
+    });
+    
+    return result.length > 0 ? result : null;
 }
 
 </script>
