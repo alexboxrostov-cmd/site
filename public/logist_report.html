@@ -2607,12 +2607,32 @@ function renderConnectedAccordions() {
         // Контент
         var content = document.createElement('div');
         content.id = 'connected_' + cr.id;
-        content.className = 'route-content';
+        content.className = 'route-content collapsed-avg collapsed-sum collapsed-cost collapsed-dohod';
+        
+        // Верхняя панель с кнопками управления
+        var topBar = document.createElement('div');
+        topBar.className = 'route-top-bar';
+        
+        var extraDiv = document.createElement('div');
+        extraDiv.className = 'route-extra';
+        extraDiv.setAttribute('data-route', 'connected_' + cr.id);
+        
+        var safeId = cr.id.replace(/'/g, "\\'");
+        extraDiv.innerHTML =
+            '<span class="calc-progress" data-route="connected_' + escapeAttr(cr.id) + '"></span>' +
+            '<button class="calc-btn" type="button" onclick="startCalc(\'connected_' + safeId + '\', false)">🚗 Рассчитать</button>' +
+            '<input type="checkbox" class="chk-recalc" title="Показать Пересчитать" onchange="toggleRecalcBtn(this)">' +
+            '<button class="recalc-btn" type="button" onclick="startCalc(\'connected_' + safeId + '\', true)">🔄 Пересчитать</button>' +
+            '<button class="open-costs-btn" onclick="openModal(\'connected_' + safeId + '\')">💰 Настроить стоимости</button>' +
+            '<label>Километры (норма):</label>' +
+            '<input type="text" class="route-km-input" data-route="connected_' + escapeAttr(cr.id) + '" value="">' +
+            '<span class="route-km-avg" data-route="connected_' + escapeAttr(cr.id) + '" title="Среднее по всем расчётам">≈ —</span>';
+        
+        topBar.appendChild(extraDiv);
+        content.appendChild(topBar);
         
         // Таблица с объединёнными данными
         var table = document.createElement('table');
-        table.style.width = '100%';
-        table.style.borderCollapse = 'collapse';
         
         var thead = document.createElement('thead');
         // Создаём заголовок с дополнительным столбцом "Маршруты"
@@ -2744,6 +2764,20 @@ function renderConnectedAccordions() {
             routeLabel.style.fontSize = '8pt';
             routeLabel.textContent = group.routes.join(' + ');
             newRow.insertBefore(routeLabel, newRow.firstChild);
+            
+            // Добавляем обработчик клика на дату для popup
+            var dateCell = newRow.querySelector('td[data-col-key="date"]');
+            if (dateCell) {
+                var dateSpan = dateCell.querySelector('.clickable-date');
+                if (dateSpan) {
+                    dateSpan.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        var dt = this.getAttribute('data-date') || group.dateKey;
+                        showPopup(e, allClients, dt, 'connected_' + cr.id + '_' + key, null, 
+                                  group.plan + '-я плановая', '', group.routes.join(', '), '', 'connected_' + cr.id);
+                    });
+                }
+            }
             
             tbody.appendChild(newRow);
         });
@@ -2993,28 +3027,87 @@ function generateAIAnalysis(routesData) {
         });
     }
     
+    // Детальный анализ по каждому маршруту
+    html += '<h3 style="color:#9b59b6;">📋 Детальный анализ маршрутов</h3>';
+    html += '<table style="width:100%; border-collapse:collapse; margin:10px 0; font-size:9.5pt;">';
+    html += '<tr style="background:#8e44ad; color:white;"><th style="padding:8px; border:1px solid #7d3c98; text-align:left;">Маршрут</th>';
+    html += '<th style="padding:8px; border:1px solid #7d3c98; text-align:right;">Оборот</th>';
+    html += '<th style="padding:8px; border:1px solid #7d3c98; text-align:right;">Затраты</th>';
+    html += '<th style="padding:8px; border:1px solid #7d3c98; text-align:right;">Прибыль</th>';
+    html += '<th style="padding:8px; border:1px solid #7d3c98; text-align:right;">Маржа</th>';
+    html += '<th style="padding:8px; border:1px solid #7d3c98; text-align:right;">Рейсов</th>';
+    html += '<th style="padding:8px; border:1px solid #7d3c98; text-align:center;">Статус</th></tr>';
+    
+    routesData.forEach(function(r) {
+        var margin = parseFloat(r.margin);
+        var status = '';
+        var statusColor = '';
+        
+        if (r.profit < 0) {
+            status = '⚠️ Убыточный';
+            statusColor = '#e74c3c';
+        } else if (margin < 10) {
+            status = '⚡ Низкая маржа';
+            statusColor = '#f39c12';
+        } else if (margin > 25) {
+            status = '✅ Отличный';
+            statusColor = '#27ae60';
+        } else {
+            status = '👍 Нормальный';
+            statusColor = '#3498db';
+        }
+        
+        var rowBg = r.profit < 0 ? '#fadbd8' : (margin > 25 ? '#d5f4e6' : '#ffffff');
+        
+        html += '<tr style="background:' + rowBg + ';">';
+        html += '<td style="padding:8px; border:1px solid #ddd;"><strong>' + r.name + '</strong></td>';
+        html += '<td style="padding:8px; border:1px solid #ddd; text-align:right;">' + fmt(r.revenue) + ' ₽</td>';
+        html += '<td style="padding:8px; border:1px solid #ddd; text-align:right; color:#e74c3c;">' + fmt(r.cost) + ' ₽</td>';
+        html += '<td style="padding:8px; border:1px solid #ddd; text-align:right; color:' + (r.profit >= 0 ? '#27ae60' : '#e74c3c') + '; font-weight:bold;">' + fmt(r.profit) + ' ₽</td>';
+        html += '<td style="padding:8px; border:1px solid #ddd; text-align:right;">' + margin.toFixed(1) + '%</td>';
+        html += '<td style="padding:8px; border:1px solid #ddd; text-align:right;">' + r.trips + '</td>';
+        html += '<td style="padding:8px; border:1px solid #ddd; text-align:center; color:' + statusColor + '; font-weight:bold;">' + status + '</td>';
+        html += '</tr>';
+    });
+    
+    html += '</table>';
+    
     // Рекомендации
     html += '<h3 style="color:#f39c12;">💡 Рекомендации</h3>';
     html += '<ul style="margin-left: 20px;">';
     
     if (problemRoutes.length > 0) {
-        html += '<li>Пересмотрите ценообразование на убыточных маршрутах: ' + problemRoutes.map(function(r) { return r.name; }).join(', ') + '</li>';
+        html += '<li><strong>Срочно:</strong> Пересмотрите ценообразование на убыточных маршрутах: ' + problemRoutes.map(function(r) { return r.name; }).join(', ') + '</li>';
     }
     
     if (parseFloat(mostEfficient.margin) > 30) {
-        html += '<li>Маршрут "' + mostEfficient.name + '" показывает высокую эффективность - рассмотрите возможность масштабирования</li>';
+        html += '<li><strong>Возможность:</strong> Маршрут "' + mostEfficient.name + '" показывает высокую эффективность (' + mostEfficient.margin + '%) - рассмотрите возможность масштабирования или увеличения частоты рейсов</li>';
     }
     
     var avgTripsPerRoute = totalTrips / routesData.length;
     if (avgTripsPerRoute < 10) {
-        html += '<li>Низкая интенсивность рейсов (' + avgTripsPerRoute.toFixed(1) + ' рейсов/маршрут) - возможна оптимизация графика</li>';
+        html += '<li><strong>Оптимизация:</strong> Низкая интенсивность рейсов (' + avgTripsPerRoute.toFixed(1) + ' рейсов/маршрут) - возможна оптимизация графика и увеличение загрузки</li>';
     }
     
     var avgMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
     if (avgMargin < 15) {
-        html += '<li>Средняя маржинальность ниже 15% - рекомендуется пересмотреть затраты и ценообразование</li>';
+        html += '<li><strong>Внимание:</strong> Средняя маржинальность ниже 15% (' + avgMargin.toFixed(1) + '%) - рекомендуется пересмотреть затраты и ценообразование</li>';
     } else if (avgMargin > 25) {
-        html += '<li>Высокая маржинальность (' + avgMargin.toFixed(1) + '%) - отличные показатели эффективности</li>';
+        html += '<li><strong>Отлично:</strong> Высокая маржинальность (' + avgMargin.toFixed(1) + '%) - отличные показатели эффективности бизнеса</li>';
+    }
+    
+    // Анализ затрат
+    var costToRevenueRatio = totalRevenue > 0 ? (totalCost / totalRevenue * 100) : 0;
+    if (costToRevenueRatio > 80) {
+        html += '<li><strong>Критично:</strong> Доля затрат в обороте составляет ' + costToRevenueRatio.toFixed(1) + '% - необходимо срочно оптимизировать расходы</li>';
+    } else if (costToRevenueRatio > 70) {
+        html += '<li><strong>Контроль:</strong> Доля затрат в обороте ' + costToRevenueRatio.toFixed(1) + '% - рекомендуется найти способы снижения издержек</li>';
+    }
+    
+    // Анализ загрузки
+    var avgClientsPerTrip = totalTrips > 0 ? (routesData.reduce(function(s, r) { return s + r.clients; }, 0) / totalTrips) : 0;
+    if (avgClientsPerTrip < 5) {
+        html += '<li><strong>Загрузка:</strong> Среднее количество клиентов на рейс (' + avgClientsPerTrip.toFixed(1) + ') ниже оптимального - рассмотрите консолидацию заказов</li>';
     }
     
     html += '</ul>';
