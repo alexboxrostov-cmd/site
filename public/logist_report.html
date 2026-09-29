@@ -1,0 +1,3209 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Отчет по логистике</title>
+<link rel="icon" href="data:,">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<style>
+body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; margin: 10px 20px; }
+.header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 15px; background: #f0f2f5; padding: 6px 15px; border-radius: 5px; margin-bottom: 10px; }
+.header h2 { margin: 0; font-size: 16pt; }
+.header .info { display: flex; flex-wrap: wrap; gap: 10px 20px; font-size: 10pt; }
+.header .info span { white-space: nowrap; }
+.header .info .label { font-weight: bold; }
+.date-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: #fff; padding: 8px 15px; border: 1px solid #dcdcdc; border-radius: 5px; margin-bottom: 15px; position: sticky; top: 0; z-index: 50; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.date-filter .df-label { font-weight: bold; }
+.date-filter button { padding: 5px 12px; font-size: 10.5pt; border: 1px solid #aaa; background: #f8f9fa; border-radius: 4px; cursor: pointer; }
+.date-filter button:hover { background: #e9ecef; }
+.date-filter button.active { background: #2c3e50; color: white; border-color: #2c3e50; }
+.date-filter input[type="date"] { padding: 4px 8px; font-size: 10.5pt; border: 1px solid #aaa; border-radius: 4px; }
+.date-filter .divider { color: #999; }
+.date-filter .btn-reload { margin-left: auto; background: #3498db; color: white; border-color: #3498db; }
+.date-filter .btn-reload:hover { background: #2980b9; }
+
+/* === НОВОЕ: Кнопка соединённых маршрутов === */
+.date-filter .btn-connected-routes { background: #8e44ad !important; color: #ffffff !important; border: 2px solid #6c3483 !important; margin-left: 5px; font-weight: bold !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+.date-filter .btn-connected-routes:hover { background: #7d3c98 !important; }
+
+/* === НОВОЕ: Кнопка Заполнить КМ === */
+.date-filter .btn-fill-km { background: #16a085 !important; color: #ffffff !important; border: 2px solid #117a65 !important; margin-left: 5px; font-weight: bold !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+.date-filter .btn-fill-km:hover { background: #138d75 !important; }
+.date-filter .btn-fill-km:disabled { background: #95a5a6 !important; border-color: #7f8c8d !important; cursor: not-allowed; }
+
+/* === НОВОЕ: Аккордеон соединённых маршрутов === */
+.connected-accordion { margin-top: 20px; border: 1px solid #8e44ad; border-radius: 5px; }
+.connected-accordion .route-header { background-color: #8e44ad; }
+.connected-accordion .route-header:hover { background-color: #7d3c98; }
+
+.route-accordion { margin-top: 20px; border: 1px solid #bdc3c7; border-radius: 5px; }
+.route-content { display: none; padding: 10px; background: #f8f9fa; border-top: 1px solid #bdc3c7; }
+.route-content.active { display: block; }
+
+/* === НОВОЕ: Сводка в свёрнутом аккордеоне (компактная) === */
+.route-collapsed-summary { display: none; padding: 6px 15px; background: #f8f9fa; border-top: 1px solid #dee2e6; font-size: 10pt; }
+.route-collapsed-summary.visible { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
+.summary-inline { display: inline-flex; align-items: center; gap: 4px; }
+.summary-inline .si-label { color: #6c757d; font-size: 9pt; }
+.summary-inline .si-value { font-weight: bold; font-size: 10.5pt; }
+.summary-inline.si-nds .si-value { color: #2980b9; }
+.summary-inline.si-cost .si-value { color: #e67e22; }
+.summary-inline.si-dohod .si-value { color: #27ae60; }
+.summary-inline .si-month { color: #95a5a6; font-size: 8.5pt; margin-right: 3px; }
+
+.route-km-avg { padding: 4px 10px; background: #eaf4ff; color: #2980b9; border-radius: 3px; font-weight: bold; font-size: 10.5pt; cursor: help; white-space: nowrap; }
+
+/* === Таблица === */
+table { border-collapse: collapse; width: 100%; }
+.route-content table { min-width: max-content; }
+
+/* === Sticky headers === */
+.route-header { background-color: #34495e; color: white; padding: 10px 12px; cursor: pointer; font-size: 13pt; font-weight: bold; border-radius: 5px 5px 0 0; position: sticky; top: 48px; z-index: 30; }
+.route-header:hover { background-color: #2c3e50; }
+
+.route-content thead { position: sticky; top: 90px; z-index: 25; }
+.route-content thead th { position: sticky; top: 90px; z-index: 25; background: #2c3e50; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+th, td { border: 1px solid #aaa; padding: 2px 3px; text-align: center; vertical-align: middle; white-space: nowrap; font-size: 9.5pt; }
+th { padding: 3px 4px; font-size: 9pt; }
+.popup-box th, .popup-box td { white-space: normal; }
+th { background-color: #2c3e50; color: white; font-weight: bold; }
+tbody tr:nth-child(even) { background-color: #f9f9f9; }
+tbody tr:hover { background-color: #f1f1f1; }
+.day-Mon td { background-color: #FFE6E6; }
+.day-Tue td { background-color: #E6F2FF; }
+.day-Wed td { background-color: #E6FFE6; }
+.day-Thu td { background-color: #FFF9E6; }
+.day-Fri td { background-color: #F0E6FF; }
+.day-Sat td { background-color: #E6F7FF; }
+.day-Sun td { background-color: #FFE6F0; }
+.week-separator td { background-color: #ecf0f1 !important; font-weight: bold; }
+.empty-col { background-color: transparent !important; border: none; width: 20px; }
+.section-sep { border: none !important; border-left: 4px double #2c3e50 !important; width: 4px !important; padding: 0 !important; background: transparent !important; }
+td[data-col-key="km"].km-has-value { cursor: pointer; }
+td[data-col-key="km"].km-has-value:hover { background: #ffe6e6 !important; text-decoration: line-through; }
+td[data-col-key="km"].km-has-value::after { content: " ✕"; color: #e74c3c; font-size: 9pt; }
+.day-cell, .queue-cell, .time-cell { cursor: pointer; font-weight: bold; }
+.day-cell:hover, .queue-cell:hover, .time-cell:hover { background-color: #d5dbdb; }
+.bold-text { font-weight: bold; }
+.clickable-date { cursor: pointer; font-weight: bold; padding: 2px 6px; border-radius: 3px; }
+.clickable-date:hover { background-color: #e8f4fd; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+.col-sum-real { display: none; text-align: right; color: #cc0000; font-weight: bold; }
+.col-sum-real.show { display: table-cell; }
+.margin-bold { font-weight: bold; }
+.text-danger td { color: red !important; }
+.text-danger td.margin-bold { color: red !important; }
+
+.col-toggle { display: inline-block; cursor: pointer; color: #f1c40f; font-size: 16pt; user-select: none; margin-left: 6px; font-weight: bold; line-height: 1; vertical-align: middle; }
+.col-toggle:hover { color: #fff; }
+
+.route-content.collapsed-avg .col-avg-day,
+.route-content.collapsed-avg .col-avg-week,
+.route-content.collapsed-sum .col-sum-day,
+.route-content.collapsed-sum .col-sum-week,
+.route-content.collapsed-cost .col-cost-cum,
+.route-content.collapsed-dohod .col-dohod-itog,
+.route-content.collapsed-dohod .col-dohod-cum { display: none; }
+
+
+
+.group-arrow { display: inline-block; width: 14px; cursor: pointer; color: #3498db; font-size: 11pt; user-select: none; margin-right: 3px; }
+.group-arrow:hover { color: #2980b9; }
+.group-child td { color: #999 !important; font-style: italic; background-color: #fafafa !important; }
+.group-child td.time-cell { padding-left: 30px !important; cursor: default; }
+.group-child td.time-cell:hover { background-color: transparent !important; }
+
+.popup-box { position: absolute; background: white; border: 2px solid #2c3e50; border-radius: 8px; padding: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); z-index: 1000; min-width: 350px; max-height: 80vh; overflow-y: auto; font-size: 10pt; }
+
+.popup-box table { width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 5px; }
+.popup-box table th { background-color: #d4e6f1; color: #1a5276; font-weight: bold; padding: 4px 8px; border: 1px solid #a9cce3; text-align: left; position: static; font-size: 9pt; }
+.popup-box table td { padding: 4px 8px; border: 1px solid #a9cce3; text-align: left; word-wrap: break-word; vertical-align: top; font-size: 9.5pt; }
+
+/* Фиксированные ширины колонок */
+.popup-box table th:nth-child(1), .popup-box table td:nth-child(1) { width: 32px;  text-align: center; }
+.popup-box table th:nth-child(2), .popup-box table td:nth-child(2) { width: 22%; }
+.popup-box table th:nth-child(3), .popup-box table td:nth-child(3) { width: auto; }
+.popup-box table th:nth-child(4), .popup-box table td:nth-child(4) { width: 80px;  white-space: nowrap; text-align: center; }
+.popup-box table th:nth-child(5), .popup-box table td:nth-child(5) { width: 100px; white-space: nowrap; text-align: right; }
+.popup-box table th:nth-child(6), .popup-box table td:nth-child(6) { width: 60px;  text-align: center; }
+
+.popup-box tr.cancelled-row td { color: #b94a4a; background: #fdf3f3; }
+.popup-box tr.cancelled-row td:first-child { text-align: center; }
+.popup-box tr.cancelled-row td:first-child::before { content: "✖ "; color: #e74c3c; font-weight: bold; }
+.popup-box td.return-cell { text-align: center; color: #e67e22; font-weight: bold; font-size: 14pt; }
+.popup-box .close-btn { float: right; cursor: pointer; font-size: 14px; font-weight: bold; color: #888; background: none; border: none; }
+.popup-box .close-btn:hover { color: #e74c3c; }
+.popup-title { font-weight: bold; margin-bottom: 5px; }
+.popup-subtitle { font-size: 9pt; color: #555; margin-bottom: 8px; }
+.popup-box .copy-btn { cursor: pointer; margin-left: 5px; background: none; border: none; font-size: 14px; }
+.popup-box .copy-btn:hover { color: #2980b9; }
+.build-route-btn { display: block; width: 100%; margin-top: 10px; padding: 8px 12px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11pt; font-weight: bold; }
+.build-route-btn:hover { background: #2980b9; }
+
+.route-extra { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-left: auto; }
+.route-extra label { font-weight: bold; margin-right: 3px; }
+.route-extra input.route-km-input { padding: 4px 8px; border: 1px solid #aaa; border-radius: 3px; width: 80px; font-size: 11pt; }
+.open-costs-btn { background: #9B59B6; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 11pt; }
+.open-costs-btn:hover { background: #7d3c98; }
+.calc-btn { background: #27ae60; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 11pt; }
+.calc-btn:hover { background: #229954; }
+.calc-btn:disabled { background: #95a5a6; cursor: not-allowed; }
+.recalc-btn { background: #e67e22; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 11pt; display: none; }
+.recalc-btn.visible { display: inline-block; }
+.recalc-btn:hover { background: #d35400; }
+.recalc-btn:disabled { background: #95a5a6; cursor: not-allowed; }
+.calc-progress { font-size: 10.5pt; color: #2c3e50; font-weight: bold; padding: 4px 10px; border-radius: 3px; background: #f0f2f5; }
+.chk-recalc { width: 14px; height: 14px; cursor: pointer; }
+
+.route-top-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; background: #f8f9fa; padding: 6px 12px; border-radius: 4px; margin-bottom: 10px; gap: 8px; }
+.filter-container { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.filter-container label { font-weight: bold; }
+.filter-container select { padding: 4px 8px; font-size: 11pt; border-radius: 4px; border: 1px solid #aaa; }
+
+.multi-filter { position: relative; display: inline-block; }
+.multi-filter-btn { padding: 4px 12px; border: 1px solid #aaa; border-radius: 4px; background: white; cursor: pointer; font-size: 11pt; min-width: 170px; text-align: left; }
+.multi-filter-btn:hover { background: #f0f0f0; }
+.multi-filter-btn.active { border-color: #2980b9; box-shadow: 0 0 3px rgba(41,128,185,0.5); }
+.multi-filter-dropdown { display: none; position: absolute; top: 100%; left: 0; background: white; border: 1px solid #aaa; border-radius: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 200; min-width: 320px; max-height: 400px; overflow-y: auto; padding: 8px; margin-top: 2px; }
+.multi-filter-dropdown.open { display: block; }
+.multi-filter-actions { display: flex; gap: 5px; padding-bottom: 6px; border-bottom: 1px solid #eee; margin-bottom: 6px; }
+.multi-filter-actions button { padding: 3px 10px; font-size: 10pt; border: 1px solid #aaa; background: #f8f9fa; border-radius: 3px; cursor: pointer; }
+.multi-filter-actions button:hover { background: #e9ecef; }
+.multi-filter-list { max-height: 300px; overflow-y: auto; }
+.multi-filter-list label { display: block; padding: 3px 5px; cursor: pointer; font-size: 10pt; font-weight: normal; }
+.multi-filter-list label:hover { background: #f1f1f1; }
+.multi-filter-list input[type="checkbox"] { margin-right: 6px; }
+
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; }
+.modal-overlay.open { display: flex; align-items: center; justify-content: center; }
+.modal-box { background: white; border-radius: 8px; padding: 20px; max-width: 90vw; max-height: 90vh; overflow: auto; min-width: 620px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 15px; font-size: 14pt; font-weight: bold; }
+.modal-close { background: none; border: none; font-size: 18pt; cursor: pointer; color: #888; line-height: 1; }
+.modal-close:hover { color: #e74c3c; }
+.modal-section { margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px; }
+.modal-section > label { font-weight: bold; display: block; margin-bottom: 8px; }
+.settings-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.settings-row label { font-weight: bold; }
+.settings-row input[type="time"], .settings-row input[type="number"] { padding: 4px 8px; border: 1px solid #aaa; border-radius: 3px; font-size: 11pt; width: 80px; }
+.settings-row input[type="text"] { padding: 4px 8px; border: 1px solid #aaa; border-radius: 3px; font-size: 11pt; flex: 1; min-width: 300px; }
+.costs-table { border-collapse: collapse; width: 100%; }
+.costs-table th, .costs-table td { border: 1px solid #ccc; padding: 4px 6px; text-align: center; }
+.costs-table th { background: #d4e6f1; color: #1a5276; font-weight: bold; }
+.costs-table td.day-label { background: #f0f0f0; font-weight: bold; text-align: left; width: 90px; }
+.costs-table input { width: 80px; padding: 4px; border: 1px solid #aaa; border-radius: 3px; font-size: 11pt; text-align: right; }
+.expand-btn { background: #3498db; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 10pt; margin-top: 8px; }
+.expand-btn:hover { background: #2980b9; }
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; padding-top: 10px; border-top: 1px solid #ccc; }
+.modal-btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 11pt; }
+.modal-btn.save { background: #2c3e50; color: white; }
+.modal-btn.save:hover { background: #1a252f; }
+.modal-btn.history { background: #f39c12; color: white; }
+.modal-btn.history:hover { background: #d68910; }
+.modal-btn.cancel { background: #e0e0e0; color: #333; }
+.modal-btn.cancel:hover { background: #c0c0c0; }
+.history-list { max-height: 400px; overflow-y: auto; }
+.history-list table { width: 100%; }
+.history-list thead { position: static; }
+.history-list th { background: #d4e6f1; color: #1a5276; padding: 4px 8px; border: 1px solid #a9cce3; position: static; }
+.history-list td { padding: 4px 8px; border: 1px solid #a9cce3; text-align: center; }
+
+.data-warning { background: #fff3cd; border: 1px solid #ffc107; padding: 8px 15px; border-radius: 5px; margin-bottom: 10px; color: #856404; }
+.data-error { text-align: center; padding: 40px 20px; color: #c0392b; }
+.data-error h3 { font-size: 16pt; margin-bottom: 15px; }
+.data-error p { font-size: 11pt; margin-bottom: 10px; }
+.data-error .hint { color: #888; font-size: 10pt; margin-bottom: 20px; }
+.data-error button { padding: 10px 25px; font-size: 12pt; cursor: pointer; border: none; background: #3498db; color: white; border-radius: 5px; }
+.data-error button:hover { background: #2980b9; }
+
+.period-trigger { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border: 1px solid #aaa; background: #fff; border-radius: 4px; cursor: pointer; font-size: 10.5pt; }
+.period-trigger:hover { background: #f0f0f0; }
+.period-trigger.active { border-color: #2980b9; box-shadow: 0 0 3px rgba(41,128,185,0.5); }
+.period-trigger .arrow { font-size: 8pt; color: #666; }
+.period-wrap { position: relative; display: inline-block; }
+
+.period-popup { position: absolute; top: 100%; left: 0; z-index: 500; background: #fff; border: 1px solid #aaa; border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,0.25); padding: 14px; display: none; margin-top: 4px; min-width: 320px; }
+.period-popup.open { display: block; }
+.period-popup .pp-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.period-popup .pp-row label { font-weight: bold; min-width: 55px; }
+.period-popup .pp-row input { padding: 5px 8px; font-size: 11pt; border: 1px solid #aaa; border-radius: 3px; flex: 1; }
+.period-popup .pp-hint { font-size: 10pt; color: #888; margin-bottom: 12px; }
+.period-popup .pp-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.period-popup .pp-actions button { padding: 6px 16px; font-size: 11pt; border-radius: 4px; cursor: pointer; border: none; }
+.period-popup .pp-apply { background: #3498db; color: #fff; }
+.period-popup .pp-apply:hover { background: #2980b9; }
+.period-popup .pp-cancel { background: #e0e0e0; color: #333; }
+.period-popup .pp-cancel:hover { background: #c0c0c0; }
+.period-warn { font-size: 10pt; color: #c0392b; margin-bottom: 8px; display: none; }
+.period-warn.show { display: block; }
+
+/* === НОВОЕ: Модалка соединённых маршрутов === */
+.cr-route-list { max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 5px; padding: 8px; }
+.cr-route-item { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 4px; cursor: pointer; transition: background 0.15s; }
+.cr-route-item:hover { background: #f0f0f0; }
+.cr-route-item.selected { background: #e8daef; border: 1px solid #8e44ad; }
+.cr-route-item input[type="checkbox"] { width: 16px; height: 16px; }
+.cr-saved-list { max-height: 250px; overflow-y: auto; }
+.cr-saved-item { border: 1px solid #dee2e6; border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; background: #fafafa; }
+.cr-saved-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.cr-saved-item .cr-name { font-weight: bold; font-size: 11pt; color: #2c3e50; }
+.cr-saved-item .cr-routes { font-size: 9.5pt; color: #6c757d; margin: 4px 0; }
+.cr-saved-item .cr-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.cr-saved-item .cr-stat { font-size: 9pt; padding: 2px 8px; border-radius: 3px; }
+.cr-saved-item .cr-stat.stat-nds { background: #d6eaf8; color: #1a5276; }
+.cr-saved-item .cr-stat.stat-cost { background: #fdebd0; color: #935116; }
+.cr-saved-item .cr-stat.stat-dohod { background: #d5f5e3; color: #1e8449; }
+.cr-saved-item .cr-stat.stat-rows { background: #e8daef; color: #6c3483; }
+.cr-delete-btn { float: right; background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 14pt; line-height: 1; }
+.cr-delete-btn:hover { color: #c0392b; }
+
+</style>
+</head>
+<body>
+<div class="header">
+    <h2>Отчет по логистике</h2>
+    <div class="info">
+        <span><span class="label">База:</span> <span id="baseName"></span></span>
+        <span><span class="label">Период:</span> <span id="period"></span></span>
+        <span><span class="label">Заданий:</span> <span id="totalCount"></span></span>
+        <span><span class="label">Отчёт от:</span> <span id="reportDateTime"></span></span>
+    </div>
+</div>
+
+<div class="date-filter">
+    <span class="df-label">📅 Период:</span>
+    <button data-range="week">Неделя</button>
+    <button data-range="2weeks">2 недели</button>
+    <button data-range="month" class="active">Текущий месяц</button>
+    <button data-range="2months">2 месяца</button>
+    <button data-range="3months">3 месяца</button>
+    <span class="period-wrap">
+        <button class="period-trigger" id="periodBtn" type="button">
+            📅 <span id="periodLabel">Загрузка…</span> <span class="arrow">▼</span>
+        </button>
+        <div class="period-popup" id="periodPopup">
+            <div class="pp-row">
+                <label>С:</label>
+                <input type="date" id="dateFrom">
+            </div>
+            <div class="pp-row">
+                <label>По:</label>
+                <input type="date" id="dateTo">
+            </div>
+            <div class="period-warn" id="periodWarn">Период не может быть больше 4 месяцев</div>
+            <div class="pp-hint">Максимум 4 месяца за раз</div>
+            <div class="pp-actions">
+                <button class="pp-cancel" id="ppCancel" type="button">Отмена</button>
+                <button class="pp-apply" id="ppApply" type="button">Применить</button>
+            </div>
+        </div>
+    </span>
+    <button class="btn-reload" id="btnReload">🔄 Обновить</button>
+    <button class="btn-fill-km" id="btnFillKm" type="button">🚗 Заполнить КМ</button>
+    <button class="btn-connected-routes" id="btnConnectedRoutes" type="button">🔗 Соединённые маршруты</button>
+</div>
+
+<div id="container"></div>
+
+<!-- === НОВОЕ: AI Анализ === -->
+<div id="aiAnalysisSection" style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white;">
+    <h2 style="margin: 0 0 15px 0; font-size: 18pt;">🤖 AI Анализ логистики</h2>
+    <div id="aiControls" style="margin-bottom: 15px;">
+        <button id="btnAnalyze" onclick="runAIAnalysis()" style="padding: 10px 20px; background: #ffffff; color: #667eea; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 11pt;">
+            📊 Проанализировать данные
+        </button>
+        <span id="aiStatus" style="margin-left: 15px; font-size: 10pt;"></span>
+    </div>
+    <div id="aiResult" style="background: rgba(255,255,255,0.95); color: #2c3e50; padding: 20px; border-radius: 8px; min-height: 100px; display: none;">
+        <div id="aiContent"></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span>Настройка стоимостей: <span id="modalRouteName"></span></span>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-section">
+                <label>Параметры кластеризации</label>
+                <div class="settings-row">
+                    <label>Первая плановая:</label>
+                    <input type="time" id="modalFirstFrom" value="00:00" step="60">
+                    <span>–</span>
+                    <input type="time" id="modalFirstTo" value="08:45" step="60">
+                </div>
+                <div class="settings-row">
+                    <label>Порог объединения (мин):</label>
+                    <input type="number" id="modalThreshold" value="90" min="10" step="5">
+                    <label style="margin-left:15px;">Мин. разрыв (мин):</label>
+                    <input type="number" id="modalMinGap" value="15" min="1" step="1">
+                </div>
+            </div>
+            <div class="modal-section">
+                <label>Стоимости по плановым</label>
+                <table class="costs-table" id="modalCostsTable"></table>
+                <button class="expand-btn" id="expandBtn" onclick="toggleDayExpand()">Развернуть по дням</button>
+            </div>
+            <div class="modal-section">
+                <label>Дополнительные параметры</label>
+                <div class="settings-row">
+                    <label>Километры:</label>
+                    <input type="text" id="modalKm" placeholder="напр. 60" style="width:80px;">
+                </div>
+                <div class="settings-row">
+                    <label>Стоимость клиентских (руб./клиент):</label>
+                    <input type="number" id="modalClientCost" value="0" min="0" step="1">
+                </div>
+            </div>
+            <div class="modal-section">
+                <label>Адреса маршрута</label>
+                <div class="settings-row">
+                    <label>Адрес начала:</label>
+                    <input type="text" id="modalAddressStart" placeholder="если пусто — стандартный адрес склада">
+                </div>
+                <div class="settings-row">
+                    <label>Адрес окончания:</label>
+                    <input type="text" id="modalAddressEnd" placeholder="если пусто — стандартный адрес склада">
+                </div>
+            </div>
+            <div class="modal-section">
+                <label>Комментарии</label>
+                <div class="settings-row">
+                    <label>Комментарий 1:</label>
+                    <input type="text" id="modalComment1" placeholder="">
+                </div>
+                <div class="settings-row">
+                    <label>Комментарий 2:</label>
+                    <input type="text" id="modalComment2" placeholder="">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn history" onclick="showHistory()">📜 История</button>
+            <button class="modal-btn cancel" onclick="closeModal()">Отмена</button>
+            <button class="modal-btn save" onclick="saveModalCosts()">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="historyOverlay">
+    <div class="modal-box" style="min-width:500px;">
+        <div class="modal-header">
+            <span>История изменений: <span id="historyRouteName"></span></span>
+            <button class="modal-close" onclick="closeHistory()">✕</button>
+        </div>
+        <div class="history-list" id="historyList"></div>
+        <div class="modal-footer">
+            <button class="modal-btn cancel" onclick="closeHistory()">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+<!-- === НОВОЕ: Модалка соединённых маршрутов === -->
+<div class="modal-overlay" id="connectedRoutesOverlay">
+    <div class="modal-box" style="min-width:650px; max-width:800px;">
+        <div class="modal-header">
+            <span>🔗 Соединённые маршруты</span>
+            <button class="modal-close" onclick="closeConnectedRoutes()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-section">
+                <label>Сохранённые комбинации</label>
+                <div class="cr-saved-list" id="crSavedList">
+                    <p style="text-align:center;color:#888;padding:15px;">Нет сохранённых комбинаций</p>
+                </div>
+            </div>
+            <div class="modal-section">
+                <label>Создать новую комбинацию</label>
+                <div class="settings-row" style="margin-bottom:10px;">
+                    <label>Название:</label>
+                    <input type="text" id="crNewName" placeholder="Например: Азов+Батайск" style="min-width:200px;">
+                </div>
+                <p style="font-size:9.5pt;color:#6c757d;margin-bottom:8px;">Выберите маршруты для объединения (минимум 2):</p>
+                <div class="cr-route-list" id="crRouteList"></div>
+                <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
+                    <button class="modal-btn cancel" onclick="crClearSelection()">Сбросить</button>
+                    <button class="modal-btn save" onclick="crSaveCombination()">💾 Сохранить комбинацию</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn cancel" onclick="closeConnectedRoutes()">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+
+
+<iframe id="routeCalcFrame" style="display:none;width:0;height:0;border:0;" src="about:blank"></iframe>
+
+<script>
+// ============================================================
+// ГЛОБАЛЬНЫЕ
+// ============================================================
+var filters = { day: {}, queue: {}, time: {}, client: {}, multiClient: {} };
+var openPopups = [];
+var routeData = {};
+var currentBase = '';
+var activeRowId = null;
+var dateFilter = { from: null, to: null, activeBtn: 'month' };
+var baseNameMapping = {
+    'rostov_neft': 'Ростов Нефтяной',
+    'rostov_vodopad': 'Ростов Водопадный',
+    'krasnodar_vish': 'Краснодар Вишняковая',
+    'krasnodar_mar': 'Краснодар Марьянская',
+    'pyatigorsk': 'Пятигорск',
+    'shahty': 'Шахты'
+};
+var BASE_ADDRESSES = {
+    'rostov_neft': '344016, Ростовская обл, Ростов-на-Дону г, Нефтяной пер, здание № 1, строение 1',
+    'rostov_vodopad': '346715, Ростовская обл, Аксайский р-н, Водопадный п, Совхозная ул, дом № 1',
+    'shahty': '346524, Ростовская обл, Шахты г, Комиссаровский пер, дом № 143И',
+    'krasnodar_vish': '350001, Краснодарский край, Краснодар г, Вишняковой ул, дом № 3, помещение 3',
+    'krasnodar_mar': '353823, Краснодарский край, Красноармейский р-н, Марьянская ст-ца, Октябрьская ул, дом № 122',
+    'pyatigorsk': '357561, Ставропольский край, Пятигорск г, Горчеводский п, Ясная ул, здание № 19'
+};
+var dayNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+var allDaysOrder = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+var modalState = { routeName: '', costs: {}, expanded: false, maxPlans: 0 };
+var ROUTE_CALC_METHOD = 'pso';
+var calcInProgress = false;
+var routeCalcIframeReady = false;
+var calcStats = { done: 0, total: 0, errors: 0, currentRoute: '' };
+
+// === НОВОЕ: Хранилище соединённых маршрутов ===
+var connectedRoutesStore = [];
+
+// Определение колонок таблицы
+var COLUMNS = [
+    { key: 'date',       label: 'Дата' },
+    { key: 'day',        label: 'День недели' },
+    { key: 'time',       label: 'Время' },
+    { key: 'queue',      label: 'Плановая' },
+    { key: 'e1',         label: '',                        cls: 'empty-col' },
+    { key: 'clients',    label: 'Кол-во контрагентов',     toggle: 'avg' },
+    { key: 'avg-day',    label: 'Ср. клиентов день',       cls: 'col-avg-day' },
+    { key: 'avg-week',   label: 'Ср. клиентов неделя',     cls: 'col-avg-week' },
+    { key: 'e2',         label: '',                        cls: 'empty-col' },
+    { key: 'sum-real',   label: 'Сумма реализации с НДС',        cls: 'col-sum-real' },
+    { key: 'sum-route',  label: 'Сумма маршрут с НДС ',           toggle: 'sum' },
+    { key: 'sum-day',    label: 'Сумма день с НДС',              cls: 'col-sum-day' },
+    { key: 'sum-week',   label: 'Сумма неделя с НДС',            cls: 'col-sum-week' },
+    { key: 'e3',         label: '',                        cls: 'empty-col' },
+    { key: 'sum-nds',    label: 'Сумма маршрут (без НДС)' },
+    { key: 'exp-client', label: 'Клиентские' },
+    { key: 'exp-route',  label: 'Стоимсоть маршрута' },
+    { key: 'margin',     label: 'Маржа без НДС (17%)',     cls: 'margin-bold' },
+    { key: 'cost',       label: 'Расходы на маршрут',      toggle: 'cost' },
+    { key: 'cost-cum',   label: 'Расходы накопительно',  cls: 'col-cost-cum' },
+    { key: 'e-cost-dohod', label: '',                       cls: 'empty-col' },
+    { key: 'dohod',      label: 'Доходность',              toggle: 'dohod' },
+    { key: 'dohod-itog', label: 'Доходность накоп. нед.',  cls: 'col-dohod-itog' },
+    { key: 'dohod-cum',  label: 'Доходность накоп. мес.',  cls: 'col-dohod-cum' },
+    { key: 'e-extra',    label: '',                        cls: 'empty-col' },
+    { key: 'km',         label: 'КМ' },
+    { key: 'time-calc',  label: 'Время' },
+    { key: 'e4',         label: '',                        cls: 'empty-col' },
+    { key: 'returns',    label: 'Возвраты' },
+    { key: 'cancelled',  label: 'Отмены мар.' }
+];
+
+// ============================================================
+// УТИЛИТЫ
+// ============================================================
+function padZero(n) { return n < 10 ? '0' + n : '' + n; }
+function fmt(n) { return (Math.round(n)).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+function getLocalDateKey(d) { return d.getFullYear() + '-' + padZero(d.getMonth() + 1) + '-' + padZero(d.getDate()); }
+function getWeekNumber(d) {
+    var dt = new Date(d); dt.setHours(0,0,0,0);
+    dt.setDate(dt.getDate() + 3 - (dt.getDay() + 6) % 7);
+    var week1 = new Date(dt.getFullYear(), 0, 4);
+    return 1 + Math.round(((dt - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+}
+function getWeekStart(d) {
+    var dt = new Date(d); dt.setHours(0,0,0,0);
+    var day = dt.getDay();
+    var diff = dt.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(dt.setDate(diff));
+}
+function formatDate(d) { return d.toLocaleDateString('ru', {day:'2-digit', month:'2-digit', year:'numeric'}); }
+function parseTimeToMin(str) { if (!str) return 0; var p = str.split(':'); return parseInt(p[0]) * 60 + parseInt(p[1] || 0); }
+function cacheBust() { return '_=' + Date.now(); }
+function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+function isCancelledClient(c) {
+    return !!(c && (c.Отменён === true || c.Отменён === 1 || c.Отменён === '1'));
+}
+function isReturnClient(c) {
+    return !!(c && (c.Возврат === true || c.Возврат === 1 || c.Возврат === '1'));
+}
+// ============================================================
+// URL
+// ============================================================
+function getBaseFromURL() {
+    var params = new URLSearchParams(window.location.search);
+    return params.get('base') || 'rostov_neft';
+}
+currentBase = getBaseFromURL();
+document.getElementById('baseName').textContent = baseNameMapping[currentBase] || currentBase;
+
+// ============================================================
+// ЗАГРУЗКА ДАННЫХ
+// ============================================================
+function getMonthsBetween(fromStr, toStr) {
+    if (!fromStr || !toStr) return [];
+    var from = new Date(fromStr);
+    var to = new Date(toStr);
+    var months = [];
+    var d = new Date(from.getFullYear(), from.getMonth(), 1);
+    while (d <= to) {
+        months.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
+        d.setMonth(d.getMonth() + 1);
+    }
+    return months;
+}
+
+function loadScriptData(url) {
+    return new Promise(function(resolve) {
+        var script = document.createElement('script');
+        try { window.data = undefined; } catch(e) {}
+        var done = false;
+        function finish(result) {
+            if (done) return;
+            done = true;
+            if (script.parentNode) script.parentNode.removeChild(script);
+            try { window.data = undefined; } catch(e) {}
+            resolve(result);
+        }
+        script.src = url;
+        script.onload = function() {
+            var d = window.data;
+            if (d && (d.routes || d.drivers)) finish(d);
+            else finish(null);
+        };
+        script.onerror = function() { finish(null); };
+        document.head.appendChild(script);
+        setTimeout(function() { finish(null); }, 10000);
+    });
+}
+
+async function tryLoadAny(urls) {
+    for (var i = 0; i < urls.length; i++) {
+        var d = await loadScriptData(urls[i]);
+        if (d && d.routes) return { data: d, url: urls[i] };
+    }
+    return null;
+}
+
+async function fetchMonthData(base, year, month) {
+    var mm = padZero(month);
+    var name = 'data_' + base + '_' + year + mm + '.js';
+    var urls = [
+        'data/' + name + '?_=' + Date.now(),
+        name + '?_=' + Date.now()
+    ];
+    var r = await tryLoadAny(urls);
+    return r ? r.data : null;
+}
+
+async function fetchOldData(base) {
+    var name = 'data_' + base + '.js';
+    var urls = [
+        'data/' + name + '?_=' + Date.now(),
+        name + '?_=' + Date.now()
+    ];
+    var r = await tryLoadAny(urls);
+    return r ? r.data : null;
+}
+
+async function loadDataForPeriod() {
+    var months = getMonthsBetween(dateFilter.from, dateFilter.to);
+    if (months.length > 4) {
+        months = months.slice(0, 4);
+        console.warn('Период обрезан до 4 месяцев');
+    }
+
+    var merged = {
+        period: { start: '', end: '' },
+        total: 0,
+        routes: [],
+        _loadedFiles: [],
+        _missingFiles: [],
+        _fallbackOldFormat: false,
+        _lastFile: null
+    };
+    var routeIndexByKey = {};
+    var anyLoaded = false;
+
+    for (var i = 0; i < months.length; i++) {
+        var m = months[i];
+        var fileName = 'data_' + currentBase + '_' + m.year + padZero(m.month) + '.js';
+        var monthData = await fetchMonthData(currentBase, m.year, m.month);
+
+        if (monthData && monthData.routes) {
+            anyLoaded = true;
+            merged._loadedFiles.push(fileName);
+            merged._lastFile = fileName;
+            merged.total += monthData.total || 0;
+            (monthData.routes || []).forEach(function(r) {
+                var key = r.Маршрут;
+                if (routeIndexByKey[key] === undefined) {
+                    routeIndexByKey[key] = merged.routes.length;
+                    merged.routes.push({ Маршрут: key, Грузополучатели: [], Строки: [] });
+                }
+                var target = merged.routes[routeIndexByKey[key]];
+                (r.Грузополучатели || []).forEach(function(c) {
+                    if (target.Грузополучатели.indexOf(c) === -1) target.Грузополучатели.push(c);
+                });
+                target.Строки = target.Строки.concat(r.Строки || []);
+            });
+        } else {
+            merged._missingFiles.push(fileName);
+        }
+    }
+
+    if (!anyLoaded) {
+        console.warn('Помесячные файлы не найдены, пробуем старый формат data_' + currentBase + '.js');
+        var oldData = await fetchOldData(currentBase);
+        if (oldData && oldData.routes) {
+            oldData._fallbackOldFormat = true;
+            oldData._missingFiles = merged._missingFiles;
+            oldData._lastFile = 'data_' + currentBase + '.js';
+            return oldData;
+        }
+        throw new Error('Файлы данных не найдены. Искали: ' + merged._missingFiles.join(', ') + ' и data_' + currentBase + '.js');
+    }
+
+    merged.routes.forEach(function(r) {
+        r.Строки.sort(function(a, b) { return new Date(a.ДатаВремя) - new Date(b.ДатаВремя); });
+    });
+
+    return merged;
+}
+
+function loadFileModTime(fileName) {
+    if (!fileName) fileName = 'data_' + currentBase + '.js';
+    var el = document.getElementById('reportDateTime');
+    var candidates = [
+        'data/' + fileName + '?' + cacheBust(),
+        fileName + '?' + cacheBust()
+    ];
+    function tryNext(i) {
+        if (i >= candidates.length) { el.textContent = 'неизвестно'; return; }
+        fetch(candidates[i], { method: 'HEAD' })
+            .then(function(r) {
+                if (!r.ok) { tryNext(i + 1); return; }
+                var lm = r.headers.get('Last-Modified');
+                if (lm) {
+                    var d = new Date(lm);
+                    el.textContent = d.toLocaleString('ru', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                } else {
+                    el.textContent = 'неизвестно';
+                }
+            })
+            .catch(function() { tryNext(i + 1); });
+    }
+    tryNext(0);
+}
+
+// ============================================================
+// ЗАГРУЗКА НАСТРОЕК МАРШРУТОВ
+// ============================================================
+function loadRouteDataFromServer() {
+    return fetch('save_route_data.php?base=' + encodeURIComponent(currentBase) + '&' + cacheBust())
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+        .then(function(t) { try { return JSON.parse(t); } catch(e) { return {}; } })
+        .then(function(d) { routeData = d || {}; return routeData; })
+        .catch(function(err) { console.error('Ошибка загрузки маршрутов:', err); routeData = {}; return routeData; });
+}
+
+function getLatestSettings(routeName) {
+    var rd = routeData[routeName];
+    if (!rd || !rd.history || rd.history.length === 0) return null;
+    return rd.history[rd.history.length - 1];
+}
+function getCostForPlan(dayCosts, planNumber) {
+    if (!dayCosts) return 0;
+    if (dayCosts[planNumber] !== undefined && dayCosts[planNumber] !== '') return parseFloat(dayCosts[planNumber]) || 0;
+    var maxKey = 0;
+    Object.keys(dayCosts).forEach(function(k) {
+        var n = parseInt(k);
+        if (n <= planNumber && n > maxKey && dayCosts[k] !== '' && dayCosts[k] !== null) maxKey = n;
+    });
+    return maxKey === 0 ? 0 : (parseFloat(dayCosts[maxKey]) || 0);
+}
+function getClientCost(routeName) { var s = getLatestSettings(routeName); if (!s || !s.settings) return 0; return parseFloat(s.settings.clientCost) || 0; }
+function getAddressStart(routeName) { var s = getLatestSettings(routeName); if (!s || !s.settings) return ''; return s.settings.addressStart || ''; }
+function getAddressEnd(routeName) { var s = getLatestSettings(routeName); if (!s || !s.settings) return ''; return s.settings.addressEnd || ''; }
+
+// ============================================================
+// МЕТОД РАСЧЁТА
+// ============================================================
+async function getRouteMethodFromConfig() {
+    try {
+        var r = await fetch('route_method.js?_=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        var text = await r.text();
+        var m = text.match(/ROUTE_CALC_METHOD_CONFIG\s*=\s*['"]([^'"]+)['"]/i);
+        if (m && m[1]) return m[1].trim();
+    } catch (e) {
+        console.warn('Не удалось прочитать route_method.js:', e);
+    }
+    return 'pso';
+}
+
+// ============================================================
+// КЛАСТЕРИЗАЦИЯ
+// ============================================================
+function assignPlansToRoute(routeRows, settings) {
+    if (!settings) { routeRows.forEach(function(r){ r._planNumber = 1; }); return 1; }
+    var firstFrom = parseTimeToMin(settings.firstPlanFrom);
+    var firstTo = parseTimeToMin(settings.firstPlanTo);
+    var threshold = parseInt(settings.threshold) || 90;
+    var minGap = parseInt(settings.minGap) || 15;
+    if (firstFrom > firstTo) { var t = firstFrom; firstFrom = firstTo; firstTo = t; }
+    var byDate = {};
+    routeRows.forEach(function(row, idx) {
+        var d = new Date(row.ДатаВремя);
+        var dateKey = getLocalDateKey(d);
+        if (!byDate[dateKey]) byDate[dateKey] = [];
+        byDate[dateKey].push({ row: row, idx: idx, mins: d.getHours() * 60 + d.getMinutes() });
+    });
+    var maxPlan = 1;
+    Object.keys(byDate).forEach(function(dateKey) {
+        var items = byDate[dateKey];
+        items.sort(function(a,b){ return a.mins - b.mins; });
+        var inFirst = [], others = [];
+        items.forEach(function(x){ if (x.mins >= firstFrom && x.mins <= firstTo) inFirst.push(x); else others.push(x); });
+        inFirst.forEach(function(x){ x.row._planNumber = 1; });
+        var currentPlan = (inFirst.length > 0) ? 1 : 0;
+        var currentStart = null, prevTime = null;
+        others.forEach(function(x) {
+            if (currentStart === null) { currentPlan++; currentStart = x.mins; x.row._planNumber = currentPlan; }
+            else {
+                var gapFromStart = x.mins - currentStart;
+                var gapFromPrev = (prevTime !== null) ? (x.mins - prevTime) : 9999;
+                if (gapFromPrev <= minGap) x.row._planNumber = currentPlan;
+                else if (gapFromStart <= threshold) x.row._planNumber = currentPlan;
+                else { currentPlan++; currentStart = x.mins; x.row._planNumber = currentPlan; }
+            }
+            prevTime = x.mins;
+            if (x.row._planNumber > maxPlan) maxPlan = x.row._planNumber;
+        });
+    });
+    return maxPlan;
+}
+
+function groupRowsByPlan(rows) {
+    var groups = [];
+    var map = {};
+    rows.forEach(function(row) {
+        var d = new Date(row.ДатаВремя);
+        var dateKey = getLocalDateKey(d);
+        var plan = row._planNumber || 1;
+        var key = dateKey + '_' + plan;
+        if (!map[key]) { map[key] = { key: key, plan: plan, dateKey: dateKey, rows: [] }; groups.push(map[key]); }
+        map[key].rows.push(row);
+    });
+    groups.sort(function(a,b){ return new Date(a.rows[0].ДатаВремя) - new Date(b.rows[0].ДатаВремя); });
+    groups.forEach(function(g){ g.rows.sort(function(a,b){ return new Date(a.ДатаВремя) - new Date(b.ДатаВремя); }); });
+    return groups;
+}
+
+function toggleGroup(rowId) {
+    var arrow = document.querySelector('.group-arrow[data-parent-id="' + rowId + '"]');
+    if (!arrow) return;
+    var isOpen = (arrow.textContent === '▼');
+    var children = document.querySelectorAll('tr[data-parent-id="' + rowId + '"]');
+    children.forEach(function(tr){ tr.style.display = isOpen ? 'none' : ''; });
+    arrow.textContent = isOpen ? '▸' : '▼';
+}
+
+// ============================================================
+// РАЗВОРАЧИВАНИЕ КОЛОНОК
+// ============================================================
+function toggleExpand(el) {
+    var group = el.getAttribute('data-group');
+    if (!group) return;
+    var content = el.closest('.route-content');
+    if (!content) return;
+    var cls = 'collapsed-' + group;
+    if (content.classList.contains(cls)) {
+        content.classList.remove(cls);
+        el.textContent = '▾';
+    } else {
+        content.classList.add(cls);
+        el.textContent = '▸';
+    }
+}
+
+
+
+// ============================================================
+// ОБНОВЛЕНИЕ СТОИМОСТЕЙ
+// ============================================================
+function pluralRoutes(n) {
+    var mod10 = n % 10;
+    var mod100 = n % 100;
+    if (mod100 >= 11 && mod100 <= 14) return 'маршрутов';
+    if (mod10 === 1) return 'маршрут';
+    if (mod10 >= 2 && mod10 <= 4) return 'маршрута';
+    return 'маршрутов';
+}
+
+function updateKmAvgBadge(routeName, content) {
+    var extra = content.querySelector('.route-extra[data-route="' + routeName + '"]');
+    if (!extra) return;
+    var kmAvgEl = extra.querySelector('.route-km-avg');
+    if (!kmAvgEl) return;
+    var rows = content.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+    var kmVals = [], timeMins = [];
+    rows.forEach(function(row) {
+        if (row.style.display === 'none') return;
+        var tk = row.getAttribute('data-time-key') || '';
+        if (!tk) return;
+        var res = (routeData[routeName] && routeData[routeName].routeCalcResults)
+            ? routeData[routeName].routeCalcResults[tk]
+            : null;
+        if (!res) return;
+        var v = parseFloat(res.km);
+        if (!isNaN(v) && v > 0) kmVals.push(v);
+        if (res.time) {
+            var pm = parseTimeToMin(res.time);
+            if (pm > 0) timeMins.push(pm);
+        }
+    });
+    if (kmVals.length > 0) {
+        var avgKm = kmVals.reduce(function(a,b){ return a+b; }, 0) / kmVals.length;
+        var txt = '≈ ' + avgKm.toFixed(1) + ' км';
+        if (timeMins.length > 0) {
+            var avgMin = Math.round(timeMins.reduce(function(a,b){ return a+b; }, 0) / timeMins.length);
+            var hh = Math.floor(avgMin / 60);
+            var mm = avgMin % 60;
+            txt += ' · ' + hh + ' ч ' + (mm < 10 ? '0' : '') + mm + ' мин';
+        }
+        txt += ' (' + kmVals.length + ' ' + pluralRoutes(kmVals.length) + ')';
+        kmAvgEl.textContent = txt;
+        kmAvgEl.title = 'Среднее по ' + kmVals.length + ' видимым ' + pluralRoutes(kmVals.length) + ' (из ' + rows.length + ')';
+    } else {
+        kmAvgEl.textContent = '≈ —';
+        kmAvgEl.title = 'Нет расчётов в видимых маршрутах';
+    }
+}
+
+function updateRouteCosts(routeName) {
+    var settings = getLatestSettings(routeName);
+    var costsByDay = (settings && settings.costs) ? settings.costs : null;
+    var clientCostRate = getClientCost(routeName);
+    var extra = document.querySelector('.route-extra[data-route="' + routeName + '"]');
+    if (!extra) return;
+    var content = extra.closest('.route-content');
+    if (!content) return;
+    var kmInput = extra.querySelector('.route-km-input');
+    if (kmInput) { var rd = routeData[routeName] || {}; if (kmInput !== document.activeElement) kmInput.value = rd.km || ''; }
+    updateKmAvgBadge(routeName, content);
+    var rows = content.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+    rows.forEach(function(row) {
+        var planNumber = parseInt(row.getAttribute('data-plan')) || 0;
+        var dayKey = row.getAttribute('data-day-key') || '';
+        var clientsCount = parseInt(row.getAttribute('data-clients-count')) || 0;
+        var baseCost = 0;
+        if (costsByDay && costsByDay[dayKey]) baseCost = getCostForPlan(costsByDay[dayKey], planNumber);
+        var clientCosts = clientsCount * clientCostRate;
+        var totalCost = baseCost + clientCosts;
+        row.setAttribute('data-base-cost', baseCost);
+        row.setAttribute('data-client-cost', clientCosts);
+        row.setAttribute('data-total-cost', totalCost);
+        var cc = row.querySelector('td[data-col-key="cost"]');
+        if (cc) cc.innerHTML = '<span style="font-weight:bold;">' + (totalCost > 0 ? fmt(totalCost) : '0') + '</span>';
+        var ccExpClient = row.querySelector('td[data-col-key="exp-client"]');
+        if (ccExpClient) ccExpClient.textContent = clientCosts > 0 ? fmt(clientCosts) : '0';
+        var ccExpRoute = row.querySelector('td[data-col-key="exp-route"]');
+        if (ccExpRoute) ccExpRoute.textContent = baseCost > 0 ? fmt(baseCost) : '0';
+        var sum = parseFloat(row.getAttribute('data-original-sum')) || 0;
+        var sumWNDS = sum * 100 / 122;
+        var sc = row.querySelector('td[data-col-key="sum-nds"]');
+        if (sc) sc.textContent = fmt(sumWNDS);
+        var margin = sumWNDS * 0.17;
+        var mc = row.querySelector('td[data-col-key="margin"]');
+        if (mc) mc.textContent = fmt(margin);
+        var dohod = margin - totalCost;
+        row.setAttribute('data-dohod', dohod);
+        var dc = row.querySelector('td[data-col-key="dohod"]');
+        if (dc) dc.textContent = fmt(dohod);
+        var timeKey = row.getAttribute('data-time-key') || '';
+        var calcRes = (routeData[routeName] && routeData[routeName].routeCalcResults) ? routeData[routeName].routeCalcResults[timeKey] : null;
+        var kc = row.querySelector('td[data-col-key="km"]');
+        if (kc) {
+            kc.textContent = calcRes ? calcRes.km : '—';
+            if (calcRes) {
+                kc.classList.add('km-has-value');
+                kc.title = 'Клик — удалить записанный КМ/Время';
+                kc.setAttribute('data-route-name', routeName);
+                kc.setAttribute('data-calc-key', timeKey);
+                kc.onclick = function(e) {
+                    e.stopPropagation();
+                    deleteRouteCalc(this.getAttribute('data-route-name'), this.getAttribute('data-calc-key'));
+                };
+            } else {
+                kc.classList.remove('km-has-value');
+                kc.title = '';
+                kc.removeAttribute('data-route-name');
+                kc.removeAttribute('data-calc-key');
+                kc.onclick = null;
+            }
+        }
+        var tc = row.querySelector('td[data-col-key="time-calc"]');
+        if (tc) tc.textContent = calcRes ? calcRes.time : '—';
+        if (dohod < 0) row.classList.add('text-danger'); else row.classList.remove('text-danger');
+    });
+    // === НОВОЕ: Обновляем сводку маршрута ===
+    updateRouteSummary(routeName);
+}
+
+function deleteRouteCalc(routeName, timeKey) {
+    if (!routeName || !timeKey) return;
+    if (!confirm('Удалить записанный КМ/Время для ' + routeName + ' (' + timeKey + ')?\n\nПосле этого строку можно будет пересчитать заново.')) return;
+    var payload = {};
+    payload[routeName] = { action: 'deleteRouteCalc', key: timeKey };
+    fetch('save_route_data.php?base=' + encodeURIComponent(currentBase) + '&' + cacheBust(), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    })
+    .then(function(r){ return r.text(); })
+    .then(function(t) {
+        try {
+            var res = JSON.parse(t);
+            if (res.success) {
+                if (routeData[routeName] && routeData[routeName].routeCalcResults) {
+                    delete routeData[routeName].routeCalcResults[timeKey];
+                }
+                updateRouteCosts(routeName);
+            } else { alert('Ошибка: ' + (res.error || 'неизвестно')); }
+        } catch(e) { alert('Сервер вернул не JSON'); }
+    })
+    .catch(function(e){ alert('Ошибка сети: ' + e.message); });
+}
+
+function updateAllRouteCosts() {
+    document.querySelectorAll('.route-content').forEach(function(c) {
+        var e = c.querySelector('.route-extra');
+        if (e) { var n = e.getAttribute('data-route'); if (n) updateRouteCosts(n); }
+    });
+}
+
+// ============================================================
+// ПЕРЕСЧЁТ НАКОПИТЕЛЬНЫХ ИТОГОВ
+// ============================================================
+function recalcCumulativeTotals() {
+    document.querySelectorAll('.route-content').forEach(function(content) {
+        content.querySelectorAll('tr.week-separator').forEach(function(sep){ sep.style.display = 'none'; });
+        var visibleWeeks = new Set();
+        var parentRows = content.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+        var currentWeek = null, currentDayKey = null;
+        var weekSum = 0, daySum = 0, weekDohod = 0;
+        var cumCost = 0, cumDohod = 0;
+        parentRows.forEach(function(row) {
+            if (row.style.display === 'none') return;
+            var weekNum = parseInt(row.getAttribute('data-week-num')) || 0;
+            var dateKey = row.getAttribute('data-date-key') || '';
+            if (currentWeek !== null && weekNum !== currentWeek) {
+                weekSum = 0; weekDohod = 0;
+                currentDayKey = null; daySum = 0;
+            }
+            currentWeek = weekNum;
+            visibleWeeks.add(weekNum);
+            if (dateKey !== currentDayKey) {
+                currentDayKey = dateKey;
+                daySum = 0;
+            }
+            var s  = parseFloat(row.getAttribute('data-original-sum')) || 0;
+            var d  = parseFloat(row.getAttribute('data-dohod')) || 0;
+            var tc = parseFloat(row.getAttribute('data-total-cost')) || 0;
+            daySum    += s;
+            weekSum   += s;
+            weekDohod += d;
+            cumCost   += tc;
+            cumDohod  += d;
+            var cDay = row.querySelector('td[data-col-key="sum-day"]');
+            if (cDay) cDay.textContent = fmt(daySum);
+            var cWeek = row.querySelector('td[data-col-key="sum-week"]');
+            if (cWeek) cWeek.textContent = fmt(weekSum);
+            var cItog = row.querySelector('td[data-col-key="dohod-itog"]');
+            if (cItog) cItog.textContent = fmt(weekDohod);
+            var cCostCum = row.querySelector('td[data-col-key="cost-cum"]');
+            if (cCostCum) cCostCum.textContent = fmt(cumCost);
+            var cDohodCum = row.querySelector('td[data-col-key="dohod-cum"]');
+            if (cDohodCum) cDohodCum.textContent = fmt(cumDohod);
+        });
+        content.querySelectorAll('tr.week-separator').forEach(function(sep) {
+            var wn = parseInt(sep.getAttribute('data-week-num')) || 0;
+            if (visibleWeeks.has(wn)) sep.style.display = '';
+        });
+    });
+}
+
+// ============================================================
+// === НОВОЕ: СВОДКА МАРШРУТА (для свёрнутого аккордеона) ===
+// ============================================================
+function updateRouteSummary(routeName) {
+    var summaryEl = document.querySelector('.route-collapsed-summary[data-route="' + routeName + '"]');
+    if (!summaryEl) return;
+    
+    var content = summaryEl.closest('.route-accordion').querySelector('.route-content');
+    if (!content) return;
+    
+    var rows = content.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+    
+    var now = new Date();
+    var currentMonth = now.getMonth();
+    var currentYear = now.getFullYear();
+    
+    var currentMonthNds = 0, currentMonthCost = 0, currentMonthDohod = 0;
+    
+    rows.forEach(function(row) {
+        var dateKey = row.getAttribute('data-date-key') || '';
+        if (!dateKey) return;
+        var d = new Date(dateKey);
+        
+        // Считаем ТОЛЬКО за текущий месяц
+        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+            var sum = parseFloat(row.getAttribute('data-original-sum')) || 0;
+            var sumWNDS = sum * 100 / 122;
+            var dohod = parseFloat(row.getAttribute('data-dohod')) || 0;
+            var cost = parseFloat(row.getAttribute('data-total-cost')) || 0;
+            
+            currentMonthNds += sumWNDS;
+            currentMonthCost += cost;
+            currentMonthDohod += dohod;
+        }
+    });
+    
+    // Обновляем DOM (компактная сводка)
+    var ndsEl = summaryEl.querySelector('.si-nds .si-value');
+    var costEl = summaryEl.querySelector('.si-cost .si-value');
+    var dohodEl = summaryEl.querySelector('.si-dohod .si-value');
+    
+    if (ndsEl) ndsEl.textContent = fmt(currentMonthNds) + ' ₽';
+    if (costEl) costEl.textContent = fmt(currentMonthCost) + ' ₽';
+    if (dohodEl) dohodEl.textContent = fmt(currentMonthDohod) + ' ₽';
+}
+
+
+
+// ============================================================
+// === НОВОЕ: СОЕДИНЁННЫЕ МАРШРУТЫ ===
+// ============================================================
+function loadConnectedRoutes() {
+    // Сначала проверяем localStorage
+    var stored = localStorage.getItem('connectedRoutes_' + currentBase);
+    if (stored) {
+        try {
+            connectedRoutesStore = JSON.parse(stored);
+            console.log('Загружено из localStorage:', connectedRoutesStore.length, 'комбинаций');
+        } catch(e) {
+            connectedRoutesStore = [];
+        }
+    }
+    
+    // Пытаемся загрузить с сервера (если есть)
+    return fetch('save_route_data.php?action=getConnectedRoutes&base=' + encodeURIComponent(currentBase) + '&' + cacheBust())
+    .then(function(r) { return r.text(); })
+    .then(function(t) {
+        try {
+            var data = JSON.parse(t);
+            if (data && Array.isArray(data) && data.length > 0) {
+                connectedRoutesStore = data;
+                // Сохраняем в localStorage
+                localStorage.setItem('connectedRoutes_' + currentBase, JSON.stringify(data));
+                console.log('Загружено с сервера:', data.length, 'комбинаций');
+            }
+        } catch(e) {
+            console.log('Сервер не вернул данные, используем localStorage');
+        }
+    })
+    .catch(function() {
+        console.log('Сервер недоступен, используем localStorage');
+    });
+}
+
+function saveConnectedRoutesToServer() {
+    // Сохраняем на сервер
+    fetch('save_route_data.php?base=' + encodeURIComponent(currentBase) + '&' + cacheBust(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ _connectedRoutes: { action: 'saveConnectedRoutes', data: connectedRoutesStore } })
+    }).catch(function() {
+        // Fallback на localStorage
+        localStorage.setItem('connectedRoutes_' + currentBase, JSON.stringify(connectedRoutesStore));
+    });
+    // Также всегда сохраняем в localStorage как резерв
+    localStorage.setItem('connectedRoutes_' + currentBase, JSON.stringify(connectedRoutesStore));
+    // Перерендериваем аккордеоны
+    renderConnectedAccordions();
+}
+
+function openConnectedRoutes() {
+    document.getElementById('connectedRoutesOverlay').classList.add('open');
+    renderConnectedRoutesList();
+    renderConnectedRoutesSelector();
+}
+
+function closeConnectedRoutes() {
+    document.getElementById('connectedRoutesOverlay').classList.remove('open');
+}
+
+function renderConnectedRoutesList() {
+    var list = document.getElementById('crSavedList');
+    if (!list) return;
+    
+    if (connectedRoutesStore.length === 0) {
+        list.innerHTML = '<p style="text-align:center;color:#888;padding:15px;">Нет сохранённых комбинаций</p>';
+        return;
+    }
+    
+    var html = '';
+    connectedRoutesStore.forEach(function(cr, idx) {
+        var stats = getConnectedRouteStats(cr);
+        html += '<div class="cr-saved-item">';
+        html += '<button class="cr-delete-btn" onclick="deleteConnectedRoute(' + idx + ')" title="Удалить">✕</button>';
+        html += '<div class="cr-name">' + escapeAttr(cr.name) + '</div>';
+        html += '<div class="cr-routes">' + cr.routeNames.join(' + ') + '</div>';
+        html += '<div class="cr-stats">';
+        html += '<span class="cr-stat stat-nds">Без НДС: ' + fmt(stats.totalNds) + ' ₽</span>';
+        html += '<span class="cr-stat stat-cost">Затраты: ' + fmt(stats.totalCost) + ' ₽</span>';
+        html += '<span class="cr-stat stat-dohod">Доход: ' + fmt(stats.totalDohod) + ' ₽</span>';
+        html += '<span class="cr-stat stat-rows">Рейсов: ' + stats.totalRows + '</span>';
+        html += '</div>';
+        html += '</div>';
+    });
+    list.innerHTML = html;
+}
+
+function getConnectedRouteStats(cr) {
+    var totalNds = 0, totalCost = 0, totalDohod = 0, totalRows = 0;
+    
+    cr.routeNames.forEach(function(routeName) {
+        var acc = findAccordionByRouteName(routeName);
+        if (!acc) return;
+        var content = acc.querySelector('.route-content');
+        if (!content) return;
+        var rows = content.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+        
+        rows.forEach(function(row) {
+            var sum = parseFloat(row.getAttribute('data-original-sum')) || 0;
+            var sumWNDS = sum * 100 / 122;
+            var dohod = parseFloat(row.getAttribute('data-dohod')) || 0;
+            var cost = parseFloat(row.getAttribute('data-total-cost')) || 0;
+            totalNds += sumWNDS;
+            totalCost += cost;
+            totalDohod += dohod;
+            totalRows++;
+        });
+    });
+    
+    return { totalNds: totalNds, totalCost: totalCost, totalDohod: totalDohod, totalRows: totalRows };
+}
+
+function findAccordionByRouteName(routeName) {
+    var extras = document.querySelectorAll('.route-extra[data-route]');
+    for (var i = 0; i < extras.length; i++) {
+        if (extras[i].getAttribute('data-route') === routeName) {
+            return extras[i].closest('.route-accordion');
+        }
+    }
+    return null;
+}
+
+function renderConnectedRoutesSelector() {
+    var list = document.getElementById('crRouteList');
+    if (!list) return;
+    
+    var routeNames = getAllRouteNames();
+    var html = '';
+    routeNames.forEach(function(name) {
+        html += '<div class="cr-route-item" onclick="crToggleRoute(this, \'' + escapeAttr(name) + '\')">';
+        html += '<input type="checkbox" data-route="' + escapeAttr(name) + '">';
+        html += '<span>' + name + '</span>';
+        html += '</div>';
+    });
+    list.innerHTML = html;
+}
+
+function getAllRouteNames() {
+    var names = [];
+    var extras = document.querySelectorAll('.route-extra[data-route]');
+    extras.forEach(function(e) {
+        var n = e.getAttribute('data-route');
+        if (n && names.indexOf(n) === -1) names.push(n);
+    });
+    return names.sort();
+}
+
+function crToggleRoute(el, routeName) {
+    var cb = el.querySelector('input[type="checkbox"]');
+    cb.checked = !cb.checked;
+    el.classList.toggle('selected', cb.checked);
+}
+
+function crClearSelection() {
+    var items = document.querySelectorAll('#crRouteList .cr-route-item');
+    items.forEach(function(item) {
+        item.classList.remove('selected');
+        var cb = item.querySelector('input[type="checkbox"]');
+        if (cb) cb.checked = false;
+    });
+    document.getElementById('crNewName').value = '';
+}
+
+function crSaveCombination() {
+    var name = document.getElementById('crNewName').value.trim();
+    if (!name) { alert('Введите название комбинации'); return; }
+    
+    var selectedRoutes = [];
+    var items = document.querySelectorAll('#crRouteList .cr-route-item.selected');
+    items.forEach(function(item) {
+        var cb = item.querySelector('input[type="checkbox"]');
+        if (cb) selectedRoutes.push(cb.getAttribute('data-route'));
+    });
+    
+    if (selectedRoutes.length < 2) { alert('Выберите минимум 2 маршрута'); return; }
+    
+    connectedRoutesStore.push({
+        id: 'cr_' + Date.now(),
+        name: name,
+        routeNames: selectedRoutes,
+        createdAt: new Date().toISOString()
+    });
+    
+    saveConnectedRoutesToServer();
+    renderConnectedRoutesList();
+    crClearSelection();
+}
+
+function deleteConnectedRoute(idx) {
+    if (!confirm('Удалить комбинацию "' + connectedRoutesStore[idx].name + '"?')) return;
+    connectedRoutesStore.splice(idx, 1);
+    saveConnectedRoutesToServer();
+    renderConnectedRoutesList();
+    renderConnectedAccordions();
+}
+
+// ============================================================
+// ФИЛЬТРЫ
+// ============================================================
+function filterByDay(cell) {
+    var rc = cell.closest('.route-content'); if (!rc) return;
+    var rn = rc.id.replace('route_', '');
+    var day = cell.innerText.trim();
+    if (filters.day[rn] === day) delete filters.day[rn]; else filters.day[rn] = day;
+    applyFilters(rc);
+}
+function filterByQueue(cell) {
+    var rc = cell.closest('.route-content'); if (!rc) return;
+    var rn = rc.id.replace('route_', '');
+    var q = cell.getAttribute('data-queue') || cell.innerText.trim();
+    if (filters.queue[rn] === q) delete filters.queue[rn]; else filters.queue[rn] = q;
+    applyFilters(rc);
+}
+function filterByTime(cell) {
+    var rc = cell.closest('.route-content'); if (!rc) return;
+    var rn = rc.id.replace('route_', '');
+    var ts = cell.textContent.replace('▼','').replace('▸','').trim();
+    var p = ts.split(':'); var total = parseInt(p[0]) * 60 + parseInt(p[1]);
+    var isFirst = cell.getAttribute('data-first') === 'true';
+    var st, en;
+    if (isFirst) { st = 1; en = 530; } else { st = total - 45; if (st < 0) st = 0; en = total + 45; }
+    if (filters.time[rn] && filters.time[rn].start === st && filters.time[rn].end === en) delete filters.time[rn];
+    else filters.time[rn] = { start: st, end: en };
+    applyFilters(rc);
+}
+function filterByClient(select) {
+    var rc = select.closest('.route-content'); if (!rc) return;
+    var rn = rc.id.replace('route_', '');
+    var client = select.value;
+    if (filters.multiClient[rn]) {
+        delete filters.multiClient[rn];
+        rc.querySelectorAll('.multi-filter-list input[type="checkbox"]').forEach(function(cb){ cb.checked = true; });
+        var btn = rc.querySelector('.multi-filter-btn'); if (btn) btn.textContent = 'Клиенты: все ▼';
+    }
+    if (client === '') {
+        delete filters.client[rn];
+        rc.querySelectorAll('.col-sum-real').forEach(function(c){ c.classList.remove('show'); });
+    } else {
+        filters.client[rn] = client;
+        rc.querySelectorAll('.col-sum-real').forEach(function(c){ c.classList.add('show'); });
+        rc.querySelectorAll('tbody tr:not(.client-detail):not(.week-separator)').forEach(function(row) {
+            var src = row.querySelector('td.col-sum-real');
+            if (src) {
+                var ca = row.getAttribute('data-clients');
+                var sum = 0;
+                if (ca) {
+                    var cl = ca.split('|');
+                    var sa = (row.getAttribute('data-client-sums') || '').split('|');
+                    for (var i = 0; i < cl.length; i++) {
+                        if (cl[i].trim() === client.trim() && i < sa.length) {
+                            var v = parseFloat(sa[i]); if (!isNaN(v)) sum = v;
+                            break;
+                        }
+                    }
+                }
+                var sr = parseFloat(row.getAttribute('data-original-sum')) || 0;
+                var pc = sr > 0 ? (sum / sr * 100).toFixed(0) : 0;
+                src.textContent = fmt(sum) + ' руб (' + pc + '%)';
+            }
+        });
+    }
+    applyFilters(rc);
+}
+function toggleMultiFilter(btn) {
+    var dd = btn.nextElementSibling; if (!dd) return;
+    var isOpen = dd.classList.contains('open');
+    document.querySelectorAll('.multi-filter-dropdown').forEach(function(d){ d.classList.remove('open'); });
+    if (!isOpen) { dd.classList.add('open'); btn.classList.add('active'); }
+    else btn.classList.remove('active');
+}
+function multiSelectAll(btn) {
+    var rc = btn.closest('.route-content'); if (!rc) return;
+    rc.querySelectorAll('.multi-filter-list input[type="checkbox"]').forEach(function(cb){ cb.checked = true; });
+    applyMultiFilter(rc);
+}
+function multiSelectNone(btn) {
+    var rc = btn.closest('.route-content'); if (!rc) return;
+    rc.querySelectorAll('.multi-filter-list input[type="checkbox"]').forEach(function(cb){ cb.checked = false; });
+    applyMultiFilter(rc);
+}
+function onMultiCheckboxChange(checkbox) {
+    var rc = checkbox.closest('.route-content'); if (!rc) return;
+    var ss = rc.querySelector('.filter-container select[id^="clientFilter_"]');
+    if (ss && ss.value !== '') {
+        ss.value = '';
+        var rn = rc.id.replace('route_', '');
+        delete filters.client[rn];
+        rc.querySelectorAll('.col-sum-real').forEach(function(c){ c.classList.remove('show'); });
+    }
+    applyMultiFilter(rc);
+}
+function applyMultiFilter(rc) {
+    var rn = rc.id.replace('route_', '');
+    var cbs = rc.querySelectorAll('.multi-filter-list input[type="checkbox"]');
+    var sel = [], total = cbs.length;
+    cbs.forEach(function(cb){ if (cb.checked) sel.push(cb.getAttribute('data-client')); });
+    var btn = rc.querySelector('.multi-filter-btn');
+    if (btn) btn.textContent = (sel.length === total) ? 'Клиенты: все ▼' : ('Клиенты: ' + sel.length + ' / ' + total + ' ▼');
+    if (sel.length === total) {
+        delete filters.multiClient[rn];
+        rc.querySelectorAll('.col-sum-real').forEach(function(c){ c.classList.remove('show'); });
+    } else {
+        filters.multiClient[rn] = sel;
+        rc.querySelectorAll('.col-sum-real').forEach(function(c){ c.classList.add('show'); });
+        rc.querySelectorAll('tbody tr:not(.client-detail):not(.week-separator):not(.group-child)').forEach(function(row) {
+            var src = row.querySelector('td.col-sum-real');
+            if (!src) return;
+            var ca = row.getAttribute('data-clients');
+            var sa = (row.getAttribute('data-client-sums') || '').split('|');
+            var sum = 0;
+            if (ca) {
+                var cl = ca.split('|');
+                for (var i = 0; i < cl.length; i++) {
+                    var c = cl[i].trim();
+                    if (sel.indexOf(c) !== -1 && i < sa.length) {
+                        var v = parseFloat(sa[i]); if (!isNaN(v)) sum += v;
+                    }
+                }
+            }
+            var sr = parseFloat(row.getAttribute('data-original-sum')) || 0;
+            var pc = sr > 0 ? (sum / sr * 100).toFixed(0) : 0;
+            src.textContent = fmt(sum) + ' руб (' + pc + '%)';
+        });
+    }
+    applyFilters(rc);
+}
+
+function applyFilters(rc) {
+    var rn = rc.id.replace('route_', '');
+    var rows = rc.querySelectorAll('tbody tr:not(.client-detail):not(.week-separator):not(.group-child)');
+    var dayF = filters.day[rn] || null;
+    var qF = filters.queue[rn] || null;
+    var tF = filters.time[rn] || null;
+    var cF = filters.client[rn] || null;
+    var mF = filters.multiClient[rn] || null;
+    rows.forEach(function(row) {
+        var show = true;
+        if (dateFilter.from && dateFilter.to) {
+            var dk = row.getAttribute('data-date-key') || '';
+            if (dk < dateFilter.from || dk > dateFilter.to) show = false;
+        }
+        if (show && dayF) { var c = row.querySelector('.day-cell'); if (c && c.innerText.trim() !== dayF) show = false; }
+        if (show && qF) {
+            var c = row.querySelector('.queue-cell');
+            if (c) {
+                var cq = c.getAttribute('data-queue') || c.innerText.trim();
+                if (cq !== qF) show = false;
+            }
+        }
+        if (show && tF) {
+            var c = row.querySelector('.time-cell');
+            if (c) {
+                var tt = c.textContent.replace('▼','').replace('▸','').trim();
+                var p = tt.split(':'); var t = parseInt(p[0]) * 60 + parseInt(p[1]);
+                if (t < tF.start || t > tF.end) show = false;
+            }
+        }
+        if (show && cF) {
+            var ca = row.getAttribute('data-clients');
+            if (ca) { if (ca.split('|').indexOf(cF) === -1) show = false; }
+            else show = false;
+        }
+        if (show && mF && mF.length > 0) {
+            var ca2 = row.getAttribute('data-clients');
+            var rc2 = ca2 ? ca2.split('|').map(function(s){ return s.trim(); }) : [];
+            var hm = false;
+            for (var i = 0; i < rc2.length; i++) if (mF.indexOf(rc2[i]) !== -1) { hm = true; break; }
+            if (!hm) show = false;
+        }
+        row.style.display = show ? '' : 'none';
+        var pid = row.getAttribute('data-row-id');
+        if (!show) {
+            rc.querySelectorAll('tr[data-parent-id="' + pid + '"]').forEach(function(ch){ ch.style.display = 'none'; });
+            var arr = row.querySelector('.group-arrow'); if (arr) arr.textContent = '▸';
+        }
+    });
+    recalcCumulativeTotals();
+    var extraEl = rc.querySelector('.route-extra');
+    var routeNameForAvg = extraEl ? extraEl.getAttribute('data-route') : '';
+    if (routeNameForAvg) {
+        updateKmAvgBadge(routeNameForAvg, rc);
+        updateRouteSummary(routeNameForAvg);
+    }
+}
+
+// ============================================================
+// ФИЛЬТР ПО ДАТАМ + ПЕРЕЗАГРУЗКА
+// ============================================================
+function setDateRangeFromBtn(range) {
+    var today = new Date(); today.setHours(0,0,0,0);
+    var from, to = today;
+    if (range === 'week') {
+        from = getWeekStart(today);
+        var to2 = new Date(from); to2.setDate(to2.getDate() + 6); to = to2;
+        // Убедимся, что конец недели не позже сегодня
+        if (to > today) to = today;
+        // Убедимся, что начало недели не позже конца
+        if (from > to) from = to;
+    } else if (range === '2weeks') {
+        from = getWeekStart(today); from.setDate(from.getDate() - 7);
+        var to2 = new Date(getWeekStart(today)); to2.setDate(to2.getDate() + 6); to = to2;
+    } else if (range === 'month') {
+        from = new Date(today.getFullYear(), today.getMonth(), 1);
+        to = today;
+    } else if (range === '2months') {
+        from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        to = today;
+    } else if (range === '3months') {
+        from = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+        to = today;
+    } else {
+        from = new Date(today.getFullYear(), today.getMonth(), 1);
+    }
+    dateFilter.from = getLocalDateKey(from);
+    dateFilter.to = getLocalDateKey(to);
+    dateFilter.activeBtn = range;
+    document.getElementById('dateFrom').value = dateFilter.from;
+    document.getElementById('dateTo').value = dateFilter.to;
+    updatePeriodLabel();
+    updateDateBtnsActive();
+    refreshData();
+}
+
+function updatePeriodLabel() {
+    var from = dateFilter.from ? dateFilter.from.split('-').reverse().join('.') : '—';
+    var to = dateFilter.to ? dateFilter.to.split('-').reverse().join('.') : '—';
+    var el = document.getElementById('periodLabel');
+    if (el) el.textContent = from + ' — ' + to;
+}
+
+function addMonths(dateStr, n) {
+    var d = new Date(dateStr);
+    var newMonth = d.getMonth() + n;
+    var newYear = d.getFullYear();
+    while (newMonth > 11) { newMonth -= 12; newYear++; }
+    while (newMonth < 0) { newMonth += 12; newYear--; }
+    var lastDay = new Date(newYear, newMonth + 1, 0).getDate();
+    var day = Math.min(d.getDate(), lastDay);
+    return newYear + '-' + padZero(newMonth + 1) + '-' + padZero(day);
+}
+
+function monthsSpan(fromStr, toStr) {
+    var a = new Date(fromStr), b = new Date(toStr);
+    return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth()) + 1;
+}
+
+function setupPeriodPicker() {
+    var periodPopup = document.getElementById('periodPopup');
+    var periodBtn = document.getElementById('periodBtn');
+    var dateFromInput = document.getElementById('dateFrom');
+    var dateToInput = document.getElementById('dateTo');
+    var periodWarn = document.getElementById('periodWarn');
+    if (!periodBtn) return;
+    function refreshBounds() {
+        var from = dateFromInput.value;
+        var to = dateToInput.value;
+        if (from) dateToInput.max = addMonths(from, 3);
+        if (to)   dateFromInput.min = addMonths(to, -3);
+    }
+    periodBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var isOpen = periodPopup.classList.contains('open');
+        if (!isOpen) {
+            dateFromInput.value = dateFilter.from || '';
+            dateToInput.value = dateFilter.to || '';
+            dateToInput.removeAttribute('max');
+            dateFromInput.removeAttribute('min');
+            refreshBounds();
+            periodWarn.classList.remove('show');
+        }
+        periodPopup.classList.toggle('open');
+        periodBtn.classList.toggle('active', !isOpen);
+    });
+    periodPopup.addEventListener('click', function(e) { e.stopPropagation(); });
+    document.addEventListener('click', function() {
+        if (periodPopup.classList.contains('open')) {
+            periodPopup.classList.remove('open');
+            periodBtn.classList.remove('active');
+        }
+    });
+    dateFromInput.addEventListener('change', function() {
+        var from = this.value;
+        if (!from) return;
+        dateToInput.removeAttribute('max');
+        dateFromInput.removeAttribute('min');
+        refreshBounds();
+        var maxTo = dateToInput.max;
+        var to = dateToInput.value;
+        if (!to || to < from) { dateToInput.value = from; }
+        else if (maxTo && to > maxTo) {
+            dateToInput.value = maxTo;
+            periodWarn.textContent = 'Конец сдвинут: максимум 4 месяца';
+            periodWarn.classList.add('show');
+            setTimeout(function(){ periodWarn.classList.remove('show'); }, 2500);
+        }
+    });
+    dateToInput.addEventListener('change', function() {
+        var to = this.value;
+        if (!to) return;
+        dateToInput.removeAttribute('max');
+        dateFromInput.removeAttribute('min');
+        refreshBounds();
+        var minFrom = dateFromInput.min;
+        var from = dateFromInput.value;
+        if (!from || from > to) { dateFromInput.value = to; }
+        else if (minFrom && from < minFrom) {
+            dateFromInput.value = minFrom;
+            periodWarn.textContent = 'Начало сдвинуто: максимум 4 месяца';
+            periodWarn.classList.add('show');
+            setTimeout(function(){ periodWarn.classList.remove('show'); }, 2500);
+        }
+    });
+    document.getElementById('ppCancel').addEventListener('click', function() {
+        periodPopup.classList.remove('open');
+        periodBtn.classList.remove('active');
+        dateFromInput.value = dateFilter.from || '';
+        dateToInput.value = dateFilter.to || '';
+    });
+    document.getElementById('ppApply').addEventListener('click', function() {
+        var from = dateFromInput.value;
+        var to = dateToInput.value;
+        if (!from || !to) { alert('Выберите обе даты'); return; }
+        if (from > to) { alert('Дата начала не может быть позже даты окончания'); return; }
+        if (monthsSpan(from, to) > 4) {
+            alert('Максимум 4 календарных месяца за раз. Пример допустимого: ' + from + ' — ' + addMonths(from, 3));
+            return;
+        }
+        dateFilter.from = from;
+        dateFilter.to = to;
+        dateFilter.activeBtn = null;
+        updatePeriodLabel();
+        updateDateBtnsActive();
+        periodPopup.classList.remove('open');
+        periodBtn.classList.remove('active');
+        refreshData();
+    });
+}
+function updateDateBtnsActive() {
+    document.querySelectorAll('.date-filter button[data-range]').forEach(function(b) {
+        if (b.getAttribute('data-range') === dateFilter.activeBtn) b.classList.add('active');
+        else b.classList.remove('active');
+    });
+}
+function applyAllFilters() {
+    document.querySelectorAll('.route-content').forEach(function(rc) { applyFilters(rc); });
+}
+
+function refreshData() {
+    var scrollPos = window.scrollY;
+    var container = document.getElementById('container');
+    container.innerHTML = '<p style="text-align:center;color:#888;padding:20px;">⏳ Загрузка данных за период...</p>';
+    return loadRouteDataFromServer().then(function() {
+        return loadDataForPeriod();
+    }).then(function(d) {
+        render(d);
+        var warn = null;
+        if (d._fallbackOldFormat) {
+            warn = document.createElement('div');
+            warn.className = 'data-warning';
+            warn.innerHTML = '⚠️ Помесячные файлы не найдены. Используется старый формат <b>data_' + currentBase + '.js</b> (скользящий месяц).';
+        } else if (d._missingFiles && d._missingFiles.length > 0) {
+            warn = document.createElement('div');
+            warn.className = 'data-warning';
+            warn.innerHTML = '⚠️ Не найдены файлы: <code>' + d._missingFiles.join('</code>, <code>') + '</code>';
+        }
+        if (warn && d._loadedFiles.length === 0) {
+            // Показываем предупреждение только если ни один файл не загружен
+            container.insertBefore(warn, container.firstChild);
+        } else if (warn && d._loadedFiles.length > 0) {
+            // Если некоторые файлы загружены, показываем информацию о недостающих как次要
+            console.log('Не найдены файлы:', d._missingFiles);
+        }
+        // Перерендериваем аккордеоны соединённых маршрутов
+        setTimeout(function() { 
+            renderConnectedAccordions();
+            window.scrollTo(0, scrollPos);
+        }, 200);
+    }).catch(function(err) {
+        console.error('Ошибка загрузки данных:', err);
+        container.innerHTML =
+            '<div class="data-error">' +
+                '<h3>❌ Не удалось загрузить данные</h3>' +
+                '<p>' + (err && err.message ? err.message : 'неизвестная ошибка') + '</p>' +
+                '<p class="hint">Проверьте, что файлы <code>data/data_' + currentBase + '_YYYYMM.js</code> ' +
+                '(или <code>data_' + currentBase + '_YYYYMM.js</code> в корне) лежат в папке <code>LOGISTIC/</code>. ' +
+                'Как запасной вариант — <code>data_' + currentBase + '.js</code>.</p>' +
+                '<button onclick="refreshData()">🔄 Загрузить заново</button>' +
+            '</div>';
+    });
+}
+
+// ============================================================
+// МОДАЛЬНОЕ ОКНО НАСТРОЕК
+// ============================================================
+function openModal(routeName) {
+    modalState.routeName = routeName;
+    modalState.expanded = false;
+    var settings = getLatestSettings(routeName);
+    var costsByDay = (settings && settings.costs) ? JSON.parse(JSON.stringify(settings.costs)) : {};
+    var s = settings ? (settings.settings || {}) : {};
+    var rd = routeData[routeName] || {};
+    var normalized = {};
+    allDaysOrder.forEach(function(day) { normalized[day] = costsByDay[day] || {}; });
+    var maxPlans = 1;
+    var routes = window._allData ? window._allData.routes : [];
+    var routeItem = null;
+    for (var i = 0; i < routes.length; i++) if (routes[i].Маршрут === routeName) { routeItem = routes[i]; break; }
+    if (routeItem && routeItem.Строки && routeItem.Строки.length > 0) {
+        var sf = { firstPlanFrom: s.firstPlanFrom || '00:00', firstPlanTo: s.firstPlanTo || '08:45', threshold: s.threshold || 90, minGap: s.minGap || 15 };
+        var testRows = routeItem.Строки.map(function(r) { return Object.assign({}, r); });
+        maxPlans = assignPlansToRoute(testRows, sf);
+    }
+    Object.keys(normalized).forEach(function(day) {
+        var mi = 0;
+        Object.keys(normalized[day]).forEach(function(k) { var n = parseInt(k); if (n > mi) mi = n; });
+        if (mi > maxPlans) maxPlans = mi;
+    });
+    modalState.costs = normalized;
+    modalState.maxPlans = maxPlans;
+    document.getElementById('modalRouteName').textContent = routeName;
+    document.getElementById('modalFirstFrom').value = s.firstPlanFrom || '00:00';
+    document.getElementById('modalFirstTo').value = s.firstPlanTo || '08:45';
+    document.getElementById('modalThreshold').value = s.threshold || 90;
+    document.getElementById('modalMinGap').value = s.minGap || 15;
+    document.getElementById('modalKm').value = rd.km || '';
+    document.getElementById('modalClientCost').value = s.clientCost || 0;
+    document.getElementById('modalAddressStart').value = s.addressStart || '';
+    document.getElementById('modalAddressEnd').value = s.addressEnd || '';
+    document.getElementById('modalComment1').value = s.comment1 || '';
+    document.getElementById('modalComment2').value = s.comment2 || '';
+    renderModalCostsTable();
+    document.getElementById('expandBtn').textContent = modalState.expanded ? 'Свернуть' : 'Развернуть по дням';
+    document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+function toggleDayExpand() {
+    modalState.expanded = !modalState.expanded;
+    document.getElementById('expandBtn').textContent = modalState.expanded ? 'Свернуть' : 'Развернуть по дням';
+    renderModalCostsTable();
+}
+function renderModalCostsTable() {
+    var table = document.getElementById('modalCostsTable');
+    var mp = modalState.maxPlans;
+    var html = '<thead><tr><th style="text-align:left;">День</th>';
+    for (var p = 1; p <= mp; p++) html += '<th>' + p + '-я</th>';
+    html += '</tr></thead><tbody>';
+    if (modalState.expanded) {
+        allDaysOrder.forEach(function(day) {
+            html += '<tr data-day="' + day + '"><td class="day-label">' + day + '</td>';
+            for (var p = 1; p <= mp; p++) {
+                var v = (modalState.costs[day] && modalState.costs[day][p] !== undefined) ? modalState.costs[day][p] : '';
+                html += '<td><input type="number" min="0" step="1" data-day="' + day + '" data-plan="' + p + '" value="' + v + '" oninput="onCostInput(this)"></td>';
+            }
+            html += '</tr>';
+        });
+    } else {
+        var groups = [
+            { label: 'Пн-Пт', days: ['Пн','Вт','Ср','Чт','Пт'] },
+            { label: 'Сб', days: ['Сб'] },
+            { label: 'Вс', days: ['Вс'] }
+        ];
+        groups.forEach(function(g) {
+            html += '<tr data-group="' + g.label + '"><td class="day-label">' + g.label + '</td>';
+            for (var p = 1; p <= mp; p++) {
+                var values = [];
+                g.days.forEach(function(day) {
+                    var v = (modalState.costs[day] && modalState.costs[day][p] !== undefined) ? modalState.costs[day][p] : '';
+                    if (v !== '') values.push(v);
+                });
+                var dv = values.length > 0 ? values[0] : '';
+                html += '<td><input type="number" min="0" step="1" data-group-days="' + g.days.join(',') + '" data-plan="' + p + '" value="' + dv + '" oninput="onGroupCostInput(this)"></td>';
+            }
+            html += '</tr>';
+        });
+    }
+    html += '</tbody>';
+    table.innerHTML = html;
+}
+function onCostInput(input) {
+    var day = input.getAttribute('data-day');
+    var plan = input.getAttribute('data-plan');
+    if (!modalState.costs[day]) modalState.costs[day] = {};
+    modalState.costs[day][plan] = input.value;
+}
+function onGroupCostInput(input) {
+    var days = input.getAttribute('data-group-days').split(',');
+    var plan = input.getAttribute('data-plan');
+    days.forEach(function(day) { if (!modalState.costs[day]) modalState.costs[day] = {}; modalState.costs[day][plan] = input.value; });
+}
+
+function captureUiState() {
+    var state = { scrollY: window.scrollY, openRoutes: [], openGroups: [] };
+    document.querySelectorAll('.route-content.active').forEach(function(c) { state.openRoutes.push(c.id); });
+    document.querySelectorAll('.group-arrow').forEach(function(a) {
+        if (a.textContent === '▼') { state.openGroups.push(a.getAttribute('data-parent-id')); }
+    });
+    return state;
+}
+function restoreUiState(state) {
+    if (!state) return;
+    (state.openRoutes || []).forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) { el.classList.add('active'); applyFilters(el); }
+    });
+    (state.openGroups || []).forEach(function(pid) {
+        var arrow = document.querySelector('.group-arrow[data-parent-id="' + pid + '"]');
+        if (arrow) {
+            arrow.textContent = '▼';
+            document.querySelectorAll('tr[data-parent-id="' + pid + '"]').forEach(function(tr) { tr.style.display = ''; });
+        }
+    });
+    if (typeof state.scrollY === 'number') { window.scrollTo(0, state.scrollY); }
+}
+
+function clusterSettingsChanged(oldS, newS) {
+    function norm(v) { return v == null ? '' : String(v).trim(); }
+    return norm(oldS.firstPlanFrom) !== norm(newS.firstPlanFrom) ||
+           norm(oldS.firstPlanTo)   !== norm(newS.firstPlanTo)   ||
+           norm(oldS.threshold)     !== norm(newS.threshold)     ||
+           norm(oldS.minGap)        !== norm(newS.minGap);
+}
+
+function findRouteContentId(routeName) {
+    var extra = document.querySelector('.route-extra[data-route="' + routeName + '"]');
+    if (!extra) return null;
+    var content = extra.closest('.route-content');
+    return content ? content.id : null;
+}
+
+function saveModalCosts() {
+    var routeName = modalState.routeName;
+    var oldSettings = getLatestSettings(routeName);
+    var oldS = (oldSettings && oldSettings.settings) ? oldSettings.settings : {};
+    var payload = {};
+    payload[routeName] = {
+        action: 'saveCosts',
+        km: document.getElementById('modalKm').value,
+        settings: {
+            firstPlanFrom: document.getElementById('modalFirstFrom').value,
+            firstPlanTo: document.getElementById('modalFirstTo').value,
+            threshold: document.getElementById('modalThreshold').value,
+            minGap: document.getElementById('modalMinGap').value,
+            clientCost: document.getElementById('modalClientCost').value,
+            addressStart: document.getElementById('modalAddressStart').value,
+            addressEnd: document.getElementById('modalAddressEnd').value,
+            comment1: document.getElementById('modalComment1').value,
+            comment2: document.getElementById('modalComment2').value
+        },
+        costs: modalState.costs
+    };
+    var newS = payload[routeName].settings;
+    var needFullRerender = clusterSettingsChanged(oldS, newS);
+    fetch('save_route_data.php?base=' + encodeURIComponent(currentBase) + '&' + cacheBust(), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    })
+    .then(function(r){ return r.text(); })
+    .then(function(t) {
+        try {
+            var res = JSON.parse(t);
+            if (!res.success) { alert('Ошибка: ' + (res.error || 'неизвестно')); return; }
+            if (!routeData[routeName]) routeData[routeName] = {};
+            if (!routeData[routeName].history) routeData[routeName].history = [];
+            routeData[routeName].history.push({
+                dateFrom: new Date().toISOString().slice(0,19),
+                savedAt: new Date().toISOString().slice(0,19),
+                settings: newS,
+                costs: modalState.costs
+            });
+            routeData[routeName].km = payload[routeName].km;
+            closeModal();
+            if (needFullRerender) {
+                var state = captureUiState();
+                if (window._allData) render(window._allData);
+                setTimeout(function(){ restoreUiState(state); }, 50);
+            } else {
+                updateRouteCosts(routeName);
+                recalcCumulativeTotals();
+            }
+        } catch(e) { alert('Сервер вернул не JSON'); }
+    })
+    .catch(function(e){ alert('Ошибка сети: ' + e.message); });
+}
+
+function showHistory() {
+    var rn = modalState.routeName;
+    var rd = routeData[rn] || {};
+    var h = rd.history || [];
+    document.getElementById('historyRouteName').textContent = rn;
+    var list = document.getElementById('historyList');
+    if (h.length === 0) list.innerHTML = '<p style="padding:15px;text-align:center;color:#888;">История пуста</p>';
+    else {
+        var html = '<table><thead><tr><th>Дата</th><th>Стоимость</th><th>Клиентские</th><th>Км</th><th>Адрес нач.</th><th>Адрес кон.</th></tr></thead><tbody>';
+        h.slice().reverse().forEach(function(x) {
+            var s = x.settings || {}; var c = x.costs || {}; var pt = c['Пн'] || {};
+            html += '<tr><td>' + (x.savedAt || '').replace('T',' ').slice(0,16) + '</td>';
+            html += '<td>' + (pt['1'] || '-') + '</td><td>' + (s.clientCost || '0') + '</td><td>' + (s.km || '-') + '</td>';
+            html += '<td style="text-align:left;font-size:9pt;">' + (s.addressStart || '') + '</td>';
+            html += '<td style="text-align:left;font-size:9pt;">' + (s.addressEnd || '') + '</td></tr>';
+        });
+        html += '</tbody></table>';
+        list.innerHTML = html;
+    }
+    document.getElementById('historyOverlay').classList.add('open');
+}
+function closeHistory() { document.getElementById('historyOverlay').classList.remove('open'); }
+
+// ============================================================
+// POPUP
+// ============================================================
+function showPopup(event, clients, dateStr, rowId, rowElement, queue, timeStr, driversStr, taskNumbers, routeName) {
+    var ex = openPopups.find(function(p){ return p.rowId === rowId; });
+    if (ex) {
+        closePopup(rowId);
+        var pr = document.querySelector('tr[data-row-id="' + rowId + '"]');
+        if (pr) pr.classList.remove('active-row');
+        activeRowId = null; return;
+    }
+    var row = document.querySelector('tr[data-row-id="' + rowId + '"]');
+    if (row) {
+        if (activeRowId) { var old = document.querySelector('tr[data-row-id="' + activeRowId + '"]'); if (old) old.classList.remove('active-row'); }
+        row.classList.add('active-row'); activeRowId = rowId;
+    }
+    var popup = document.createElement('div');
+    popup.className = 'popup-box';
+    popup.setAttribute('data-row-id', rowId);
+    popup.setAttribute('data-route-name', routeName || '');
+    var hd = document.createElement('div'); hd.className = 'popup-title';
+    hd.innerHTML = 'Грузополучатели на ' + dateStr + ' <button class="close-btn" onclick="closePopup(\'' + rowId + '\')">✕</button>';
+    popup.appendChild(hd);
+    var sub = document.createElement('div'); sub.className = 'popup-subtitle';
+    sub.textContent = 'Время: ' + (timeStr || '—') + ' | Номер задания: ' + (taskNumbers || '—') + ' | Очередь: ' + (queue || '—') + ' | Водитель: ' + (driversStr || '—');
+    popup.appendChild(sub);
+    popup.setAttribute('data-clients-json', JSON.stringify(clients || []));
+    var rb = document.createElement('button');
+    rb.className = 'build-route-btn'; rb.type = 'button'; rb.textContent = '🗺 Построить маршрут';
+    rb.setAttribute('onclick', 'event.stopPropagation(); openRouteCalc(this)');
+    popup.appendChild(rb);
+    var table = document.createElement('table');
+    var thead = document.createElement('thead');
+    var trh = document.createElement('tr');
+    ['№','Грузополучатель','Адрес доставки','Время передачи','Сумма','Возврат'].forEach(function(t){ var th = document.createElement('th'); th.textContent = t; trh.appendChild(th); });
+    thead.appendChild(trh); table.appendChild(thead);
+    var tbody = document.createElement('tbody');
+    if (clients && clients.length > 0) {
+        clients.forEach(function(c, idx) {
+            var tr = document.createElement('tr');
+            var isCancelled = isCancelledClient(c);
+            if (isCancelled) tr.className = 'cancelled-row';
+            var t0 = document.createElement('td'); t0.textContent = idx + 1; t0.style.textAlign = 'center'; tr.appendChild(t0);
+            var t1 = document.createElement('td'); t1.textContent = c.Наименование || ''; tr.appendChild(t1);
+            var t2 = document.createElement('td');
+            var ad = c.Адрес || '';
+            t2.innerHTML = ad + ' <button class="copy-btn" data-address="' + escapeAttr(ad) + '" onclick="copyAddress(this)">📋</button>';
+            tr.appendChild(t2);
+            var t3 = document.createElement('td'); t3.textContent = c.ВремяПередачи || ''; tr.appendChild(t3);
+            var t4 = document.createElement('td'); t4.style.textAlign = 'right'; t4.textContent = (c.Сумма || 0).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); tr.appendChild(t4);
+            var t5 = document.createElement('td');
+            t5.className = 'return-cell';
+            if (isReturnClient(c)) t5.textContent = '↩';
+            else t5.textContent = '';
+            tr.appendChild(t5);
+            tbody.appendChild(tr);
+        });
+    } else {
+        var tr = document.createElement('tr'); var td = document.createElement('td'); td.colSpan = 6; td.textContent = 'Нет грузополучателей'; tr.appendChild(td); tbody.appendChild(tr);
+    }
+    table.appendChild(tbody); popup.appendChild(table);
+    var target = rowElement || event.target;
+    var rect = target.getBoundingClientRect();
+    var pw = Math.min(window.innerWidth * 0.9, 750);
+    var left = rect.left + window.scrollX + rect.width / 2 - pw / 2;
+    if (left < window.scrollX + 10) left = window.scrollX + 10;
+    if (left + pw > window.scrollX + window.innerWidth - 10) left = window.scrollX + window.innerWidth - pw - 10;
+    var top = rect.bottom + window.scrollY + 5;
+    popup.style.left = left + 'px';
+    popup.style.top = top + 'px';
+    popup.style.width = pw + 'px';
+    popup.addEventListener('click', function(e){ e.stopPropagation(); });
+    document.body.appendChild(popup);
+    openPopups.push({ rowId: rowId, element: popup });
+}
+function closePopup(rowId) {
+    var i = openPopups.findIndex(function(p){ return p.rowId === rowId; });
+    if (i !== -1) { var p = openPopups[i].element; p.remove(); openPopups.splice(i, 1); }
+    var row = document.querySelector('tr[data-row-id="' + rowId + '"]'); if (row) row.classList.remove('active-row');
+    if (activeRowId === rowId) activeRowId = null;
+}
+function closeAllPopups() {
+    openPopups.forEach(function(p){ p.element.remove(); var r = document.querySelector('tr[data-row-id="' + p.rowId + '"]'); if (r) r.classList.remove('active-row'); });
+    openPopups = []; activeRowId = null;
+}
+function openRouteCalc(btn) {
+    var popup = btn.closest('.popup-box'); if (!popup) return;
+    var cj = popup.getAttribute('data-clients-json') || '[]';
+    var clients; try { clients = JSON.parse(cj); } catch(e) { clients = []; }
+    var routeName = popup.getAttribute('data-route-name') || '';
+    var base = BASE_ADDRESSES[currentBase] || '';
+    var userStart = routeName ? getAddressStart(routeName) : '';
+    var userEnd   = routeName ? getAddressEnd(routeName)   : '';
+    var startAddr = userStart || base;
+    var endAddr   = userEnd   || base;
+    var items = [];
+    if (startAddr) { items.push({ address: startAddr, label: userStart ? 'Начало маршрута' : 'Склад' }); }
+    clients.forEach(function(c){
+        if (isCancelledClient(c)) return;
+        var a = (c.Адрес || '').trim();
+        if (a === '') return;
+        var name = (c.Наименование || '').trim();
+        var sum  = parseFloat(c.Сумма) || 0;
+        var label = name;
+        if (sum > 0) { label += ' (' + fmt(sum) + ' ₽)'; }
+        if (!label) label = 'Точка';
+        items.push({ address: a, label: label });
+    });
+    if (endAddr) {
+        items.push({ address: endAddr, label: (userEnd || !userStart) && items.length > 1 && endAddr === startAddr ? 'Возврат на склад' : (userEnd ? 'Конец маршрута' : 'Возврат на склад') });
+    }
+    if (items.length < 2) { alert('Нет адресов для построения маршрута (все отменены или без адреса)'); return; }
+    sessionStorage.setItem('routeCalcPayload', JSON.stringify({ addresses: items.map(function(x){ return x.address; }), labels: items.map(function(x){ return x.label; }) }));
+    sessionStorage.setItem('routeCalcAddresses', JSON.stringify(items.map(function(x){ return x.address; })));
+    window.open('route_calc.html?_=' + Date.now(), '_blank');
+}
+document.addEventListener('click', function(e) {
+    var ip = openPopups.some(function(p){ return p.element && p.element.contains(e.target); });
+    if (!ip) closeAllPopups();
+    document.querySelectorAll('.multi-filter-dropdown.open').forEach(function(dd){
+        if (!dd.parentElement.contains(e.target)) dd.classList.remove('open');
+    });
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { closeAllPopups(); closeModal(); closeHistory(); closeConnectedRoutes(); }
+});
+function copyAddress(btn) {
+    var a = btn.getAttribute('data-address'); if (!a) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(a).then(function(){ btn.textContent = '✅'; setTimeout(function(){ btn.textContent = '📋'; }, 30000); })
+            .catch(function(){ fallbackCopy(a, btn); });
+    } else fallbackCopy(a, btn);
+}
+function fallbackCopy(t, btn) {
+    var ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); btn.textContent = '✅'; setTimeout(function(){ btn.textContent = '📋'; }, 30000); } catch(e) { alert('Не удалось скопировать'); }
+    document.body.removeChild(ta);
+}
+
+// ============================================================
+// РАСЧЁТ КМ/ВРЕМЯ ЧЕРЕЗ IFRAME
+// ============================================================
+function initRouteCalcIframe() {
+    var iframe = document.getElementById('routeCalcFrame');
+    iframe.src = 'route_calc.html?mode=api&_=' + Date.now();
+}
+window.addEventListener('message', function(event) {
+    var msg = event.data; if (!msg || typeof msg !== 'object') return;
+    if (msg.type === 'ready') { routeCalcIframeReady = true; return; }
+    if (msg.type === 'result') {
+        if (msg.ok) {
+            var taskId = msg.taskId;
+            var parts = taskId.split('|||');
+            var rn = parts[0], tk = parts[1];
+            var payload = {};
+            payload[rn] = { action: 'saveRouteCalc', key: tk, km: msg.distance, time: msg.duration, method: msg.method || ROUTE_CALC_METHOD };
+            fetch('save_route_data.php?base=' + encodeURIComponent(currentBase) + '&' + cacheBust(), {
+                method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+            }).catch(function(e){ console.error('saveRouteCalc:', e); });
+            if (!routeData[rn]) routeData[rn] = {};
+            if (!routeData[rn].routeCalcResults) routeData[rn].routeCalcResults = {};
+            routeData[rn].routeCalcResults[tk] = { km: msg.distance, time: msg.duration, method: msg.method || ROUTE_CALC_METHOD };
+            updateRouteCosts(rn);
+        } else { calcStats.errors++; }
+        return;
+    }
+    if (msg.type === 'progress') {
+        calcStats.done = msg.done;
+        calcStats.total = msg.total;
+        var el = document.querySelector('.calc-progress[data-route="' + calcStats.currentRoute + '"]');
+        if (el) el.textContent = '🚗 ' + msg.done + ' / ' + msg.total;
+        return;
+    }
+    if (msg.type === 'done') {
+        var el = document.querySelector('.calc-progress[data-route="' + calcStats.currentRoute + '"]');
+        if (el) {
+            if (calcStats.errors > 0) {
+                el.textContent = '✅ ' + calcStats.done + '/' + calcStats.total + ' (ошибок: ' + calcStats.errors + ')';
+                el.style.color = '#e67e22';
+            } else {
+                el.textContent = '✅ Готово: ' + calcStats.total + ' из ' + calcStats.total;
+                el.style.color = '#27ae60';
+            }
+        }
+        enableCalcButtons(calcStats.currentRoute, true);
+        calcInProgress = false;
+        // Разблокируем кнопку "Заполнить КМ"
+        var btnFillKm = document.getElementById('btnFillKm');
+        if (btnFillKm) btnFillKm.disabled = false;
+        return;
+    }
+});
+
+function enableCalcButtons(routeName, enable) {
+    var extra = document.querySelector('.route-extra[data-route="' + routeName + '"]');
+    if (!extra) return;
+    var b1 = extra.querySelector('.calc-btn'), b2 = extra.querySelector('.recalc-btn');
+    if (b1) b1.disabled = !enable;
+    if (b2) b2.disabled = !enable;
+}
+
+async function startCalc(routeName, recalcAll) {
+    if (calcInProgress) { alert('Идёт расчёт, подождите...'); return; }
+    if (!routeCalcIframeReady) { alert('Страница расчёта ещё загружается, подождите пару секунд.'); return; }
+    var method = await getRouteMethodFromConfig();
+    ROUTE_CALC_METHOD = method;
+    var extra = document.querySelector('.route-extra[data-route="' + routeName + '"]');
+    if (!extra) return;
+    var rc = extra.closest('.route-content');
+    if (!rc) return;
+    var parentRows = rc.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+    var tasks = [];
+    var baseAddr = BASE_ADDRESSES[currentBase] || '';
+    var userStart = getAddressStart(routeName);
+    var userEnd = getAddressEnd(routeName);
+    parentRows.forEach(function(row) {
+        var timeKey = row.getAttribute('data-time-key') || '';
+        if (!timeKey) return;
+        var existing = (routeData[routeName] && routeData[routeName].routeCalcResults) ? routeData[routeName].routeCalcResults[timeKey] : null;
+        if (!recalcAll && existing) return;
+        var clientsJson = row.getAttribute('data-clients-addresses') || '';
+        if (!clientsJson) return;
+        var clientAddresses = clientsJson.split('||').filter(function(a){ return a.trim() !== ''; });
+        if (clientAddresses.length === 0) return;
+        var startAddr = userStart || baseAddr;
+        var endAddr = userEnd || baseAddr;
+        var addresses = [];
+        if (startAddr) addresses.push(startAddr);
+        clientAddresses.forEach(function(a){ addresses.push(a); });
+        if (endAddr) addresses.push(endAddr);
+        tasks.push({ taskId: routeName + '|||' + timeKey, addresses: addresses });
+    });
+    if (tasks.length === 0) { alert('Нет строк для расчёта'); return; }
+    var msgText = 'Рассчитать ' + tasks.length + ' строк?\nМетод расчёта: ' + method.toUpperCase();
+    if (tasks.length > 20) msgText += '\nЭто может занять ~' + Math.round(tasks.length * 3 / 60) + ' мин.';
+    if (!confirm(msgText)) return;
+    calcInProgress = true;
+    calcStats = { done: 0, total: tasks.length, errors: 0, currentRoute: routeName };
+    enableCalcButtons(routeName, false);
+    var progEl = extra.querySelector('.calc-progress');
+    if (progEl) { progEl.textContent = '🚗 0 / ' + tasks.length; progEl.style.color = '#2c3e50'; }
+    var iframe = document.getElementById('routeCalcFrame');
+    iframe.contentWindow.postMessage({ type: 'calc', method: ROUTE_CALC_METHOD, tasks: tasks }, '*');
+}
+
+// ============================================================
+// ОТРИСОВКА ТАБЛИЦЫ (с изменениями: table-wrapper, сводка, индикатор)
+// ============================================================
+function buildThead() {
+    var trh = document.createElement('tr');
+    COLUMNS.forEach(function(col) {
+        var th = document.createElement('th');
+        if (col.cls) th.className = col.cls;
+        th.setAttribute('data-col-key', col.key);
+        if (col.toggle) {
+            th.innerHTML = col.label + ' <span class="col-toggle" data-group="' + col.toggle + '" onclick="event.stopPropagation(); toggleExpand(this)">▸</span>';
+        } else {
+            th.textContent = col.label;
+        }
+        trh.appendChild(th);
+    });
+    return trh;
+}
+
+function buildRow(values, rowAttrs, extraCls) {
+    var tr = document.createElement('tr');
+    if (extraCls) tr.className = extraCls;
+    COLUMNS.forEach(function(col) {
+        var td = document.createElement('td');
+        if (col.cls) td.className = col.cls;
+        td.setAttribute('data-col-key', col.key);
+        var v = values[col.key] || {};
+        if (v.cls) td.className += ' ' + v.cls;
+        if (v.style) td.setAttribute('style', v.style);
+        if (v.onclick) td.setAttribute('onclick', v.onclick);
+        if (v.attr) Object.keys(v.attr).forEach(function(k) { td.setAttribute(k, v.attr[k]); });
+        if (v.html) td.innerHTML = v.html;
+        else td.textContent = v.text == null ? '' : v.text;
+        tr.appendChild(td);
+    });
+    if (rowAttrs) Object.keys(rowAttrs).forEach(function(k) { tr.setAttribute(k, rowAttrs[k]); });
+    return tr;
+}
+
+function render(data) {
+    window._allData = data;
+    var periodStart = dateFilter.from ? dateFilter.from.split('-').reverse().join('.') : '';
+    var periodEnd = dateFilter.to ? dateFilter.to.split('-').reverse().join('.') : '';
+    document.getElementById('period').textContent = 'с ' + periodStart + ' по ' + periodEnd;
+    document.getElementById('totalCount').textContent = data.total;
+    loadFileModTime(data._lastFile);
+
+    var container = document.getElementById('container');
+    var existingWarn = container.querySelector('.data-warning');
+    container.innerHTML = '';
+    if (existingWarn) container.appendChild(existingWarn);
+
+    var routesWrap = document.createElement('div');
+    container.appendChild(routesWrap);
+
+    var routeIndex = 0;
+
+    data.routes.forEach(function(routeDataItem) {
+        routeIndex++;
+        var routeId = 'route_' + routeIndex;
+        var routeName = routeDataItem.Маршрут;
+
+        var settings = getLatestSettings(routeName);
+        var sForAssign = settings ? (settings.settings || {}) : null;
+        var rowsCopy = routeDataItem.Строки.map(function(r){ return Object.assign({}, r); });
+        assignPlansToRoute(rowsCopy, sForAssign);
+        var groups = groupRowsByPlan(rowsCopy);
+
+        var acc = document.createElement('div');
+        acc.className = 'route-accordion';
+        var header = document.createElement('div');
+        header.className = 'route-header';
+        header.setAttribute('onclick', 'toggleRoute(\'' + routeId + '\')');
+        header.textContent = routeName + ' ▼';
+        acc.appendChild(header);
+
+        // === НОВОЕ: Сводка в свёрнутом аккордеоне (компактная) ===
+        var summaryDiv = document.createElement('div');
+        summaryDiv.className = 'route-collapsed-summary visible';
+        summaryDiv.setAttribute('data-route', routeName);
+        var monthNames = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+        var curMonth = monthNames[new Date().getMonth()] + ' ' + new Date().getFullYear();
+        summaryDiv.innerHTML = 
+            '<span class="summary-inline si-nds"><span class="si-month">(' + curMonth + ')</span><span class="si-label">Продажи БезНДС:</span><span class="si-value">—</span></span>' +
+            '<span class="summary-inline si-cost"><span class="si-label">Затраты:</span><span class="si-value">—</span></span>' +
+            '<span class="summary-inline si-dohod"><span class="si-label">Доходность:</span><span class="si-value">—</span></span>';
+        acc.appendChild(summaryDiv);
+
+        var content = document.createElement('div');
+        content.id = routeId;
+        content.className = 'route-content collapsed-avg collapsed-sum collapsed-cost collapsed-dohod';
+
+        var topBar = document.createElement('div');
+        topBar.className = 'route-top-bar';
+        var filterDiv = document.createElement('div');
+        filterDiv.className = 'filter-container';
+        var lbl = document.createElement('label'); lbl.textContent = 'Фильтр по грузополучателю:';
+        filterDiv.appendChild(lbl);
+        var sel = document.createElement('select');
+        sel.id = 'clientFilter_' + routeIndex;
+        sel.setAttribute('onchange', 'filterByClient(this)');
+        var oa = document.createElement('option'); oa.value = ''; oa.textContent = 'ВСЕ'; sel.appendChild(oa);
+        var cl = (routeDataItem.Грузополучатели || []).slice().sort();
+        cl.forEach(function(c){ var o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
+        filterDiv.appendChild(sel);
+        var mfd = document.createElement('div'); mfd.className = 'multi-filter';
+        var mfb = document.createElement('button');
+        mfb.className = 'multi-filter-btn'; mfb.type = 'button'; mfb.textContent = 'Клиенты: все ▼';
+        mfb.setAttribute('onclick', 'event.stopPropagation(); toggleMultiFilter(this)');
+        mfd.appendChild(mfb);
+        var dd = document.createElement('div'); dd.className = 'multi-filter-dropdown';
+        var actions = document.createElement('div'); actions.className = 'multi-filter-actions';
+        var ba = document.createElement('button'); ba.type = 'button'; ba.textContent = 'Все';
+        ba.setAttribute('onclick', 'event.stopPropagation(); multiSelectAll(this)'); actions.appendChild(ba);
+        var bn = document.createElement('button'); bn.type = 'button'; bn.textContent = 'Ничего';
+        bn.setAttribute('onclick', 'event.stopPropagation(); multiSelectNone(this)'); actions.appendChild(bn);
+        dd.appendChild(actions);
+        var listDiv = document.createElement('div'); listDiv.className = 'multi-filter-list';
+        cl.forEach(function(c){
+            var cbL = document.createElement('label');
+            var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = true;
+            cb.setAttribute('data-client', c);
+            cb.setAttribute('onchange', 'event.stopPropagation(); onMultiCheckboxChange(this)');
+            cbL.appendChild(cb); cbL.appendChild(document.createTextNode(c));
+            listDiv.appendChild(cbL);
+        });
+        dd.appendChild(listDiv);
+        mfd.appendChild(dd);
+        filterDiv.appendChild(mfd);
+        topBar.appendChild(filterDiv);
+
+        var extraDiv = document.createElement('div');
+        extraDiv.className = 'route-extra';
+        extraDiv.setAttribute('data-route', routeName);
+        var kmVal = (routeData[routeName] && routeData[routeName].km) || '';
+        var safeName = routeName.replace(/'/g, "\\'");
+        extraDiv.innerHTML =
+            '<span class="calc-progress" data-route="' + escapeAttr(routeName) + '"></span>' +
+            '<button class="calc-btn" type="button" onclick="startCalc(\'' + safeName + '\', false)">🚗 Рассчитать</button>' +
+            '<input type="checkbox" class="chk-recalc" title="Показать Пересчитать" onchange="toggleRecalcBtn(this)">' +
+            '<button class="recalc-btn" type="button" onclick="startCalc(\'' + safeName + '\', true)">🔄 Пересчитать</button>' +
+            '<button class="open-costs-btn" onclick="openModal(\'' + safeName + '\')">💰 Настроить стоимости</button>' +
+            '<label>Километры (норма):</label>' +
+            '<input type="text" class="route-km-input" data-route="' + escapeAttr(routeName) + '" value="' + escapeAttr(kmVal) + '">' +
+            '<span class="route-km-avg" data-route="' + escapeAttr(routeName) + '" title="Среднее по всем расчётам">≈ —</span>';
+        topBar.appendChild(extraDiv);
+        content.appendChild(topBar);
+
+
+
+        var table = document.createElement('table');
+        var thead = document.createElement('thead');
+        thead.appendChild(buildThead());
+        table.appendChild(thead);
+
+        var tbody = document.createElement('tbody');
+        var currentWeek = null, currentDayKey = null;
+        var weekSum = 0, daySum = 0, weekClients = 0, dayClients = 0, weekGroups = 0, dayGroups = 0;
+        var separatorShown = false, firstInDay = true;
+        var rowIndex = 0;
+
+        groups.forEach(function(group) {
+            rowIndex++;
+            var firstRow = group.rows[0];
+            var dateObj = new Date(firstRow.ДатаВремя);
+            var dateKey = group.dateKey;
+            var weekNumber = getWeekNumber(dateObj);
+            var weekStartDate = getWeekStart(dateObj);
+
+            if (currentWeek === null || weekNumber !== currentWeek) {
+                currentWeek = weekNumber; weekSum = 0; weekClients = 0; weekGroups = 0;
+                separatorShown = false; firstInDay = true;
+            }
+            if (currentDayKey === null || dateKey !== currentDayKey) {
+                currentDayKey = dateKey; daySum = 0; dayClients = 0; dayGroups = 0; firstInDay = true;
+            }
+
+            if (!separatorShown) {
+                var wr = document.createElement('tr'); wr.className = 'week-separator';
+                wr.setAttribute('data-week-num', String(weekNumber));
+                var tdW = document.createElement('td');
+                tdW.colSpan = COLUMNS.length;
+                tdW.textContent = 'Неделя с ' + formatDate(weekStartDate);
+                wr.appendChild(tdW);
+                tbody.appendChild(wr);
+                separatorShown = true;
+            }
+
+            var groupSum = 0, groupClients = 0, groupReturns = 0, groupCancelled = 0;
+            var allGroupClients = [], allClientsNames = [], allSumsArr = [], allAddresses = [];
+            var groupDrivers = {};
+            var groupTaskNumbers = [];
+            group.rows.forEach(function(r) {
+                groupSum += r.СуммаМаршрута || 0;
+                groupClients += r.КолКлиентов || 0;
+                groupReturns += r.Возвраты || 0;
+                groupCancelled += r.Отменено || 0;
+                if (r.Водитель && r.Водитель.ФИО) groupDrivers[r.Водитель.ФИО] = true;
+                if (r.НомерЗадания && groupTaskNumbers.indexOf(r.НомерЗадания) === -1) {
+                    groupTaskNumbers.push(r.НомерЗадания);
+                }
+                if (r.Клиенты && r.Клиенты.length > 0) {
+                    r.Клиенты.forEach(function(c) {
+                        allGroupClients.push(c);
+                        allClientsNames.push(c.Наименование);
+                        allSumsArr.push((isCancelledClient(c) ? 0 : (c.Сумма || 0)).toFixed(2));
+                        if (c.Адрес && c.Адрес.trim() !== '') allAddresses.push(c.Адрес.trim());
+                    });
+                }
+            });
+            var driversStr = Object.keys(groupDrivers).join(', ') || 'Неизвестный водитель';
+            var taskNumbersStr = groupTaskNumbers.join(' / ') || '';
+            daySum += groupSum; weekSum += groupSum;
+            dayClients += groupClients; weekClients += groupClients;
+            dayGroups++; weekGroups++;
+            var avgDay = dayGroups > 0 ? (dayClients / dayGroups) : 0;
+            var avgWeek = weekGroups > 0 ? (weekClients / weekGroups) : 0;
+            var sumWNDS = groupSum * 100 / 122;
+            var margin = sumWNDS * 0.17;
+
+            var dayName = dayNames[dateObj.getDay()];
+            var classDay = 'day-' + ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dateObj.getDay()];
+            var rowId = 'row_' + routeIndex + '_g' + rowIndex;
+            var isGroup = group.rows.length > 1;
+
+            var timeKey = dateKey + '_' + padZero(dateObj.getHours()) + ':' + padZero(dateObj.getMinutes());
+            var dateStr = formatDate(dateObj);
+            var timeStr = padZero(dateObj.getHours()) + ':' + padZero(dateObj.getMinutes());
+            var queue = firstRow.Очередь || '';
+
+            var timeHtml = isGroup
+                ? '<span class="group-arrow" data-parent-id="' + rowId + '" onclick="event.stopPropagation(); toggleGroup(\'' + rowId + '\')">▸</span>' + timeStr
+                : timeStr;
+
+            var rowValues = {
+                'date':       { html: '<span class="clickable-date" data-date="' + escapeAttr(dateStr) + '">' + dateStr + '</span>' },
+                'day':        { text: dayName, cls: 'day-cell', onclick: 'filterByDay(this)' },
+                'time':       { html: timeHtml, cls: 'time-cell', onclick: 'filterByTime(this)', attr: firstInDay ? {'data-first':'true'} : {} },
+                'queue':      { text: group.plan + '-я плановая', cls: 'queue-cell', onclick: 'filterByQueue(this)', attr: { 'data-queue': queue, 'title': queue } },
+                'clients':    { text: groupClients, cls: 'bold-text' },
+                'avg-day':    { text: avgDay.toFixed(2), style: 'text-align:right;' },
+                'avg-week':   { text: avgWeek.toFixed(2), style: 'text-align:right;' },
+                'sum-route':  { text: fmt(groupSum), cls: 'bold-text', style: 'text-align:right;' },
+                'sum-day':    { text: fmt(daySum), style: 'text-align:right;' },
+                'sum-week':   { text: fmt(weekSum), style: 'text-align:right;' },
+                'sum-nds':    { text: fmt(sumWNDS), style: 'text-align:right;' },
+                'exp-client': { text: '0', style: 'text-align:right;' },
+                'exp-route':  { text: '0', style: 'text-align:right;' },
+                'margin':     { text: fmt(margin), cls: 'margin-bold', style: 'text-align:right;' },
+                'cost':       { text: '0', style: 'text-align:right;' },
+                'cost-cum':   { text: '0', style: 'text-align:right;' },
+                'dohod':      { text: '0', style: 'text-align:right;' },
+                'dohod-itog': { text: '0', style: 'text-align:right;' },
+                'dohod-cum':  { text: '0', style: 'text-align:right;' },
+                'km':         { text: '—', style: 'text-align:right;' },
+                'time-calc':  { text: '—', style: 'text-align:right;' },
+                'returns':    { text: groupReturns },
+                'cancelled':  { text: groupCancelled }
+            };
+            var trAttrs = {
+                'data-row-id': rowId,
+                'data-datetime': firstRow.ДатаВремя,
+                'data-plan': String(group.plan),
+                'data-day-key': dayName,
+                'data-original-sum': groupSum,
+                'data-clients-count': groupClients,
+                'data-clients': allClientsNames.join('|'),
+                'data-client-sums': allSumsArr.join('|'),
+                'data-clients-addresses': allAddresses.join('||'),
+                'data-date-key': dateKey,
+                'data-week-num': String(weekNumber),
+                'data-time-key': timeKey,
+                'data-task-numbers': taskNumbersStr
+            };
+            var tr = buildRow(rowValues, trAttrs, classDay);
+            var dateSpan = tr.querySelector('.clickable-date');
+            if (dateSpan) {
+                dateSpan.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var dt = this.getAttribute('data-date') || dateStr;
+                    showPopup(e, allGroupClients, dt, rowId, null, queue, timeStr, driversStr, taskNumbersStr, routeName);
+                });
+            }
+            tbody.appendChild(tr);
+            firstInDay = false;
+
+            if (isGroup) {
+                for (var k = 1; k < group.rows.length; k++) {
+                    var chRow = group.rows[k];
+                    var chDate = new Date(chRow.ДатаВремя);
+                    var chTime = padZero(chDate.getHours()) + ':' + padZero(chDate.getMinutes());
+                    var chValues = {
+                        'time':      { text: chTime, cls: 'time-cell' },
+                        'clients':   { text: chRow.КолКлиентов || 0 },
+                        'sum-route': { text: fmt(chRow.СуммаМаршрута || 0), style: 'text-align:right;' },
+                        'returns':   { text: chRow.Возвраты || 0 },
+                        'cancelled': { text: chRow.Отменено || 0 }
+                    };
+                    var chTr = buildRow(chValues, { 'data-parent-id': rowId }, 'group-child');
+                    chTr.style.display = 'none';
+                    tbody.appendChild(chTr);
+                }
+            }
+        });
+
+        table.appendChild(tbody);
+        content.appendChild(table);
+        acc.appendChild(content);
+        routesWrap.appendChild(acc);
+    });
+
+    setTimeout(function() {
+        applyAllFilters();
+        updateAllRouteCosts();
+        recalcCumulativeTotals();
+        // === НОВОЕ: Обновляем сводки всех маршрутов ===
+        document.querySelectorAll('.route-collapsed-summary[data-route]').forEach(function(el) {
+            var rn = el.getAttribute('data-route');
+            if (rn) updateRouteSummary(rn);
+        });
+    }, 100);
+}
+
+function toggleRoute(id) {
+    var elem = document.getElementById(id);
+    if (elem) {
+        if (!elem.classList.contains('active')) {
+            elem.classList.add('active');
+            applyFilters(elem);
+            // === НОВОЕ: Скрываем сводку при раскрытии ===
+            var acc = elem.closest('.route-accordion');
+            if (acc) {
+                var summary = acc.querySelector('.route-collapsed-summary');
+                if (summary) summary.classList.remove('visible');
+            }
+        } else {
+            elem.classList.remove('active');
+            closeAllPopups();
+            // === НОВОЕ: Показываем сводку при сворачивании ===
+            var acc = elem.closest('.route-accordion');
+            if (acc) {
+                var summary = acc.querySelector('.route-collapsed-summary');
+                if (summary) {
+                    summary.classList.add('visible');
+                    var rn = summary.getAttribute('data-route');
+                    if (rn) updateRouteSummary(rn);
+                }
+            }
+        }
+    }
+}
+
+function toggleRecalcBtn(cb) {
+    var extra = cb.closest('.route-extra');
+    if (!extra) return;
+    var btn = extra.querySelector('.recalc-btn');
+    if (!btn) return;
+    if (cb.checked) btn.classList.add('visible');
+    else btn.classList.remove('visible');
+}
+
+// ============================================================
+// === НОВОЕ: ЗАПОЛНИТЬ КМ ДЛЯ ВСЕХ МАРШРУТОВ ===
+// ============================================================
+async function fillAllKm() {
+    if (calcInProgress) { alert('Идёт расчёт, подождите...'); return; }
+    if (!routeCalcIframeReady) { alert('Страница расчёта ещё загружается, подождите пару секунд.'); return; }
+    
+    var method = await getRouteMethodFromConfig();
+    ROUTE_CALC_METHOD = method;
+    
+    var allTasks = [];
+    var baseAddr = BASE_ADDRESSES[currentBase] || '';
+    
+    // Собираем задачи со всех маршрутов
+    document.querySelectorAll('.route-extra[data-route]').forEach(function(extra) {
+        var routeName = extra.getAttribute('data-route');
+        var rc = extra.closest('.route-content');
+        if (!rc) return;
+        
+        var userStart = getAddressStart(routeName);
+        var userEnd = getAddressEnd(routeName);
+        
+        var parentRows = rc.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+        parentRows.forEach(function(row) {
+            var timeKey = row.getAttribute('data-time-key') || '';
+            if (!timeKey) return;
+            var existing = (routeData[routeName] && routeData[routeName].routeCalcResults) ? routeData[routeName].routeCalcResults[timeKey] : null;
+            if (existing) return; // Уже рассчитано
+            var clientsJson = row.getAttribute('data-clients-addresses') || '';
+            if (!clientsJson) return;
+            var clientAddresses = clientsJson.split('||').filter(function(a){ return a.trim() !== ''; });
+            if (clientAddresses.length === 0) return;
+            
+            var startAddr = userStart || baseAddr;
+            var endAddr = userEnd || baseAddr;
+            var addresses = [];
+            if (startAddr) addresses.push(startAddr);
+            clientAddresses.forEach(function(a){ addresses.push(a); });
+            if (endAddr) addresses.push(endAddr);
+            
+            allTasks.push({ taskId: routeName + '|||' + timeKey, addresses: addresses });
+        });
+    });
+    
+    if (allTasks.length === 0) { alert('Нет строк для расчёта (все уже рассчитаны)'); return; }
+    
+    var msgText = 'Рассчитать КМ для ВСЕХ маршрутов?\nВсего строк: ' + allTasks.length + '\nМетод расчёта: ' + method.toUpperCase();
+    if (allTasks.length > 20) msgText += '\nЭто может занять ~' + Math.round(allTasks.length * 3 / 60) + ' мин.';
+    if (!confirm(msgText)) return;
+    
+    calcInProgress = true;
+    calcStats = { done: 0, total: allTasks.length, errors: 0, currentRoute: '_all' };
+    
+    // Блокируем кнопку
+    var btn = document.getElementById('btnFillKm');
+    if (btn) btn.disabled = true;
+    
+    var iframe = document.getElementById('routeCalcFrame');
+    iframe.contentWindow.postMessage({ type: 'calc', method: ROUTE_CALC_METHOD, tasks: allTasks }, '*');
+}
+
+// ============================================================
+// === НОВОЕ: СОЕДИНЁННЫЕ МАРШРУТЫ КАК АККОРДЕОНЫ ===
+// ============================================================
+function renderConnectedAccordions() {
+    // Удаляем старые аккордеоны соединённых маршрутов
+    document.querySelectorAll('.connected-accordion').forEach(function(el) { el.remove(); });
+    
+    if (connectedRoutesStore.length === 0) return;
+    
+    var container = document.getElementById('container');
+    var routesWrap = container.querySelector('div');
+    if (!routesWrap) return;
+    
+    connectedRoutesStore.forEach(function(cr) {
+        var acc = document.createElement('div');
+        acc.className = 'route-accordion connected-accordion';
+        acc.setAttribute('data-connected-id', cr.id);
+        
+        var header = document.createElement('div');
+        header.className = 'route-header';
+        header.setAttribute('onclick', 'toggleConnectedRoute(\'' + cr.id + '\')');
+        header.innerHTML = '🔗 ' + cr.name + ' <span style="font-size:10pt;font-weight:normal;opacity:0.8;">(' + cr.routeNames.join(' + ') + ')</span> ▼';
+        acc.appendChild(header);
+        
+        // Сводка
+        var summaryDiv = document.createElement('div');
+        summaryDiv.className = 'route-collapsed-summary visible';
+        summaryDiv.setAttribute('data-connected', cr.id);
+        var monthNames = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+        var curMonth = monthNames[new Date().getMonth()] + ' ' + new Date().getFullYear();
+        summaryDiv.innerHTML = 
+            '<span class="summary-inline si-nds"><span class="si-month">(' + curMonth + ')</span><span class="si-label">Продажи БезНДС:</span><span class="si-value">—</span></span>' +
+            '<span class="summary-inline si-cost"><span class="si-label">Затраты:</span><span class="si-value">—</span></span>' +
+            '<span class="summary-inline si-dohod"><span class="si-label">Доходность:</span><span class="si-value">—</span></span>';
+        acc.appendChild(summaryDiv);
+        
+        // Контент
+        var content = document.createElement('div');
+        content.id = 'connected_' + cr.id;
+        content.className = 'route-content collapsed-avg collapsed-sum collapsed-cost collapsed-dohod';
+        
+        // Верхняя панель с кнопками управления
+        var topBar = document.createElement('div');
+        topBar.className = 'route-top-bar';
+        
+        var extraDiv = document.createElement('div');
+        extraDiv.className = 'route-extra';
+        extraDiv.setAttribute('data-route', 'connected_' + cr.id);
+        
+        var safeId = cr.id.replace(/'/g, "\\'");
+        extraDiv.innerHTML =
+            '<span class="calc-progress" data-route="connected_' + escapeAttr(cr.id) + '"></span>' +
+            '<button class="calc-btn" type="button" onclick="startCalc(\'connected_' + safeId + '\', false)">🚗 Рассчитать</button>' +
+            '<input type="checkbox" class="chk-recalc" title="Показать Пересчитать" onchange="toggleRecalcBtn(this)">' +
+            '<button class="recalc-btn" type="button" onclick="startCalc(\'connected_' + safeId + '\', true)">🔄 Пересчитать</button>' +
+            '<button class="open-costs-btn" onclick="openModal(\'connected_' + safeId + '\')">💰 Настроить стоимости</button>' +
+            '<label>Километры (норма):</label>' +
+            '<input type="text" class="route-km-input" data-route="connected_' + escapeAttr(cr.id) + '" value="">' +
+            '<span class="route-km-avg" data-route="connected_' + escapeAttr(cr.id) + '" title="Среднее по всем расчётам">≈ —</span>';
+        
+        topBar.appendChild(extraDiv);
+        content.appendChild(topBar);
+        
+        // Таблица с объединёнными данными
+        var table = document.createElement('table');
+        
+        var thead = document.createElement('thead');
+        // Создаём заголовок с дополнительным столбцом "Маршруты"
+        var trh = document.createElement('tr');
+        var thRoute = document.createElement('th');
+        thRoute.textContent = 'Маршруты';
+        thRoute.style.fontWeight = 'bold';
+        trh.appendChild(thRoute);
+        COLUMNS.forEach(function(col) {
+            var th = document.createElement('th');
+            if (col.cls) th.className = col.cls;
+            th.setAttribute('data-col-key', col.key);
+            if (col.toggle) {
+                th.innerHTML = col.label + ' <span class="col-toggle" data-group="' + col.toggle + '" onclick="event.stopPropagation(); toggleExpand(this)">▸</span>';
+            } else {
+                th.textContent = col.label;
+            }
+            trh.appendChild(th);
+        });
+        thead.appendChild(trh);
+        table.appendChild(thead);
+        
+        var tbody = document.createElement('tbody');
+        
+        // Собираем и группируем строки из всех маршрутов по дате и плановой
+        var groupedRows = {};
+        
+        cr.routeNames.forEach(function(routeName) {
+            var sourceAcc = findAccordionByRouteName(routeName);
+            if (!sourceAcc) return;
+            var sourceContent = sourceAcc.querySelector('.route-content');
+            if (!sourceContent) return;
+            
+            var sourceRows = sourceContent.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+            sourceRows.forEach(function(row) {
+                var dateKey = row.getAttribute('data-date-key') || '';
+                var plan = row.getAttribute('data-plan') || '1';
+                var groupKey = dateKey + '_' + plan;
+                
+                if (!groupedRows[groupKey]) {
+                    groupedRows[groupKey] = {
+                        dateKey: dateKey,
+                        plan: plan,
+                        routes: [],
+                        rows: []
+                    };
+                }
+                
+                groupedRows[groupKey].routes.push(routeName);
+                groupedRows[groupKey].rows.push(row);
+            });
+        });
+        
+        // Создаём объединённые строки
+        Object.keys(groupedRows).sort().forEach(function(key) {
+            var group = groupedRows[key];
+            var firstRow = group.rows[0];
+            
+            // Суммируем показатели
+            var totalSum = 0, totalClients = 0, totalReturns = 0, totalCancelled = 0;
+            var totalCost = 0, totalDohod = 0;
+            var totalClientCost = 0, totalRouteCost = 0;
+            var allClients = [];
+            
+            group.rows.forEach(function(row) {
+                totalSum += parseFloat(row.getAttribute('data-original-sum')) || 0;
+                totalClients += parseInt(row.getAttribute('data-clients-count')) || 0;
+                totalReturns += parseInt(row.getAttribute('data-returns')) || 0;
+                totalCancelled += parseInt(row.getAttribute('data-cancelled')) || 0;
+                totalCost += parseFloat(row.getAttribute('data-total-cost')) || 0;
+                totalDohod += parseFloat(row.getAttribute('data-dohod')) || 0;
+                
+                // Суммируем клиентские и стоимость маршрута отдельно
+                var clientCostCell = row.querySelector('td[data-col-key="exp-client"]');
+                var routeCostCell = row.querySelector('td[data-col-key="exp-route"]');
+                if (clientCostCell) totalClientCost += parseFloat(clientCostCell.textContent.replace(/\s/g, '')) || 0;
+                if (routeCostCell) totalRouteCost += parseFloat(routeCostCell.textContent.replace(/\s/g, '')) || 0;
+                
+                var clients = row.getAttribute('data-clients') || '';
+                if (clients) allClients = allClients.concat(clients.split('|'));
+            });
+            
+            // Создаём новую строку
+            var newRow = firstRow.cloneNode(true);
+            var sumWNDS = totalSum * 100 / 122;
+            var margin = sumWNDS * 0.17;
+            
+            newRow.setAttribute('data-original-sum', totalSum);
+            newRow.setAttribute('data-clients-count', totalClients);
+            newRow.setAttribute('data-clients', allClients.join('|'));
+            newRow.setAttribute('data-total-cost', totalCost);
+            newRow.setAttribute('data-dohod', totalDohod);
+            
+            // Обновляем все числовые ячейки
+            var sumCell = newRow.querySelector('td[data-col-key="sum-route"]');
+            if (sumCell) sumCell.textContent = fmt(totalSum);
+            
+            var sumNdsCell = newRow.querySelector('td[data-col-key="sum-nds"]');
+            if (sumNdsCell) sumNdsCell.textContent = fmt(sumWNDS);
+            
+            var marginCell = newRow.querySelector('td[data-col-key="margin"]');
+            if (marginCell) marginCell.textContent = fmt(margin);
+            
+            var expClientCell = newRow.querySelector('td[data-col-key="exp-client"]');
+            if (expClientCell) expClientCell.textContent = fmt(totalClientCost);
+            
+            var expRouteCell = newRow.querySelector('td[data-col-key="exp-route"]');
+            if (expRouteCell) expRouteCell.textContent = fmt(totalRouteCost);
+            
+            var clientsCell = newRow.querySelector('td[data-col-key="clients"]');
+            if (clientsCell) clientsCell.textContent = totalClients;
+            
+            var costCell = newRow.querySelector('td[data-col-key="cost"]');
+            if (costCell) costCell.innerHTML = '<span style="font-weight:bold;">' + fmt(totalCost) + '</span>';
+            
+            var dohodCell = newRow.querySelector('td[data-col-key="dohod"]');
+            if (dohodCell) dohodCell.textContent = fmt(totalDohod);
+            
+            var returnsCell = newRow.querySelector('td[data-col-key="returns"]');
+            if (returnsCell) returnsCell.textContent = totalReturns;
+            
+            var cancelledCell = newRow.querySelector('td[data-col-key="cancelled"]');
+            if (cancelledCell) cancelledCell.textContent = totalCancelled;
+            
+            // Добавляем метку маршрутов
+            var routeLabel = document.createElement('td');
+            routeLabel.style.fontWeight = 'bold';
+            routeLabel.style.color = '#8e44ad';
+            routeLabel.style.fontSize = '8pt';
+            routeLabel.textContent = group.routes.join(' + ');
+            newRow.insertBefore(routeLabel, newRow.firstChild);
+            
+            // Добавляем обработчик клика на дату для popup
+            var dateCell = newRow.querySelector('td[data-col-key="date"]');
+            if (dateCell) {
+                var dateSpan = dateCell.querySelector('.clickable-date');
+                if (dateSpan) {
+                    dateSpan.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        var dt = this.getAttribute('data-date') || group.dateKey;
+                        showPopup(e, allClients, dt, 'connected_' + cr.id + '_' + key, null, 
+                                  group.plan + '-я плановая', '', group.routes.join(', '), '', 'connected_' + cr.id);
+                    });
+                }
+            }
+            
+            tbody.appendChild(newRow);
+        });
+        
+        table.appendChild(tbody);
+        content.appendChild(table);
+        acc.appendChild(content);
+        
+        routesWrap.appendChild(acc);
+        
+        // Обновляем сводку
+        updateConnectedSummary(cr.id);
+        
+        // Пересчитываем накопительные итоги
+        setTimeout(function() {
+            recalcCumulativeTotals();
+        }, 100);
+    });
+}
+
+function updateConnectedSummary(crId) {
+    var cr = connectedRoutesStore.find(function(c) { return c.id === crId; });
+    if (!cr) return;
+    
+    var summaryEl = document.querySelector('.route-collapsed-summary[data-connected="' + crId + '"]');
+    if (!summaryEl) return;
+    
+    var now = new Date();
+    var currentMonth = now.getMonth();
+    var currentYear = now.getFullYear();
+    
+    var currentMonthNds = 0, totalCost = 0, totalDohod = 0;
+    
+    cr.routeNames.forEach(function(routeName) {
+        var sourceAcc = findAccordionByRouteName(routeName);
+        if (!sourceAcc) return;
+        var sourceContent = sourceAcc.querySelector('.route-content');
+        if (!sourceContent) return;
+        
+        var rows = sourceContent.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+        rows.forEach(function(row) {
+            var dateKey = row.getAttribute('data-date-key') || '';
+            if (!dateKey) return;
+            var d = new Date(dateKey);
+            var sum = parseFloat(row.getAttribute('data-original-sum')) || 0;
+            var sumWNDS = sum * 100 / 122;
+            var dohod = parseFloat(row.getAttribute('data-dohod')) || 0;
+            var cost = parseFloat(row.getAttribute('data-total-cost')) || 0;
+            
+            totalCost += cost;
+            totalDohod += dohod;
+            
+            if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                currentMonthNds += sumWNDS;
+            }
+        });
+    });
+    
+    var ndsEl = summaryEl.querySelector('.si-nds .si-value');
+    var costEl = summaryEl.querySelector('.si-cost .si-value');
+    var dohodEl = summaryEl.querySelector('.si-dohod .si-value');
+    
+    if (ndsEl) ndsEl.textContent = fmt(currentMonthNds) + ' ₽';
+    if (costEl) costEl.textContent = fmt(totalCost) + ' ₽';
+    if (dohodEl) dohodEl.textContent = fmt(totalDohod) + ' ₽';
+}
+
+function toggleConnectedRoute(crId) {
+    var elem = document.getElementById('connected_' + crId);
+    if (elem) {
+        if (!elem.classList.contains('active')) {
+            elem.classList.add('active');
+            var acc = elem.closest('.route-accordion');
+            if (acc) {
+                var summary = acc.querySelector('.route-collapsed-summary');
+                if (summary) summary.classList.remove('visible');
+            }
+        } else {
+            elem.classList.remove('active');
+            var acc = elem.closest('.route-accordion');
+            if (acc) {
+                var summary = acc.querySelector('.route-collapsed-summary');
+                if (summary) summary.classList.add('visible');
+                updateConnectedSummary(crId);
+            }
+        }
+    }
+}
+
+// ============================================================
+// ИНИЦИАЛИЗАЦИЯ
+// ============================================================
+document.querySelectorAll('.date-filter button[data-range]').forEach(function(btn) {
+    btn.addEventListener('click', function() { setDateRangeFromBtn(this.getAttribute('data-range')); });
+});
+
+document.getElementById('btnReload').addEventListener('click', function() { refreshData(); });
+
+// === НОВОЕ: Кнопка Заполнить КМ ===
+document.getElementById('btnFillKm').addEventListener('click', function() { fillAllKm(); });
+
+// === НОВОЕ: Кнопка соединённых маршрутов ===
+document.getElementById('btnConnectedRoutes').addEventListener('click', function() { openConnectedRoutes(); });
+
+setupPeriodPicker();
+setDateRangeFromBtn('month');
+initRouteCalcIframe();
+
+// === НОВОЕ: Загрузка соединённых маршрутов ===
+loadConnectedRoutes().then(function() {
+    // После загрузки данных рендерим аккордеоны соединённых маршрутов
+    setTimeout(function() { renderConnectedAccordions(); }, 500);
+});
+
+// === НОВОЕ: AI Анализ ===
+async function runAIAnalysis() {
+    var statusEl = document.getElementById('aiStatus');
+    var resultEl = document.getElementById('aiResult');
+    var contentEl = document.getElementById('aiContent');
+    var btnEl = document.getElementById('btnAnalyze');
+    
+    btnEl.disabled = true;
+    statusEl.textContent = '⏳ Анализирую данные...';
+    resultEl.style.display = 'block';
+    contentEl.innerHTML = '<p style="text-align:center; color:#888;">Пожалуйста, подождите...</p>';
+    
+    try {
+        // Собираем данные по маршрутам
+        var routesData = [];
+        var now = new Date();
+        var currentMonth = now.getMonth();
+        var currentYear = now.getFullYear();
+        
+        document.querySelectorAll('.route-accordion:not(.connected-accordion)').forEach(function(acc) {
+            var routeName = acc.querySelector('.route-header').textContent.replace(' ▼', '').trim();
+            var content = acc.querySelector('.route-content');
+            if (!content) return;
+            
+            var rows = content.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+            var monthRevenue = 0, monthCost = 0, monthProfit = 0, totalRows = 0;
+            
+            rows.forEach(function(row) {
+                var dateKey = row.getAttribute('data-date-key') || '';
+                if (!dateKey) return;
+                var d = new Date(dateKey);
+                
+                if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                    var sum = parseFloat(row.getAttribute('data-original-sum')) || 0;
+                    var revenue = sum * 100 / 122; // Без НДС
+                    var cost = parseFloat(row.getAttribute('data-total-cost')) || 0;
+                    var profit = parseFloat(row.getAttribute('data-dohod')) || 0;
+                    
+                    monthRevenue += revenue;
+                    monthCost += cost;
+                    monthProfit += profit;
+                    totalRows++;
+                }
+            });
+            
+            if (totalRows > 0) {
+                routesData.push({
+                    name: routeName,
+                    revenue: Math.round(monthRevenue),
+                    cost: Math.round(monthCost),
+                    profit: Math.round(monthProfit),
+                    trips: totalRows,
+                    avgRevenue: Math.round(monthRevenue / totalRows),
+                    avgProfit: Math.round(monthProfit / totalRows),
+                    margin: monthRevenue > 0 ? ((monthProfit / monthRevenue) * 100).toFixed(1) : 0
+                });
+            }
+        });
+        
+        if (routesData.length === 0) {
+            contentEl.innerHTML = '<p style="color:#e74c3c;">❌ Нет данных для анализа</p>';
+            statusEl.textContent = '';
+            btnEl.disabled = false;
+            return;
+        }
+        
+        // Генерируем анализ
+        var analysis = generateAIAnalysis(routesData);
+        contentEl.innerHTML = analysis;
+        statusEl.textContent = '✅ Анализ завершён';
+        
+    } catch (error) {
+        console.error('Ошибка анализа:', error);
+        contentEl.innerHTML = '<p style="color:#e74c3c;">❌ Ошибка при анализе: ' + error.message + '</p>';
+        statusEl.textContent = '❌ Ошибка';
+    }
+    
+    btnEl.disabled = false;
+}
+
+function generateAIAnalysis(routesData) {
+    var totalRevenue = routesData.reduce(function(s, r) { return s + r.revenue; }, 0);
+    var totalCost = routesData.reduce(function(s, r) { return s + r.cost; }, 0);
+    var totalProfit = routesData.reduce(function(s, r) { return s + r.profit; }, 0);
+    var totalTrips = routesData.reduce(function(s, r) { return s + r.trips; }, 0);
+    
+    var bestRoute = routesData.reduce(function(best, r) { 
+        return r.profit > best.profit ? r : best; 
+    }, routesData[0]);
+    
+    var worstRoute = routesData.reduce(function(worst, r) { 
+        return r.profit < worst.profit ? r : worst; 
+    }, routesData[0]);
+    
+    var mostEfficient = routesData.reduce(function(best, r) { 
+        var margin = parseFloat(r.margin);
+        var bestMargin = parseFloat(best.margin);
+        return margin > bestMargin ? r : best; 
+    }, routesData[0]);
+    
+    // Анализ по неделям
+    var weeklyAnalysis = calculateWeeklyTrend(routesData);
+    
+    var html = '<div style="font-size: 10.5pt; line-height: 1.6;">';
+    
+    // Общая статистика
+    html += '<h3 style="color:#667eea; margin-top:0;">📈 Общая статистика</h3>';
+    html += '<p><strong>Всего маршрутов:</strong> ' + routesData.length + '</p>';
+    html += '<p><strong>Общий оборот (без НДС):</strong> ' + fmt(totalRevenue) + ' ₽</p>';
+    html += '<p><strong>Общие затраты:</strong> ' + fmt(totalCost) + ' ₽</p>';
+    html += '<p><strong>Общая прибыль:</strong> ' + fmt(totalProfit) + ' ₽</p>';
+    html += '<p><strong>Всего рейсов:</strong> ' + totalTrips + '</p>';
+    html += '<p><strong>Средняя маржинальность:</strong> ' + (totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : 0) + '%</p>';
+    
+    // Лучший маршрут
+    html += '<h3 style="color:#27ae60;">🏆 Самый прибыльный маршрут</h3>';
+    html += '<p><strong>' + bestRoute.name + '</strong></p>';
+    html += '<p>Прибыль: ' + fmt(bestRoute.profit) + ' ₽ | Маржа: ' + bestRoute.margin + '% | Рейсов: ' + bestRoute.trips + '</p>';
+    
+    // Самый эффективный
+    if (mostEfficient.name !== bestRoute.name) {
+        html += '<h3 style="color:#3498db;">💎 Самый эффективный маршрут</h3>';
+        html += '<p><strong>' + mostEfficient.name + '</strong></p>';
+        html += '<p>Маржинальность: ' + mostEfficient.margin + '% | Прибыль: ' + fmt(mostEfficient.profit) + ' ₽</p>';
+    }
+    
+    // Проблемные маршруты
+    var problemRoutes = routesData.filter(function(r) { return r.profit < 0; });
+    if (problemRoutes.length > 0) {
+        html += '<h3 style="color:#e74c3c;">⚠️ Убыточные маршруты</h3>';
+        problemRoutes.forEach(function(r) {
+            html += '<p><strong>' + r.name + ':</strong> убыток ' + fmt(Math.abs(r.profit)) + ' ₽ (маржа: ' + r.margin + '%)</p>';
+        });
+    }
+    
+    // Детальный анализ по каждому маршруту
+    html += '<h3 style="color:#9b59b6;">📋 Детальный анализ маршрутов</h3>';
+    html += '<table style="width:100%; border-collapse:collapse; margin:10px 0; font-size:9.5pt;">';
+    html += '<tr style="background:#8e44ad; color:white;"><th style="padding:8px; border:1px solid #7d3c98; text-align:left;">Маршрут</th>';
+    html += '<th style="padding:8px; border:1px solid #7d3c98; text-align:right;">Оборот</th>';
+    html += '<th style="padding:8px; border:1px solid #7d3c98; text-align:right;">Затраты</th>';
+    html += '<th style="padding:8px; border:1px solid #7d3c98; text-align:right;">Прибыль</th>';
+    html += '<th style="padding:8px; border:1px solid #7d3c98; text-align:right;">Маржа</th>';
+    html += '<th style="padding:8px; border:1px solid #7d3c98; text-align:right;">Рейсов</th>';
+    html += '<th style="padding:8px; border:1px solid #7d3c98; text-align:center;">Статус</th></tr>';
+    
+    routesData.forEach(function(r) {
+        var margin = parseFloat(r.margin);
+        var status = '';
+        var statusColor = '';
+        
+        if (r.profit < 0) {
+            status = '⚠️ Убыточный';
+            statusColor = '#e74c3c';
+        } else if (margin < 10) {
+            status = '⚡ Низкая маржа';
+            statusColor = '#f39c12';
+        } else if (margin > 25) {
+            status = '✅ Отличный';
+            statusColor = '#27ae60';
+        } else {
+            status = '👍 Нормальный';
+            statusColor = '#3498db';
+        }
+        
+        var rowBg = r.profit < 0 ? '#fadbd8' : (margin > 25 ? '#d5f4e6' : '#ffffff');
+        
+        html += '<tr style="background:' + rowBg + ';">';
+        html += '<td style="padding:8px; border:1px solid #ddd;"><strong>' + r.name + '</strong></td>';
+        html += '<td style="padding:8px; border:1px solid #ddd; text-align:right;">' + fmt(r.revenue) + ' ₽</td>';
+        html += '<td style="padding:8px; border:1px solid #ddd; text-align:right; color:#e74c3c;">' + fmt(r.cost) + ' ₽</td>';
+        html += '<td style="padding:8px; border:1px solid #ddd; text-align:right; color:' + (r.profit >= 0 ? '#27ae60' : '#e74c3c') + '; font-weight:bold;">' + fmt(r.profit) + ' ₽</td>';
+        html += '<td style="padding:8px; border:1px solid #ddd; text-align:right;">' + margin.toFixed(1) + '%</td>';
+        html += '<td style="padding:8px; border:1px solid #ddd; text-align:right;">' + r.trips + '</td>';
+        html += '<td style="padding:8px; border:1px solid #ddd; text-align:center; color:' + statusColor + '; font-weight:bold;">' + status + '</td>';
+        html += '</tr>';
+    });
+    
+    html += '</table>';
+    
+    // Рекомендации
+    html += '<h3 style="color:#f39c12;">💡 Рекомендации</h3>';
+    html += '<ul style="margin-left: 20px;">';
+    
+    if (problemRoutes.length > 0) {
+        html += '<li><strong>Срочно:</strong> Пересмотрите ценообразование на убыточных маршрутах: ' + problemRoutes.map(function(r) { return r.name; }).join(', ') + '</li>';
+    }
+    
+    if (parseFloat(mostEfficient.margin) > 30) {
+        html += '<li><strong>Возможность:</strong> Маршрут "' + mostEfficient.name + '" показывает высокую эффективность (' + mostEfficient.margin + '%) - рассмотрите возможность масштабирования или увеличения частоты рейсов</li>';
+    }
+    
+    var avgTripsPerRoute = totalTrips / routesData.length;
+    if (avgTripsPerRoute < 10) {
+        html += '<li><strong>Оптимизация:</strong> Низкая интенсивность рейсов (' + avgTripsPerRoute.toFixed(1) + ' рейсов/маршрут) - возможна оптимизация графика и увеличение загрузки</li>';
+    }
+    
+    var avgMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+    if (avgMargin < 15) {
+        html += '<li><strong>Внимание:</strong> Средняя маржинальность ниже 15% (' + avgMargin.toFixed(1) + '%) - рекомендуется пересмотреть затраты и ценообразование</li>';
+    } else if (avgMargin > 25) {
+        html += '<li><strong>Отлично:</strong> Высокая маржинальность (' + avgMargin.toFixed(1) + '%) - отличные показатели эффективности бизнеса</li>';
+    }
+    
+    // Анализ затрат
+    var costToRevenueRatio = totalRevenue > 0 ? (totalCost / totalRevenue * 100) : 0;
+    if (costToRevenueRatio > 80) {
+        html += '<li><strong>Критично:</strong> Доля затрат в обороте составляет ' + costToRevenueRatio.toFixed(1) + '% - необходимо срочно оптимизировать расходы</li>';
+    } else if (costToRevenueRatio > 70) {
+        html += '<li><strong>Контроль:</strong> Доля затрат в обороте ' + costToRevenueRatio.toFixed(1) + '% - рекомендуется найти способы снижения издержек</li>';
+    }
+    
+    // Анализ загрузки
+    var avgClientsPerTrip = totalTrips > 0 ? (routesData.reduce(function(s, r) { return s + r.clients; }, 0) / totalTrips) : 0;
+    if (avgClientsPerTrip < 5) {
+        html += '<li><strong>Загрузка:</strong> Среднее количество клиентов на рейс (' + avgClientsPerTrip.toFixed(1) + ') ниже оптимального - рассмотрите консолидацию заказов</li>';
+    }
+    
+    html += '</ul>';
+    
+    // Тренд по неделям
+    if (weeklyAnalysis) {
+        html += '<h3 style="color:#e67e22;">📅 Тренд: Последняя неделя vs Предыдущая</h3>';
+        html += '<table style="width:100%; border-collapse:collapse; margin:10px 0; font-size:10pt;">';
+        html += '<tr style="background:#f8f9fa;"><th style="padding:8px; border:1px solid #ddd; text-align:left;">Маршрут</th>';
+        html += '<th style="padding:8px; border:1px solid #ddd; text-align:right;">Оборот (без НДС)</th>';
+        html += '<th style="padding:8px; border:1px solid #ddd; text-align:right;">Прибыль</th>';
+        html += '<th style="padding:8px; border:1px solid #ddd; text-align:right;">Изменение</th></tr>';
+        
+        weeklyAnalysis.forEach(function(route) {
+            var revenueChange = route.prevWeekRevenue > 0 
+                ? ((route.lastWeekRevenue - route.prevWeekRevenue) / route.prevWeekRevenue * 100).toFixed(1)
+                : 'N/A';
+            var profitChange = route.prevWeekProfit !== 0 
+                ? ((route.lastWeekProfit - route.prevWeekProfit) / Math.abs(route.prevWeekProfit) * 100).toFixed(1)
+                : 'N/A';
+            
+            var revColor = revenueChange === 'N/A' ? '#666' : (parseFloat(revenueChange) >= 0 ? '#27ae60' : '#e74c3c');
+            var profColor = profitChange === 'N/A' ? '#666' : (parseFloat(profitChange) >= 0 ? '#27ae60' : '#e74c3c');
+            
+            html += '<tr>';
+            html += '<td style="padding:8px; border:1px solid #ddd;"><strong>' + route.name + '</strong></td>';
+            html += '<td style="padding:8px; border:1px solid #ddd; text-align:right;">' + fmt(route.lastWeekRevenue) + ' ₽</td>';
+            html += '<td style="padding:8px; border:1px solid #ddd; text-align:right;">' + fmt(route.lastWeekProfit) + ' ₽</td>';
+            html += '<td style="padding:8px; border:1px solid #ddd; text-align:right;">';
+            html += '<span style="color:' + revColor + ';">Оборот: ' + (revenueChange === 'N/A' ? '—' : (parseFloat(revenueChange) >= 0 ? '+' : '') + revenueChange + '%') + '</span><br>';
+            html += '<span style="color:' + profColor + ';">Прибыль: ' + (profitChange === 'N/A' ? '—' : (parseFloat(profitChange) >= 0 ? '+' : '') + profitChange + '%') + '</span>';
+            html += '</td></tr>';
+        });
+        
+        html += '</table>';
+    }
+    
+    html += '</div>';
+    
+    return html;
+}
+
+function calculateWeeklyTrend(routesData) {
+    var now = new Date();
+    var lastWeekStart = getWeekStart(now);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    var lastWeekEnd = new Date(lastWeekStart);
+    lastWeekEnd.setDate(lastWeekEnd.getDate() + 6);
+    
+    var prevWeekStart = new Date(lastWeekStart);
+    prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+    var prevWeekEnd = new Date(lastWeekStart);
+    prevWeekEnd.setDate(prevWeekEnd.getDate() - 1);
+    
+    var result = [];
+    
+    document.querySelectorAll('.route-accordion:not(.connected-accordion)').forEach(function(acc) {
+        var routeName = acc.querySelector('.route-header').textContent.replace(' ▼', '').trim();
+        var content = acc.querySelector('.route-content');
+        if (!content) return;
+        
+        var rows = content.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+        var lastWeekRevenue = 0, lastWeekProfit = 0;
+        var prevWeekRevenue = 0, prevWeekProfit = 0;
+        
+        rows.forEach(function(row) {
+            var dateKey = row.getAttribute('data-date-key') || '';
+            if (!dateKey) return;
+            var d = new Date(dateKey);
+            var sum = parseFloat(row.getAttribute('data-original-sum')) || 0;
+            var revenue = sum * 100 / 122;
+            var profit = parseFloat(row.getAttribute('data-dohod')) || 0;
+            
+            if (d >= lastWeekStart && d <= lastWeekEnd) {
+                lastWeekRevenue += revenue;
+                lastWeekProfit += profit;
+            } else if (d >= prevWeekStart && d <= prevWeekEnd) {
+                prevWeekRevenue += revenue;
+                prevWeekProfit += profit;
+            }
+        });
+        
+        if (lastWeekRevenue > 0 || prevWeekRevenue > 0) {
+            result.push({
+                name: routeName,
+                lastWeekRevenue: Math.round(lastWeekRevenue),
+                lastWeekProfit: Math.round(lastWeekProfit),
+                prevWeekRevenue: Math.round(prevWeekRevenue),
+                prevWeekProfit: Math.round(prevWeekProfit)
+            });
+        }
+    });
+    
+    return result.length > 0 ? result : null;
+}
+
+</script>
+</body>
+</html>
