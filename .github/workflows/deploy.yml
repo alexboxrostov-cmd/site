@@ -3,8 +3,9 @@ name: Deploy to FTP
 on:
   push:
     branches:
-      - main  # Срабатывает при изменениях в ветке main
-workflow_dispatch:
+      - main
+  workflow_dispatch: # Кнопка ручного запуска
+
 jobs:
   web-deploy:
     name: 🎉 Deploy
@@ -19,7 +20,9 @@ jobs:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
-        # Путь, куда загружать (из вашего FAR Manager)
+        # Путь на сервере, куда загружать (из вашего FAR Manager)
         server-dir: /domains/a0650449.xsph.ru/public_html/LOGISTIC/
-        # Что загружать. Загружаем только то, что в папке public
+        # Что загружать. Загружаем только то, что находится в папке public
         local-dir: ./public/
+        # Включаем подробный лог, чтобы видеть, на чем спотыкается
+        log-level: verbose
