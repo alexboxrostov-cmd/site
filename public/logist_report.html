@@ -308,7 +308,12 @@ td[data-col-key="km"].km-has-value::after { content: " ✕"; color: #e74c3c; fon
 
 <!-- === НОВОЕ: AI Анализ === -->
 <div id="aiAnalysisSection" style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white;">
-    <h2 style="margin: 0 0 15px 0; font-size: 18pt;">🤖 AI Анализ логистики</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2 style="margin: 0; font-size: 18pt;">🤖 AI Анализ логистики</h2>
+        <button onclick="openAIExclusionSettings()" style="padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.5); border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 10pt; transition: all 0.3s;">
+            ⚙️ Настройки анализа
+        </button>
+    </div>
     <div id="aiControls" style="margin-bottom: 15px;">
         <button id="btnAnalyze" onclick="runAIAnalysis()" style="padding: 10px 20px; background: #ffffff; color: #667eea; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 11pt;">
             📊 Проанализировать данные
@@ -3055,6 +3060,9 @@ loadConnectedRoutes().then(function() {
     setTimeout(function() { renderConnectedAccordions(); }, 500);
 });
 
+// === НОВОЕ: Загрузка исключённых маршрутов из AI анализа ===
+loadExcludedRoutes();
+
 // === НОВОЕ: AI Анализ ===
 async function runAIAnalysis() {
     var statusEl = document.getElementById('aiStatus');
@@ -3074,8 +3082,15 @@ async function runAIAnalysis() {
         var currentMonth = now.getMonth();
         var currentYear = now.getFullYear();
         
+        // Обрабатываем обычные маршруты
         document.querySelectorAll('.route-accordion:not(.connected-accordion)').forEach(function(acc) {
             var routeName = acc.querySelector('.route-header').textContent.replace(' ▼', '').trim();
+            
+            // Проверяем, не исключён ли маршрут
+            if (excludedRoutesFromAnalysis.indexOf(routeName) !== -1) {
+                return;
+            }
+            
             var content = acc.querySelector('.route-content');
             if (!content) return;
             
@@ -3114,6 +3129,58 @@ async function runAIAnalysis() {
             }
         });
         
+        // Обрабатываем соединённые маршруты
+        document.querySelectorAll('.route-accordion.connected-accordion').forEach(function(acc) {
+            var connectedId = acc.getAttribute('data-connected-id');
+            var routeLabel = 'connected_' + connectedId;
+            
+            // Проверяем, не исключён ли маршрут
+            if (excludedRoutesFromAnalysis.indexOf(routeLabel) !== -1) {
+                return;
+            }
+            
+            var headerLeft = acc.querySelector('.route-header span:first-child');
+            if (!headerLeft) return;
+            
+            var displayName = headerLeft.textContent.replace('🔗 ', '').split(' (')[0].trim();
+            var content = acc.querySelector('.route-content');
+            if (!content) return;
+            
+            var rows = content.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+            var monthRevenue = 0, monthCost = 0, monthProfit = 0, totalRows = 0;
+            
+            rows.forEach(function(row) {
+                var dateKey = row.getAttribute('data-date-key') || '';
+                if (!dateKey) return;
+                var d = new Date(dateKey);
+                
+                if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                    var sum = parseFloat(row.getAttribute('data-original-sum')) || 0;
+                    var revenue = sum * 100 / 122; // Без НДС
+                    var cost = parseFloat(row.getAttribute('data-total-cost')) || 0;
+                    var profit = parseFloat(row.getAttribute('data-dohod')) || 0;
+                    
+                    monthRevenue += revenue;
+                    monthCost += cost;
+                    monthProfit += profit;
+                    totalRows++;
+                }
+            });
+            
+            if (totalRows > 0) {
+                routesData.push({
+                    name: '🔗 ' + displayName,
+                    revenue: Math.round(monthRevenue),
+                    cost: Math.round(monthCost),
+                    profit: Math.round(monthProfit),
+                    trips: totalRows,
+                    avgRevenue: Math.round(monthRevenue / totalRows),
+                    avgProfit: Math.round(monthProfit / totalRows),
+                    margin: monthRevenue > 0 ? ((monthProfit / monthRevenue) * 100).toFixed(1) : 0
+                });
+            }
+        });
+        
         if (routesData.length === 0) {
             contentEl.innerHTML = '<p style="color:#e74c3c;">❌ Нет данных для анализа</p>';
             statusEl.textContent = '';
@@ -3124,7 +3191,7 @@ async function runAIAnalysis() {
         // Генерируем анализ
         var analysis = generateAIAnalysis(routesData);
         contentEl.innerHTML = analysis;
-        statusEl.textContent = '✅ Анализ завершён';
+        statusEl.textContent = '✅ Анализ завершён (' + routesData.length + ' маршрутов)';
         
     } catch (error) {
         console.error('Ошибка анализа:', error);
@@ -3322,70 +3389,60 @@ function generateAIAnalysis(routesData) {
         var statusColor = '';
         var statusBg = '';
         var statusIcon = '';
-        var profitWidth = maxProfit > 0 ? (Math.abs(r.profit) / maxProfit * 100) : 0;
         
         if (r.profit < 0) {
             status = 'Убыточный';
             statusColor = '#e74c3c';
-            statusBg = '#fadbd8';
+            statusBg = '#fff5f5';
             statusIcon = '⚠️';
         } else if (margin < 10) {
             status = 'Низкая маржа';
             statusColor = '#f39c12';
-            statusBg = '#fef5e7';
+            statusBg = '#fffbf0';
             statusIcon = '⚡';
         } else if (margin > 25) {
             status = 'Отличный';
             statusColor = '#27ae60';
-            statusBg = '#d5f4e6';
+            statusBg = '#f0fff4';
             statusIcon = '✅';
         } else {
             status = 'Нормальный';
             statusColor = '#3498db';
-            statusBg = '#ebf5fb';
+            statusBg = '#f0f9ff';
             statusIcon = '👍';
         }
         
-        html += '<div style="background: ' + statusBg + '; padding: 8px 10px; border-radius: 5px; border-left: 3px solid ' + statusColor + '; margin-bottom: 8px;">';
+        html += '<div style="background: ' + statusBg + '; padding: 10px 12px; border-radius: 6px; border-left: 4px solid ' + statusColor + '; margin-bottom: 8px;">';
         
-        // Заголовок маршрута
-        html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">';
-        html += '<strong style="font-size: 10pt; color: #2c3e50;">' + r.name + '</strong>';
-        html += '<span style="font-size: 8pt; color: ' + statusColor + '; font-weight: 600; background: white; padding: 2px 6px; border-radius: 10px;">' + statusIcon + ' ' + status + '</span>';
+        // Компактная строка с названием и статусом
+        html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">';
+        html += '<strong style="font-size: 11pt; color: #2c3e50;">' + r.name + '</strong>';
+        html += '<span style="font-size: 9pt; color: ' + statusColor + '; font-weight: 600; background: white; padding: 3px 8px; border-radius: 12px; border: 1px solid ' + statusColor + ';">' + statusIcon + ' ' + status + '</span>';
         html += '</div>';
         
-        // Основные показатели в компактной сетке
-        html += '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 6px;">';
+        // Компактное отображение показателей в одну строку
+        html += '<div style="display: flex; justify-content: space-between; align-items: center; gap: 15px; font-size: 10pt;">';
         
-        html += '<div style="background: white; padding: 6px 8px; border-radius: 3px;">';
-        html += '<div style="font-size: 7pt; color: #7f8c8d; text-transform: uppercase;">Оборот</div>';
-        html += '<div style="font-size: 10pt; font-weight: bold; color: #3498db;">' + fmt(r.revenue) + ' ₽</div>';
+        html += '<div style="flex: 1;">';
+        html += '<span style="color: #7f8c8d; font-size: 8pt;">Оборот: </span>';
+        html += '<span style="font-weight: bold; color: #3498db;">' + fmt(r.revenue) + ' ₽</span>';
         html += '</div>';
         
-        html += '<div style="background: white; padding: 6px 8px; border-radius: 3px;">';
-        html += '<div style="font-size: 7pt; color: #7f8c8d; text-transform: uppercase;">Затраты</div>';
-        html += '<div style="font-size: 10pt; font-weight: bold; color: #e74c3c;">' + fmt(r.cost) + ' ₽</div>';
+        html += '<div style="flex: 1;">';
+        html += '<span style="color: #7f8c8d; font-size: 8pt;">Затраты: </span>';
+        html += '<span style="font-weight: bold; color: #e74c3c;">' + fmt(r.cost) + ' ₽</span>';
         html += '</div>';
         
-        html += '<div style="background: white; padding: 6px 8px; border-radius: 3px;">';
-        html += '<div style="font-size: 7pt; color: #7f8c8d; text-transform: uppercase;">Прибыль</div>';
-        html += '<div style="font-size: 10pt; font-weight: bold; color: ' + (r.profit >= 0 ? '#27ae60' : '#e74c3c') + ';">' + fmt(r.profit) + ' ₽</div>';
+        html += '<div style="flex: 1;">';
+        html += '<span style="color: #7f8c8d; font-size: 8pt;">Прибыль: </span>';
+        html += '<span style="font-weight: bold; color: ' + (r.profit >= 0 ? '#27ae60' : '#e74c3c') + ';">' + fmt(r.profit) + ' ₽</span>';
         html += '</div>';
         
-        html += '<div style="background: white; padding: 6px 8px; border-radius: 3px;">';
-        html += '<div style="font-size: 7pt; color: #7f8c8d; text-transform: uppercase;">Маржа</div>';
-        html += '<div style="font-size: 10pt; font-weight: bold; color: ' + statusColor + ';">' + margin.toFixed(1) + '%</div>';
+        html += '<div style="flex: 1; text-align: right;">';
+        html += '<span style="color: #7f8c8d; font-size: 8pt;">Маржа: </span>';
+        html += '<span style="font-weight: bold; color: ' + statusColor + '; font-size: 11pt;">' + margin.toFixed(1) + '%</span>';
         html += '</div>';
         
-        html += '</div>';
-        
-        // Прогресс-бар прибыли
-        html += '<div style="display: flex; align-items: center; gap: 8px;">';
-        html += '<span style="font-size: 7pt; color: #7f8c8d; min-width: 80px;">Прибыль vs лучший:</span>';
-        html += '<div style="flex: 1; background: #e0e0e0; height: 5px; border-radius: 3px; overflow: hidden;">';
-        html += '<div style="background: ' + (r.profit >= 0 ? '#27ae60' : '#e74c3c') + '; width: ' + profitWidth + '%; height: 100%;"></div>';
-        html += '</div>';
-        html += '<span style="font-size: 7pt; color: #7f8c8d; min-width: 30px;">' + profitWidth.toFixed(0) + '%</span>';
         html += '</div>';
         
         html += '</div>';
@@ -3476,9 +3533,9 @@ function generateAIAnalysis(routesData) {
     
     // Тренд по неделям с визуализацией
     if (weeklyAnalysis) {
-        html += '<div style="background: #fff; padding: 12px; border-radius: 6px; border: 1px solid #dee2e6;">';
-        html += '<h4 style="margin: 0 0 10px 0; color: #2c3e50;">📅 Динамика: Последняя неделя vs Предыдущая</h4>';
-        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">';
+        html += '<div style="background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6; margin-bottom: 15px;">';
+        html += '<h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 12pt; border-bottom: 2px solid #667eea; padding-bottom: 8px;">📅 Динамика: Последняя неделя vs Предыдущая</h4>';
+        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">';
         
         weeklyAnalysis.forEach(function(route) {
             var revenueChange = route.prevWeekRevenue > 0 
@@ -3493,22 +3550,48 @@ function generateAIAnalysis(routesData) {
             var revIcon = revenueChange === 'N/A' ? '➖' : (parseFloat(revenueChange) >= 0 ? '📈' : '📉');
             var profIcon = profitChange === 'N/A' ? '➖' : (parseFloat(profitChange) >= 0 ? '📈' : '📉');
             
-            var bgColor = (parseFloat(revenueChange) < 0 || parseFloat(profitChange) < 0) ? '#fadbd8' : '#d5f4e6';
+            var borderColor = (parseFloat(revenueChange) < 0 || parseFloat(profitChange) < 0) ? '#e74c3c' : '#27ae60';
+            var bgColor = (parseFloat(revenueChange) < 0 || parseFloat(profitChange) < 0) ? '#fff5f5' : '#f0fff4';
             
-            html += '<div style="background: ' + bgColor + '; padding: 10px; border-radius: 5px;">';
-            html += '<div style="font-weight: 600; margin-bottom: 8px; font-size: 10pt;">' + route.name + '</div>';
-            html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 9pt;">';
+            html += '<div style="background: ' + bgColor + '; padding: 12px; border-radius: 6px; border-left: 4px solid ' + borderColor + ';">';
+            html += '<div style="font-weight: bold; margin-bottom: 10px; font-size: 11pt; color: #2c3e50; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 6px;">' + route.name + '</div>';
+            
+            // Оборот
+            html += '<div style="margin-bottom: 10px;">';
+            html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
+            html += '<span style="color: #7f8c8d; font-size: 9pt; text-transform: uppercase; font-weight: 600;">Оборот</span>';
+            html += '<span style="color: ' + revColor + '; font-size: 10pt; font-weight: bold;">' + revIcon + ' ' + (revenueChange === 'N/A' ? '—' : (parseFloat(revenueChange) >= 0 ? '+' : '') + revenueChange + '%') + '</span>';
+            html += '</div>';
+            html += '<div style="display: flex; justify-content: space-between; align-items: baseline;">';
             html += '<div>';
-            html += '<div style="color: #666; font-size: 8pt;">Оборот</div>';
-            html += '<div style="font-weight: 600;">' + fmt(route.lastWeekRevenue) + ' ₽</div>';
-            html += '<div style="color: ' + revColor + '; font-size: 8pt; font-weight: 600;">' + revIcon + ' ' + (revenueChange === 'N/A' ? '—' : (parseFloat(revenueChange) >= 0 ? '+' : '') + revenueChange + '%') + '</div>';
+            html += '<div style="font-size: 8pt; color: #95a5a6;">Текущая неделя</div>';
+            html += '<div style="font-size: 12pt; font-weight: bold; color: #2c3e50;">' + fmt(route.lastWeekRevenue) + ' ₽</div>';
             html += '</div>';
+            html += '<div style="text-align: right;">';
+            html += '<div style="font-size: 8pt; color: #95a5a6;">Предыдущая</div>';
+            html += '<div style="font-size: 10pt; color: #7f8c8d;">' + fmt(route.prevWeekRevenue) + ' ₽</div>';
+            html += '</div>';
+            html += '</div>';
+            html += '</div>';
+            
+            // Прибыль
+            html += '<div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(0,0,0,0.1);">';
+            html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
+            html += '<span style="color: #7f8c8d; font-size: 9pt; text-transform: uppercase; font-weight: 600;">Прибыль</span>';
+            html += '<span style="color: ' + profColor + '; font-size: 10pt; font-weight: bold;">' + profIcon + ' ' + (profitChange === 'N/A' ? '—' : (parseFloat(profitChange) >= 0 ? '+' : '') + profitChange + '%') + '</span>';
+            html += '</div>';
+            html += '<div style="display: flex; justify-content: space-between; align-items: baseline;">';
             html += '<div>';
-            html += '<div style="color: #666; font-size: 8pt;">Прибыль</div>';
-            html += '<div style="font-weight: 600;">' + fmt(route.lastWeekProfit) + ' ₽</div>';
-            html += '<div style="color: ' + profColor + '; font-size: 8pt; font-weight: 600;">' + profIcon + ' ' + (profitChange === 'N/A' ? '—' : (parseFloat(profitChange) >= 0 ? '+' : '') + profitChange + '%') + '</div>';
+            html += '<div style="font-size: 8pt; color: #95a5a6;">Текущая неделя</div>';
+            html += '<div style="font-size: 12pt; font-weight: bold; color: ' + profColor + ';">' + fmt(route.lastWeekProfit) + ' ₽</div>';
+            html += '</div>';
+            html += '<div style="text-align: right;">';
+            html += '<div style="font-size: 8pt; color: #95a5a6;">Предыдущая</div>';
+            html += '<div style="font-size: 10pt; color: #7f8c8d;">' + fmt(route.prevWeekProfit) + ' ₽</div>';
             html += '</div>';
             html += '</div>';
+            html += '</div>';
+            
             html += '</div>';
         });
         
@@ -3572,6 +3655,121 @@ function calculateWeeklyTrend(routesData) {
     });
     
     return result.length > 0 ? result : null;
+}
+
+// ============================================================
+// === НОВОЕ: НАСТРОЙКИ ИСКЛЮЧЕНИЯ МАРШРУТОВ ИЗ АНАЛИЗА ===
+// ============================================================
+var excludedRoutesFromAnalysis = [];
+
+function loadExcludedRoutes() {
+    return fetch('save_route_data.php?action=getExcludedRoutes&base=' + encodeURIComponent(currentBase) + '&' + cacheBust())
+    .then(function(r) { return r.text(); })
+    .then(function(t) {
+        try {
+            var data = JSON.parse(t);
+            if (data && Array.isArray(data)) {
+                excludedRoutesFromAnalysis = data;
+            }
+        } catch(e) {
+            var stored = localStorage.getItem('excludedRoutes_' + currentBase);
+            if (stored) {
+                try { excludedRoutesFromAnalysis = JSON.parse(stored); } catch(e2) { excludedRoutesFromAnalysis = []; }
+            }
+        }
+    })
+    .catch(function() {
+        var stored = localStorage.getItem('excludedRoutes_' + currentBase);
+        if (stored) {
+            try { excludedRoutesFromAnalysis = JSON.parse(stored); } catch(e) { excludedRoutesFromAnalysis = []; }
+        }
+    });
+}
+
+function saveExcludedRoutes() {
+    fetch('save_route_data.php?base=' + encodeURIComponent(currentBase) + '&' + cacheBust(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ _excludedRoutes: { action: 'saveExcludedRoutes', data: excludedRoutesFromAnalysis } })
+    }).catch(function() {
+        console.warn('Не удалось сохранить на сервер, используем localStorage');
+    });
+    localStorage.setItem('excludedRoutes_' + currentBase, JSON.stringify(excludedRoutesFromAnalysis));
+}
+
+function openAIExclusionSettings() {
+    var modal = document.createElement('div');
+    modal.id = 'aiExclusionModal';
+    modal.className = 'modal-overlay open';
+    modal.innerHTML = `
+        <div class="modal-box" style="min-width: 500px; max-width: 700px;">
+            <div class="modal-header">
+                <span>⚙️ Настройки AI анализа - Исключение маршрутов</span>
+                <button class="modal-close" onclick="closeAIExclusionSettings()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 15px; color: #666; font-size: 10pt;">
+                    Выберите маршруты, которые нужно исключить из AI анализа:
+                </p>
+                <div id="exclusionRoutesList" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 10px;">
+                    ${generateExclusionList()}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel" onclick="closeAIExclusionSettings()">Отмена</button>
+                <button class="modal-btn save" onclick="saveAIExclusionSettings()">💾 Сохранить</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function generateExclusionList() {
+    var html = '';
+    var allRoutes = getAllRouteNames();
+    
+    // Добавляем обычные маршруты
+    allRoutes.forEach(function(routeName) {
+        var isChecked = excludedRoutesFromAnalysis.indexOf(routeName) !== -1;
+        html += `<label style="display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #eee; cursor: pointer;">
+            <input type="checkbox" data-route="${routeName}" ${isChecked ? 'checked' : ''} style="margin-right: 10px; width: 18px; height: 18px;">
+            <span style="flex: 1;">${routeName}</span>
+            ${isChecked ? '<span style="color: #e74c3c; font-size: 9pt;">Исключён</span>' : ''}
+        </label>`;
+    });
+    
+    // Добавляем соединённые маршруты
+    connectedRoutesStore.forEach(function(cr) {
+        var routeLabel = '🔗 ' + cr.name;
+        var isChecked = excludedRoutesFromAnalysis.indexOf('connected_' + cr.id) !== -1;
+        html += `<label style="display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #eee; cursor: pointer; background: #f8f9fa;">
+            <input type="checkbox" data-route="connected_${cr.id}" ${isChecked ? 'checked' : ''} style="margin-right: 10px; width: 18px; height: 18px;">
+            <span style="flex: 1;">${routeLabel} <span style="color: #666; font-size: 9pt;">(${cr.routeNames.join(' + ')})</span></span>
+            ${isChecked ? '<span style="color: #e74c3c; font-size: 9pt;">Исключён</span>' : ''}
+        </label>`;
+    });
+    
+    return html || '<p style="text-align: center; color: #999;">Нет доступных маршрутов</p>';
+}
+
+function closeAIExclusionSettings() {
+    var modal = document.getElementById('aiExclusionModal');
+    if (modal) modal.remove();
+}
+
+function saveAIExclusionSettings() {
+    var checkboxes = document.querySelectorAll('#exclusionRoutesList input[type="checkbox"]');
+    excludedRoutesFromAnalysis = [];
+    
+    checkboxes.forEach(function(cb) {
+        if (cb.checked) {
+            excludedRoutesFromAnalysis.push(cb.getAttribute('data-route'));
+        }
+    });
+    
+    saveExcludedRoutes();
+    closeAIExclusionSettings();
+    alert('✅ Настройки сохранены! Маршруты будут исключены из следующего анализа.');
 }
 
 </script>
