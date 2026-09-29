@@ -2739,14 +2739,6 @@ function renderConnectedAccordions() {
                 totalClients += parseInt(row.getAttribute('data-clients-count')) || 0;
                 totalReturns += parseInt(row.getAttribute('data-returns')) || 0;
                 totalCancelled += parseInt(row.getAttribute('data-cancelled')) || 0;
-                totalCost += parseFloat(row.getAttribute('data-total-cost')) || 0;
-                totalDohod += parseFloat(row.getAttribute('data-dohod')) || 0;
-                
-                // Суммируем клиентские и стоимость маршрута отдельно
-                var clientCostCell = row.querySelector('td[data-col-key="exp-client"]');
-                var routeCostCell = row.querySelector('td[data-col-key="exp-route"]');
-                if (clientCostCell) totalClientCost += parseFloat(clientCostCell.textContent.replace(/\s/g, '')) || 0;
-                if (routeCostCell) totalRouteCost += parseFloat(routeCostCell.textContent.replace(/\s/g, '')) || 0;
                 
                 var clients = row.getAttribute('data-clients') || '';
                 if (clients) allClients = allClients.concat(clients.split('|'));
@@ -2763,14 +2755,43 @@ function renderConnectedAccordions() {
                 }
             });
             
+            // Проверяем настройки соединённого маршрута
+            var connectedRouteName = 'connected_' + cr.id;
+            var connectedSettings = getLatestSettings(connectedRouteName);
+            var hasClientCost = connectedSettings && connectedSettings.settings && parseFloat(connectedSettings.settings.clientCost) > 0;
+            var hasRouteCost = false; // Проверим, есть ли стоимость маршрута в настройках
+            
+            // Если клиентские не заданы в настройках, суммируем из объединённых маршрутов
+            if (!hasClientCost) {
+                group.rows.forEach(function(row) {
+                    var clientCostCell = row.querySelector('td[data-col-key="exp-client"]');
+                    if (clientCostCell) totalClientCost += parseFloat(clientCostCell.textContent.replace(/\s/g, '')) || 0;
+                });
+            } else {
+                // Используем значение из настроек
+                totalClientCost = totalClients * parseFloat(connectedSettings.settings.clientCost);
+            }
+            
+            // Если стоимость маршрута не задана в настройках, суммируем из объединённых маршрутов
+            if (!hasRouteCost) {
+                group.rows.forEach(function(row) {
+                    var routeCostCell = row.querySelector('td[data-col-key="exp-route"]');
+                    if (routeCostCell) totalRouteCost += parseFloat(routeCostCell.textContent.replace(/\s/g, '')) || 0;
+                });
+            }
+            
+            // Рассчитываем общую стоимость и доходность
+            totalCost = totalClientCost + totalRouteCost;
+            var sumWNDS = totalSum * 100 / 122;
+            var margin = sumWNDS * 0.17;
+            totalDohod = margin - totalCost;
+            
             // Сохраняем объекты клиентов в атрибуте строки для popup
             var clientsJsonStr = '';
             try { clientsJsonStr = JSON.stringify(allClientsObjects); } catch(e) { clientsJsonStr = '[]'; }
             
             // Создаём новую строку
             var newRow = firstRow.cloneNode(true);
-            var sumWNDS = totalSum * 100 / 122;
-            var margin = sumWNDS * 0.17;
             
             newRow.setAttribute('data-original-sum', totalSum);
             newRow.setAttribute('data-clients-count', totalClients);
@@ -3096,6 +3117,18 @@ function sortAIComparison(criteria) {
     items.forEach(function(item) { container.appendChild(item); });
 }
 
+function toggleComparisonMetric(metric) {
+    var checkbox = document.getElementById('show' + metric.charAt(0).toUpperCase() + metric.slice(1));
+    if (!checkbox) return;
+    
+    var isVisible = checkbox.checked;
+    var rows = document.querySelectorAll('.metric-row[data-metric="' + metric + '"]');
+    
+    rows.forEach(function(row) {
+        row.style.display = isVisible ? 'flex' : 'none';
+    });
+}
+
 var routesDataCache = [];
 
 function generateAIAnalysis(routesData) {
@@ -3141,6 +3174,52 @@ function generateAIAnalysis(routesData) {
     html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Маржа</div><div style="font-size: 16pt; font-weight: bold;">' + avgMargin.toFixed(1) + '%</div></div>';
     html += '</div></div>';
     
+    // Расчёт стоимости километра и клиентских
+    html += '<div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ffc107;">';
+    html += '<h4 style="margin: 0 0 12px 0; color: #856404; font-size: 11pt;">💰 Анализ стоимости километра и клиентских</h4>';
+    
+    var totalKm = routesData.reduce(function(s, r) { return s + (r.km || 0); }, 0);
+    var totalClientsCount = routesData.reduce(function(s, r) { return s + (r.clients || 0); }, 0);
+    var avgCostPerKm = totalKm > 0 ? (totalCost / totalKm) : 0;
+    var avgCostPerClient = totalClientsCount > 0 ? (totalCost / totalClientsCount) : 0;
+    
+    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">';
+    
+    html += '<div style="background: white; padding: 12px; border-radius: 6px; border-left: 3px solid #3498db;">';
+    html += '<div style="font-size: 9pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Средняя стоимость км</div>';
+    html += '<div style="font-size: 14pt; font-weight: bold; color: #3498db;">' + avgCostPerKm.toFixed(2) + ' ₽/км</div>';
+    html += '<div style="font-size: 8pt; color: #95a5a6; margin-top: 4px;">Всего км: ' + totalKm + '</div>';
+    html += '</div>';
+    
+    html += '<div style="background: white; padding: 12px; border-radius: 6px; border-left: 3px solid #e67e22;">';
+    html += '<div style="font-size: 9pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Стоимость на клиента</div>';
+    html += '<div style="font-size: 14pt; font-weight: bold; color: #e67e22;">' + avgCostPerClient.toFixed(2) + ' ₽</div>';
+    html += '<div style="font-size: 8pt; color: #95a5a6; margin-top: 4px;">Всего клиентов: ' + totalClientsCount + '</div>';
+    html += '</div>';
+    
+    html += '<div style="background: white; padding: 12px; border-radius: 6px; border-left: 3px solid #9b59b6;">';
+    html += '<div style="font-size: 9pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Общие затраты</div>';
+    html += '<div style="font-size: 14pt; font-weight: bold; color: #9b59b6;">' + fmt(totalCost) + ' ₽</div>';
+    html += '<div style="font-size: 8pt; color: #95a5a6; margin-top: 4px;">Включая клиентские и маршрут</div>';
+    html += '</div>';
+    
+    html += '</div>';
+    
+    // Рекомендации по оптимизации
+    if (avgCostPerKm > 50) {
+        html += '<div style="margin-top: 12px; padding: 10px; background: #fadbd8; border-radius: 4px; font-size: 9pt; color: #721c24;">';
+        html += '⚠️ <strong>Высокая стоимость километра:</strong> ' + avgCostPerKm.toFixed(2) + ' ₽/км превышает оптимальное значение (50 ₽/км). Рекомендуется оптимизировать маршруты или пересмотреть затраты.';
+        html += '</div>';
+    }
+    
+    if (avgCostPerClient > 500) {
+        html += '<div style="margin-top: 8px; padding: 10px; background: #fef5e7; border-radius: 4px; font-size: 9pt; color: #7d6608;">';
+        html += '⚡ <strong>Высокая стоимость клиента:</strong> ' + avgCostPerClient.toFixed(2) + ' ₽ превышает оптимальное значение (500 ₽). Рассмотрите увеличение количества клиентов на рейс.';
+        html += '</div>';
+    }
+    
+    html += '</div>';
+    
     // Визуальное сравнение маршрутов
     var maxCost = Math.max.apply(null, routesData.map(function(r) { return r.cost; }));
     
@@ -3153,6 +3232,22 @@ function generateAIAnalysis(routesData) {
     html += '<option value="cost">По расходам</option>';
     html += '<option value="margin">По марже</option>';
     html += '</select>';
+    html += '</div>';
+    
+    // Чекбоксы для выбора показателей
+    html += '<div style="margin-bottom: 12px; padding: 8px; background: white; border-radius: 4px; display: flex; gap: 15px; flex-wrap: wrap;">';
+    html += '<label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 9pt;">';
+    html += '<input type="checkbox" id="showRevenue" checked onchange="toggleComparisonMetric(\'revenue\')" style="cursor: pointer;">';
+    html += '<span style="color: #3498db; font-weight: 600;">Оборот</span>';
+    html += '</label>';
+    html += '<label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 9pt;">';
+    html += '<input type="checkbox" id="showCost" checked onchange="toggleComparisonMetric(\'cost\')" style="cursor: pointer;">';
+    html += '<span style="color: #e74c3c; font-weight: 600;">Расходы</span>';
+    html += '</label>';
+    html += '<label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 9pt;">';
+    html += '<input type="checkbox" id="showProfit" checked onchange="toggleComparisonMetric(\'profit\')" style="cursor: pointer;">';
+    html += '<span style="color: #27ae60; font-weight: 600;">Прибыль</span>';
+    html += '</label>';
     html += '</div>';
     
     html += '<div id="aiComparisonContainer">';
@@ -3169,7 +3264,7 @@ function generateAIAnalysis(routesData) {
         html += '</div>';
         
         // Оборот
-        html += '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px;">';
+        html += '<div class="metric-row" data-metric="revenue" style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px;">';
         html += '<span style="font-size: 8pt; color: #666; min-width: 60px;">Оборот:</span>';
         html += '<div style="flex: 1; background: #e0e0e0; height: 6px; border-radius: 3px; overflow: hidden;">';
         html += '<div style="background: #3498db; width: ' + widthPct + '%; height: 100%;"></div>';
@@ -3178,7 +3273,7 @@ function generateAIAnalysis(routesData) {
         html += '</div>';
         
         // Расходы
-        html += '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px;">';
+        html += '<div class="metric-row" data-metric="cost" style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px;">';
         html += '<span style="font-size: 8pt; color: #666; min-width: 60px;">Расходы:</span>';
         html += '<div style="flex: 1; background: #e0e0e0; height: 6px; border-radius: 3px; overflow: hidden;">';
         html += '<div style="background: #e74c3c; width: ' + costWidthPct + '%; height: 100%;"></div>';
@@ -3187,7 +3282,7 @@ function generateAIAnalysis(routesData) {
         html += '</div>';
         
         // Прибыль
-        html += '<div style="display: flex; align-items: center; gap: 8px;">';
+        html += '<div class="metric-row" data-metric="profit" style="display: flex; align-items: center; gap: 8px;">';
         html += '<span style="font-size: 8pt; color: #666; min-width: 60px;">Прибыль:</span>';
         html += '<div style="flex: 1; background: #e0e0e0; height: 6px; border-radius: 3px; overflow: hidden;">';
         html += '<div style="background: ' + barColor + '; width: ' + profitWidthPct + '%; height: 100%;"></div>';
@@ -3222,60 +3317,92 @@ function generateAIAnalysis(routesData) {
     }
     
     // Детальный анализ по каждому маршруту с визуализацией
-    html += '<div style="background: #fff; padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #dee2e6;">';
-    html += '<h4 style="margin: 0 0 10px 0; color: #2c3e50;">📋 Детальный анализ маршрутов</h4>';
-    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px;">';
+    html += '<div style="background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #dee2e6;">';
+    html += '<h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 12pt;">📋 Детальный анализ маршрутов</h4>';
     
-    routesData.forEach(function(r) {
+    routesData.forEach(function(r, idx) {
         var margin = parseFloat(r.margin);
         var status = '';
         var statusColor = '';
         var statusBg = '';
+        var statusIcon = '';
         var profitWidth = maxProfit > 0 ? (Math.abs(r.profit) / maxProfit * 100) : 0;
         
         if (r.profit < 0) {
-            status = '⚠️ Убыточный';
+            status = 'Убыточный';
             statusColor = '#e74c3c';
             statusBg = '#fadbd8';
+            statusIcon = '⚠️';
         } else if (margin < 10) {
-            status = '⚡ Низкая маржа';
+            status = 'Низкая маржа';
             statusColor = '#f39c12';
             statusBg = '#fef5e7';
+            statusIcon = '⚡';
         } else if (margin > 25) {
-            status = '✅ Отличный';
+            status = 'Отличный';
             statusColor = '#27ae60';
             statusBg = '#d5f4e6';
+            statusIcon = '✅';
         } else {
-            status = '👍 Нормальный';
+            status = 'Нормальный';
             statusColor = '#3498db';
             statusBg = '#ebf5fb';
+            statusIcon = '👍';
         }
         
-        html += '<div style="background: ' + statusBg + '; padding: 10px; border-radius: 5px; border-left: 3px solid ' + statusColor + ';">';
-        html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">';
-        html += '<strong style="font-size: 10pt;">' + r.name + '</strong>';
-        html += '<span style="font-size: 8pt; color: ' + statusColor + '; font-weight: 600;">' + status + '</span>';
+        html += '<div style="background: ' + statusBg + '; padding: 15px; border-radius: 6px; border-left: 4px solid ' + statusColor + '; margin-bottom: 12px;">';
+        
+        // Заголовок маршрута
+        html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.1);">';
+        html += '<strong style="font-size: 11pt; color: #2c3e50;">' + r.name + '</strong>';
+        html += '<span style="font-size: 9pt; color: ' + statusColor + '; font-weight: 600; background: white; padding: 3px 8px; border-radius: 12px;">' + statusIcon + ' ' + status + '</span>';
         html += '</div>';
         
-        html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 9pt; margin-bottom: 8px;">';
-        html += '<div>Оборот: <strong>' + fmt(r.revenue) + ' ₽</strong></div>';
-        html += '<div>Затраты: <strong style="color:#e74c3c;">' + fmt(r.cost) + ' ₽</strong></div>';
-        html += '<div>Прибыль: <strong style="color:' + (r.profit >= 0 ? '#27ae60' : '#e74c3c') + ';">' + fmt(r.profit) + ' ₽</strong></div>';
-        html += '<div>Маржа: <strong>' + margin.toFixed(1) + '%</strong></div>';
-        html += '<div>Рейсов: <strong>' + r.trips + '</strong></div>';
-        html += '<div>Ср. оборот: <strong>' + fmt(r.avgRevenue) + ' ₽</strong></div>';
+        // Основные показатели в две колонки
+        html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">';
+        
+        // Левая колонка
+        html += '<div style="background: white; padding: 10px; border-radius: 4px;">';
+        html += '<div style="font-size: 8pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Оборот</div>';
+        html += '<div style="font-size: 12pt; font-weight: bold; color: #3498db;">' + fmt(r.revenue) + ' ₽</div>';
+        html += '<div style="font-size: 8pt; color: #95a5a6; margin-top: 2px;">Ср. за рейс: ' + fmt(r.avgRevenue) + ' ₽</div>';
+        html += '</div>';
+        
+        html += '<div style="background: white; padding: 10px; border-radius: 4px;">';
+        html += '<div style="font-size: 8pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Затраты</div>';
+        html += '<div style="font-size: 12pt; font-weight: bold; color: #e74c3c;">' + fmt(r.cost) + ' ₽</div>';
+        html += '<div style="font-size: 8pt; color: #95a5a6; margin-top: 2px;">Ср. за рейс: ' + fmt(r.cost / r.trips) + ' ₽</div>';
+        html += '</div>';
+        
+        html += '<div style="background: white; padding: 10px; border-radius: 4px;">';
+        html += '<div style="font-size: 8pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Прибыль</div>';
+        html += '<div style="font-size: 12pt; font-weight: bold; color: ' + (r.profit >= 0 ? '#27ae60' : '#e74c3c') + ';">' + fmt(r.profit) + ' ₽</div>';
+        html += '<div style="font-size: 8pt; color: #95a5a6; margin-top: 2px;">Ср. за рейс: ' + fmt(r.profit / r.trips) + ' ₽</div>';
+        html += '</div>';
+        
+        html += '<div style="background: white; padding: 10px; border-radius: 4px;">';
+        html += '<div style="font-size: 8pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;">Маржа</div>';
+        html += '<div style="font-size: 12pt; font-weight: bold; color: ' + statusColor + ';">' + margin.toFixed(1) + '%</div>';
+        html += '<div style="font-size: 8pt; color: #95a5a6; margin-top: 2px;">Рейсов: ' + r.trips + '</div>';
+        html += '</div>';
+        
         html += '</div>';
         
         // Прогресс-бар прибыли
-        html += '<div style="font-size: 8pt; color: #666; margin-bottom: 2px;">Прибыль относительно лучшего:</div>';
-        html += '<div style="background: #e0e0e0; height: 6px; border-radius: 3px; overflow: hidden;">';
-        html += '<div style="background: ' + (r.profit >= 0 ? '#27ae60' : '#e74c3c') + '; width: ' + profitWidth + '%; height: 100%;"></div>';
+        html += '<div style="margin-top: 10px;">';
+        html += '<div style="display: flex; justify-content: space-between; font-size: 8pt; color: #7f8c8d; margin-bottom: 4px;">';
+        html += '<span>Прибыль относительно лучшего маршрута</span>';
+        html += '<span>' + profitWidth.toFixed(0) + '%</span>';
+        html += '</div>';
+        html += '<div style="background: #e0e0e0; height: 8px; border-radius: 4px; overflow: hidden;">';
+        html += '<div style="background: ' + (r.profit >= 0 ? '#27ae60' : '#e74c3c') + '; width: ' + profitWidth + '%; height: 100%; transition: width 0.3s;"></div>';
+        html += '</div>';
         html += '</div>';
         
         html += '</div>';
     });
     
-    html += '</div></div>';
+    html += '</div>';
     
     // Умные рекомендации с приоритетами
     var recommendations = [];
