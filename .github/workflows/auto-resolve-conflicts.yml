@@ -1,0 +1,52 @@
+name: Auto Resolve Conflicts
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  resolve-conflicts:
+    runs-on: ubuntu-latest
+    # Срабатывает только для PR от Qwen (ветки начинаются с fix-page-)
+    if: startsWith(github.event.pull_request.head.ref, 'fix-page-')
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }} # Используем ваш токен для права пуша
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge main into PR branch
+        id: merge
+        run: |
+          set +e
+          git fetch origin main
+          git merge origin/main --no-commit --no-ff
+          echo "MERGE_EXIT_CODE=$?" >> $GITHUB_ENV
+          set -e
+
+      - name: Check for conflicts and resolve
+        id: conflict-check
+        if: env.MERGE_EXIT_CODE != '0'
+        run: |
+          conflicted_files=$(git diff --name-only --diff-filter=U)
+          echo "Conflicted files: $conflicted_files"
+          # Разрешаем конфликты, оставляя версию из ветки Qwen (--ours)
+          # Если хотите приоритет main, поменяйте --ours на --theirs
+          for file in $conflicted_files; do
+            git checkout --ours -- "$file"
+            git add "$file"
+          done
+          git commit -m "Auto-resolve merge conflicts with main"
+
+      - name: Push resolved branch
+        run: git push origin ${{ github.head_ref }}
