@@ -1114,13 +1114,13 @@ function updateRouteSummary(routeName) {
         }
     });
     
-    // Обновляем сводку в заголовке
-    if (headerSummaryEl) {
-        headerSummaryEl.innerHTML = 
-            '<span style="color: #3498db;">(' + curMonthStr + ') Продажи БезНДС: ' + fmt(currentMonthNds) + ' ₽</span> | ' +
-            '<span style="color: #e74c3c;">Затраты: ' + fmt(currentMonthCost) + ' ₽</span> | ' +
-            '<span style="color: #27ae60;">Доходность: ' + fmt(currentMonthDohod) + ' ₽</span>';
-    }
+    // Сводка в заголовке отключена - данные дублируются в AI анализе
+    // if (headerSummaryEl) {
+    //     headerSummaryEl.innerHTML = 
+    //         '<span style="color: #3498db;">(' + curMonthStr + ') Продажи БезНДС: ' + fmt(currentMonthNds) + ' ₽</span> | ' +
+    //         '<span style="color: #e74c3c;">Затраты: ' + fmt(currentMonthCost) + ' ₽</span> | ' +
+    //         '<span style="color: #27ae60;">Доходность: ' + fmt(currentMonthDohod) + ' ₽</span>';
+    // }
 }
 
 
