@@ -309,7 +309,7 @@ td[data-col-key="km"].km-has-value::after { content: " ✕"; color: #e74c3c; fon
 <!-- === НОВОЕ: AI Анализ === -->
 <div id="aiAnalysisSection" style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h2 style="margin: 0; font-size: 18pt;">🤖 AI Анализ логистики</h2>
+        <h2 style="margin: 0; font-size: 18pt;">📊 Анализ логистики</h2>
         <button onclick="openAIExclusionSettings()" style="padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.5); border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 10pt; transition: all 0.3s;">
             ⚙️ Настройки анализа
         </button>
@@ -2257,7 +2257,23 @@ function render(data) {
         header.style.alignItems = 'center';
         
         var headerLeft = document.createElement('span');
-        header.textContent = routeName + ' ▼';
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'center';
+        
+        var headerLeft = document.createElement('span');
+        headerLeft.textContent = routeName + ' ▼';
+        
+        var headerRight = document.createElement('span');
+        headerRight.className = 'route-header-summary';
+        headerRight.setAttribute('data-route-header', routeName);
+        headerRight.style.fontSize = '10pt';
+        headerRight.style.fontWeight = 'normal';
+        headerRight.style.opacity = '0.9';
+        headerRight.textContent = '';
+        
+        header.appendChild(headerLeft);
+        header.appendChild(headerRight);
         acc.appendChild(header);
 
         // Сводка (скрыта, данные только в заголовке)
@@ -2622,7 +2638,23 @@ function renderConnectedAccordions() {
         var header = document.createElement('div');
         header.className = 'route-header';
         header.setAttribute('onclick', 'toggleConnectedRoute(\'' + cr.id + '\')');
-        header.innerHTML = '🔗 ' + cr.name + ' <span style="font-size:10pt;font-weight:normal;opacity:0.8;">(' + cr.routeNames.join(' + ') + ')</span> ▼';
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'center';
+        
+        var headerLeft = document.createElement('span');
+        headerLeft.innerHTML = '🔗 ' + cr.name + ' <span style="font-size:10pt;font-weight:normal;opacity:0.8;">(' + cr.routeNames.join(' + ') + ')</span> ▼';
+        
+        var headerRight = document.createElement('span');
+        headerRight.className = 'route-header-summary';
+        headerRight.setAttribute('data-connected-header', cr.id);
+        headerRight.style.fontSize = '10pt';
+        headerRight.style.fontWeight = 'normal';
+        headerRight.style.opacity = '0.9';
+        headerRight.textContent = '';
+        
+        header.appendChild(headerLeft);
+        header.appendChild(headerRight);
         acc.appendChild(header);
         
         // Сводка (скрыта, данные только в заголовке)
@@ -2978,12 +3010,13 @@ function updateConnectedSummary(crId) {
         });
     });
     
-    // Сводка в контенте скрыта, данные только в заголовке
-    
-    // Сводка в заголовке отключена - данные дублируются в AI анализе
-    // if (headerSummaryEl) {
-    //     headerSummaryEl.textContent = '(' + curMonthStr + ') Продажи БезНДС: ' + fmt(currentMonthNds) + ' ₽ | Затраты: ' + fmt(currentMonthCost) + ' ₽ | Доходность: ' + fmt(currentMonthDohod) + ' ₽';
-    // }
+    // Обновляем сводку в заголовке
+    if (headerSummaryEl) {
+        headerSummaryEl.innerHTML = 
+            '<span style="color: #3498db;">(' + curMonthStr + ') Продажи БезНДС: ' + fmt(currentMonthNds) + ' ₽</span> | ' +
+            '<span style="color: #e74c3c;">Затраты: ' + fmt(currentMonthCost) + ' ₽</span> | ' +
+            '<span style="color: #27ae60;">Доходность: ' + fmt(currentMonthDohod) + ' ₽</span>';
+    }
 }
 
 function toggleConnectedRoute(crId) {
@@ -3162,7 +3195,9 @@ async function runAIAnalysis() {
         }
         
         // Генерируем анализ
-        var analysis = generateAIAnalysis(routesData);
+        var monthNames = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+        var curMonthStr = monthNames[currentMonth] + ' ' + currentYear;
+        var analysis = generateAIAnalysis(routesData, curMonthStr);
         contentEl.innerHTML = analysis;
         statusEl.textContent = '✅ Анализ завершён (' + routesData.length + ' маршрутов)';
         
@@ -3213,7 +3248,7 @@ function toggleComparisonMetric(metric) {
 
 var routesDataCache = [];
 
-function generateAIAnalysis(routesData) {
+function generateAIAnalysis(routesData, curMonthStr) {
     routesDataCache = routesData;
     var totalRevenue = routesData.reduce(function(s, r) { return s + r.revenue; }, 0);
     var totalCost = routesData.reduce(function(s, r) { return s + r.cost; }, 0);
@@ -3355,8 +3390,8 @@ function generateAIAnalysis(routesData) {
     }
     
     // Детальный анализ по каждому маршруту с визуализацией
-    html += '<div style="background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #dee2e6;">';
-    html += '<h4 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 11pt;">📋 Детальный анализ маршрутов</h4>';
+    html += '<div style="background: #fff; padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #dee2e6;">';
+    html += '<h4 style="margin: 0 0 12px 0; color: #2c3e50; font-size: 12pt;">📋 Детальный анализ маршрутов за ' + curMonthStr + '</h4>';
     
     routesData.forEach(function(r, idx) {
         var margin = parseFloat(r.margin);
@@ -3387,35 +3422,38 @@ function generateAIAnalysis(routesData) {
             statusIcon = '👍';
         }
         
-        html += '<div style="background: ' + statusBg + '; padding: 10px 12px; border-radius: 6px; border-left: 4px solid ' + statusColor + '; margin-bottom: 8px;">';
+        // Одна большая строка с названием маршрута и всеми показателями
+        html += '<div style="background: ' + statusBg + '; padding: 12px 15px; border-radius: 6px; border-left: 4px solid ' + statusColor + '; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 20px;">';
         
-        // Компактная строка с названием и статусом
-        html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">';
-        html += '<strong style="font-size: 11pt; color: #2c3e50;">' + r.name + '</strong>';
-        html += '<span style="font-size: 9pt; color: ' + statusColor + '; font-weight: 600; background: white; padding: 3px 8px; border-radius: 12px; border: 1px solid ' + statusColor + ';">' + statusIcon + ' ' + status + '</span>';
+        // Название маршрута и статус
+        html += '<div style="flex: 0 0 auto; min-width: 200px;">';
+        html += '<div style="display: flex; align-items: center; gap: 8px;">';
+        html += '<strong style="font-size: 12pt; color: #2c3e50;">' + r.name + '</strong>';
+        html += '<span style="font-size: 9pt; color: ' + statusColor + '; font-weight: 600; background: white; padding: 2px 8px; border-radius: 10px; border: 1px solid ' + statusColor + ';">' + statusIcon + ' ' + status + '</span>';
+        html += '</div>';
         html += '</div>';
         
-        // Компактное отображение показателей в одну строку
-        html += '<div style="display: flex; justify-content: space-between; align-items: center; gap: 15px; font-size: 10pt;">';
+        // Показатели в одну строку с крупными цифрами
+        html += '<div style="flex: 1; display: flex; align-items: center; gap: 25px;">';
         
-        html += '<div style="flex: 1;">';
-        html += '<span style="color: #7f8c8d; font-size: 8pt;">Оборот: </span>';
-        html += '<span style="font-weight: bold; color: #3498db;">' + fmt(r.revenue) + ' ₽</span>';
+        html += '<div style="text-align: center;">';
+        html += '<div style="font-size: 8pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 2px;">Оборот</div>';
+        html += '<div style="font-size: 14pt; font-weight: bold; color: #3498db;">' + fmt(r.revenue) + ' ₽</div>';
         html += '</div>';
         
-        html += '<div style="flex: 1;">';
-        html += '<span style="color: #7f8c8d; font-size: 8pt;">Затраты: </span>';
-        html += '<span style="font-weight: bold; color: #e74c3c;">' + fmt(r.cost) + ' ₽</span>';
+        html += '<div style="text-align: center;">';
+        html += '<div style="font-size: 8pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 2px;">Затраты</div>';
+        html += '<div style="font-size: 14pt; font-weight: bold; color: #e74c3c;">' + fmt(r.cost) + ' ₽</div>';
         html += '</div>';
         
-        html += '<div style="flex: 1;">';
-        html += '<span style="color: #7f8c8d; font-size: 8pt;">Прибыль: </span>';
-        html += '<span style="font-weight: bold; color: ' + (r.profit >= 0 ? '#27ae60' : '#e74c3c') + ';">' + fmt(r.profit) + ' ₽</span>';
+        html += '<div style="text-align: center;">';
+        html += '<div style="font-size: 8pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 2px;">Прибыль</div>';
+        html += '<div style="font-size: 14pt; font-weight: bold; color: ' + (r.profit >= 0 ? '#27ae60' : '#e74c3c') + ';">' + fmt(r.profit) + ' ₽</div>';
         html += '</div>';
         
-        html += '<div style="flex: 1; text-align: right;">';
-        html += '<span style="color: #7f8c8d; font-size: 8pt;">Маржа: </span>';
-        html += '<span style="font-weight: bold; color: ' + statusColor + '; font-size: 11pt;">' + margin.toFixed(1) + '%</span>';
+        html += '<div style="text-align: center;">';
+        html += '<div style="font-size: 8pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 2px;">Маржа</div>';
+        html += '<div style="font-size: 16pt; font-weight: bold; color: ' + statusColor + ';">' + margin.toFixed(1) + '%</div>';
         html += '</div>';
         
         html += '</div>';
