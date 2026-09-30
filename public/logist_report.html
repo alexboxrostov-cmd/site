@@ -1068,15 +1068,12 @@ function recalcCumulativeTotals() {
 // === НОВОЕ: СВОДКА МАРШРУТА (для свёрнутого аккордеона) ===
 // ============================================================
 function updateRouteSummary(routeName) {
-    // Находим аккордеон маршрута
+    // Находим аккордеон маршрута по точному совпадению имени
     var routeAccordion = null;
     document.querySelectorAll('.route-accordion:not(.connected-accordion)').forEach(function(acc) {
-        var header = acc.querySelector('.route-header');
-        if (header) {
-            var headerText = header.querySelector('span:first-child');
-            if (headerText && headerText.textContent.indexOf(routeName) !== -1) {
-                routeAccordion = acc;
-            }
+        var headerSummary = acc.querySelector('[data-route-header]');
+        if (headerSummary && headerSummary.getAttribute('data-route-header') === routeName) {
+            routeAccordion = acc;
         }
     });
     
@@ -2255,10 +2252,6 @@ function render(data) {
         header.className = 'route-header';
         header.setAttribute('onclick', 'toggleRoute(\'' + routeId + '\')');
         header.style.display = 'flex';
-        header.style.justifyContent = 'space-between';
-        header.style.alignItems = 'center';
-        
-        var headerLeft = document.createElement('span');
         header.style.display = 'flex';
         header.style.justifyContent = 'space-between';
         header.style.alignItems = 'center';
@@ -2513,12 +2506,9 @@ function render(data) {
         updateAllRouteCosts();
         recalcCumulativeTotals();
         // === НОВОЕ: Обновляем сводки всех маршрутов ===
-        document.querySelectorAll('.route-accordion:not(.connected-accordion)').forEach(function(acc) {
-            var header = acc.querySelector('.route-header');
-            if (header) {
-                var routeName = header.querySelector('span:first-child').textContent.replace(' ▼', '');
-                if (routeName) updateRouteSummary(routeName);
-            }
+        document.querySelectorAll('[data-route-header]').forEach(function(headerSummary) {
+            var routeName = headerSummary.getAttribute('data-route-header');
+            if (routeName) updateRouteSummary(routeName);
         });
     }, 100);
 }
