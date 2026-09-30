@@ -2257,18 +2257,7 @@ function render(data) {
         header.style.alignItems = 'center';
         
         var headerLeft = document.createElement('span');
-        headerLeft.textContent = routeName + ' ▼';
-        
-        var headerRight = document.createElement('span');
-        headerRight.className = 'route-header-summary';
-        headerRight.setAttribute('data-route-header', routeName);
-        headerRight.style.fontSize = '10pt';
-        headerRight.style.fontWeight = 'normal';
-        headerRight.style.opacity = '0.9';
-        headerRight.textContent = 'Загрузка...';
-        
-        header.appendChild(headerLeft);
-        header.appendChild(headerRight);
+        header.textContent = routeName + ' ▼';
         acc.appendChild(header);
 
         // Сводка (скрыта, данные только в заголовке)
@@ -2633,23 +2622,7 @@ function renderConnectedAccordions() {
         var header = document.createElement('div');
         header.className = 'route-header';
         header.setAttribute('onclick', 'toggleConnectedRoute(\'' + cr.id + '\')');
-        header.style.display = 'flex';
-        header.style.justifyContent = 'space-between';
-        header.style.alignItems = 'center';
-        
-        var headerLeft = document.createElement('span');
-        headerLeft.innerHTML = '🔗 ' + cr.name + ' <span style="font-size:10pt;font-weight:normal;opacity:0.8;">(' + cr.routeNames.join(' + ') + ')</span> ▼';
-        
-        var headerRight = document.createElement('span');
-        headerRight.className = 'route-header-summary';
-        headerRight.setAttribute('data-connected-header', cr.id);
-        headerRight.style.fontSize = '10pt';
-        headerRight.style.fontWeight = 'normal';
-        headerRight.style.opacity = '0.9';
-        headerRight.textContent = 'Загрузка...';
-        
-        header.appendChild(headerLeft);
-        header.appendChild(headerRight);
+        header.innerHTML = '🔗 ' + cr.name + ' <span style="font-size:10pt;font-weight:normal;opacity:0.8;">(' + cr.routeNames.join(' + ') + ')</span> ▼';
         acc.appendChild(header);
         
         // Сводка (скрыта, данные только в заголовке)
