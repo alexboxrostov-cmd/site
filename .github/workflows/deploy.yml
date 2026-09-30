@@ -1,28 +1,35 @@
-name: Deploy to FTP
+name: Auto-merge Qwen PRs
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch: # Кнопка ручного запуска
+  pull_request_target:
+    types: [opened, synchronize, reopened]
 
 jobs:
-  web-deploy:
-    name: 🎉 Deploy
+  auto-merge:
     runs-on: ubuntu-latest
+    # Срабатывает только для PR от Qwen
+    if: startsWith(github.event.pull_request.head.ref, 'fix-page-')
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
-    - name: 🚚 Get latest code
-      uses: actions/checkout@v4
+      - name: Enable auto-merge
+        run: gh pr merge --auto --squash "${{ github.event.pull_request.html_url }}"
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }} # Ваш токен для авто-слияния
 
-    - name: 📂 Sync files
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        # Путь на сервере, куда загружать (из вашего FAR Manager)
-        server-dir: /domains/a0650449.xsph.ru/public_html/LOGISTIC/
-        # Что загружать. Загружаем только то, что находится в папке public
-        local-dir: ./public/
-        # Включаем подробный лог, чтобы видеть, на чем спотыкается
-        log-level: verbose
+      - name: Wait for PR to be merged and trigger deploy
+        # Ждем, пока PR реально сольется, и запускаем деплой
+        run: |
+          for i in $(seq 1 30); do
+            STATE=$(gh pr view "${{ github.event.pull_request.html_url }}" --json state --jq .state)
+            if [ "$STATE" = "MERGED" ]; then
+              echo "PR merged. Triggering deploy..."
+              gh workflow run deploy.yml --repo ${{ github.repository }} --ref main
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::warning::PR did not merge in time; run deploy.yml manually"
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }} # Ваш токен для запуска деплоя
