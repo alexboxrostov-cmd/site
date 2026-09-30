@@ -1068,22 +1068,24 @@ function recalcCumulativeTotals() {
 // === НОВОЕ: СВОДКА МАРШРУТА (для свёрнутого аккордеона) ===
 // ============================================================
 function updateRouteSummary(routeName) {
-    var headerSummaryEl = document.querySelector('[data-route-header="' + routeName + '"]');
-    
-    var content = document.querySelector('.route-accordion .route-content');
-    if (!content) return;
-    
-    // Находим контент для конкретного маршрута
+    // Находим аккордеон маршрута
     var routeAccordion = null;
     document.querySelectorAll('.route-accordion:not(.connected-accordion)').forEach(function(acc) {
         var header = acc.querySelector('.route-header');
-        if (header && header.textContent.indexOf(routeName) !== -1) {
-            routeAccordion = acc;
+        if (header) {
+            var headerText = header.querySelector('span:first-child');
+            if (headerText && headerText.textContent.indexOf(routeName) !== -1) {
+                routeAccordion = acc;
+            }
         }
     });
     
     if (!routeAccordion) return;
-    content = routeAccordion.querySelector('.route-content');
+    
+    var headerSummaryEl = routeAccordion.querySelector('[data-route-header]');
+    if (!headerSummaryEl) return;
+    
+    var content = routeAccordion.querySelector('.route-content');
     if (!content) return;
     
     var rows = content.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
@@ -2511,9 +2513,12 @@ function render(data) {
         updateAllRouteCosts();
         recalcCumulativeTotals();
         // === НОВОЕ: Обновляем сводки всех маршрутов ===
-        document.querySelectorAll('.route-collapsed-summary[data-route]').forEach(function(el) {
-            var rn = el.getAttribute('data-route');
-            if (rn) updateRouteSummary(rn);
+        document.querySelectorAll('.route-accordion:not(.connected-accordion)').forEach(function(acc) {
+            var header = acc.querySelector('.route-header');
+            if (header) {
+                var routeName = header.querySelector('span:first-child').textContent.replace(' ▼', '');
+                if (routeName) updateRouteSummary(routeName);
+            }
         });
     }, 100);
 }
