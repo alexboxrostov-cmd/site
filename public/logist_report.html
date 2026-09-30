@@ -3539,10 +3539,31 @@ function generateAIAnalysis(routesData, curMonthStr) {
     
     html += '</div>';
     
-    // Тренд по неделям с визуализацией
+    // Тренд по неделям с визуализацией и градациями
     if (weeklyAnalysis) {
+        // Добавляем расчёт изменения прибыли для сортировки
+        weeklyAnalysis.forEach(function(route) {
+            route.profitChange = route.prevWeekProfit !== 0 
+                ? ((route.lastWeekProfit - route.prevWeekProfit) / Math.abs(route.prevWeekProfit) * 100)
+                : 0;
+        });
+        
+        // Сортируем от худших к лучшим
+        weeklyAnalysis.sort(function(a, b) {
+            return a.profitChange - b.profitChange;
+        });
+        
         html += '<div style="background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6; margin-bottom: 15px;">';
         html += '<h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 12pt; border-bottom: 2px solid #667eea; padding-bottom: 8px;">📅 Динамика: Последняя неделя vs Предыдущая</h4>';
+        
+        // Легенда градаций
+        html += '<div style="display: flex; gap: 15px; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; flex-wrap: wrap;">';
+        html += '<div style="display: flex; align-items: center; gap: 5px;"><div style="width: 12px; height: 12px; background: #e74c3c; border-radius: 2px;"></div><span style="font-size: 9pt; color: #7f8c8d;">Отрицательная динамика</span></div>';
+        html += '<div style="display: flex; align-items: center; gap: 5px;"><div style="width: 12px; height: 12px; background: #f39c12; border-radius: 2px;"></div><span style="font-size: 9pt; color: #7f8c8d;">Удовлетворительно (0-10%)</span></div>';
+        html += '<div style="display: flex; align-items: center; gap: 5px;"><div style="width: 12px; height: 12px; background: #3498db; border-radius: 2px;"></div><span style="font-size: 9pt; color: #7f8c8d;">Нормально (10-20%)</span></div>';
+        html += '<div style="display: flex; align-items: center; gap: 5px;"><div style="width: 12px; height: 12px; background: #27ae60; border-radius: 2px;"></div><span style="font-size: 9pt; color: #7f8c8d;">Супер (≥20%)</span></div>';
+        html += '</div>';
+        
         html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">';
         
         weeklyAnalysis.forEach(function(route) {
@@ -3558,11 +3579,41 @@ function generateAIAnalysis(routesData, curMonthStr) {
             var revIcon = revenueChange === 'N/A' ? '➖' : (parseFloat(revenueChange) >= 0 ? '📈' : '📉');
             var profIcon = profitChange === 'N/A' ? '➖' : (parseFloat(profitChange) >= 0 ? '📈' : '📉');
             
-            var borderColor = (parseFloat(revenueChange) < 0 || parseFloat(profitChange) < 0) ? '#e74c3c' : '#27ae60';
-            var bgColor = (parseFloat(revenueChange) < 0 || parseFloat(profitChange) < 0) ? '#fff5f5' : '#f0fff4';
+            // Определяем градацию
+            var grade, gradeColor, gradeBg, gradeIcon;
+            var profitChangeNum = parseFloat(profitChange);
             
-            html += '<div style="background: ' + bgColor + '; padding: 12px; border-radius: 6px; border-left: 4px solid ' + borderColor + ';">';
-            html += '<div style="font-weight: bold; margin-bottom: 10px; font-size: 11pt; color: #2c3e50; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 6px;">' + route.name + '</div>';
+            if (profitChange === 'N/A' || profitChangeNum < 0) {
+                grade = 'Отрицательная';
+                gradeColor = '#e74c3c';
+                gradeBg = '#fff5f5';
+                gradeIcon = '📉';
+            } else if (profitChangeNum < 10) {
+                grade = 'Удовлетворительно';
+                gradeColor = '#f39c12';
+                gradeBg = '#fffbf0';
+                gradeIcon = '⚠️';
+            } else if (profitChangeNum < 20) {
+                grade = 'Нормально';
+                gradeColor = '#3498db';
+                gradeBg = '#f0f9ff';
+                gradeIcon = '👍';
+            } else {
+                grade = 'Супер';
+                gradeColor = '#27ae60';
+                gradeBg = '#f0fff4';
+                gradeIcon = '🚀';
+            }
+            
+            html += '<div style="background: ' + gradeBg + '; padding: 12px; border-radius: 6px; border-left: 4px solid ' + gradeColor + ';">';
+            
+            // Заголовок с градацией
+            html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(0,0,0,0.1);">';
+            html += '<div style="font-weight: bold; font-size: 11pt; color: #2c3e50;">' + route.name + '</div>';
+            html += '<div style="display: flex; align-items: center; gap: 5px; background: white; padding: 3px 8px; border-radius: 12px; border: 1px solid ' + gradeColor + ';">';
+            html += '<span style="font-size: 9pt; color: ' + gradeColor + '; font-weight: 600;">' + gradeIcon + ' ' + grade + '</span>';
+            html += '</div>';
+            html += '</div>';
             
             // Оборот
             html += '<div style="margin-bottom: 10px;">';
@@ -3625,8 +3676,15 @@ function calculateWeeklyTrend(routesData) {
     
     var result = [];
     
+    // Обрабатываем обычные маршруты
     document.querySelectorAll('.route-accordion:not(.connected-accordion)').forEach(function(acc) {
         var routeName = acc.querySelector('[data-route-header]').getAttribute('data-route-header');
+        
+        // Проверяем, не исключён ли маршрут
+        if (excludedRoutesFromAnalysis.indexOf(routeName) !== -1) {
+            return;
+        }
+        
         var content = acc.querySelector('.route-content');
         if (!content) return;
         
@@ -3654,6 +3712,55 @@ function calculateWeeklyTrend(routesData) {
         if (lastWeekRevenue > 0 || prevWeekRevenue > 0) {
             result.push({
                 name: routeName,
+                lastWeekRevenue: Math.round(lastWeekRevenue),
+                lastWeekProfit: Math.round(lastWeekProfit),
+                prevWeekRevenue: Math.round(prevWeekRevenue),
+                prevWeekProfit: Math.round(prevWeekProfit)
+            });
+        }
+    });
+    
+    // Обрабатываем соединённые маршруты
+    document.querySelectorAll('.route-accordion.connected-accordion').forEach(function(acc) {
+        var connectedId = acc.getAttribute('data-connected-id');
+        var routeLabel = 'connected_' + connectedId;
+        
+        // Проверяем, не исключён ли маршрут
+        if (excludedRoutesFromAnalysis.indexOf(routeLabel) !== -1) {
+            return;
+        }
+        
+        var headerLeft = acc.querySelector('.route-header span:first-child');
+        if (!headerLeft) return;
+        
+        var displayName = headerLeft.textContent.replace('🔗 ', '').split(' (')[0].trim();
+        var content = acc.querySelector('.route-content');
+        if (!content) return;
+        
+        var rows = content.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+        var lastWeekRevenue = 0, lastWeekProfit = 0;
+        var prevWeekRevenue = 0, prevWeekProfit = 0;
+        
+        rows.forEach(function(row) {
+            var dateKey = row.getAttribute('data-date-key') || '';
+            if (!dateKey) return;
+            var d = new Date(dateKey);
+            var sum = parseFloat(row.getAttribute('data-original-sum')) || 0;
+            var revenue = sum * 100 / 122;
+            var profit = parseFloat(row.getAttribute('data-dohod')) || 0;
+            
+            if (d >= lastWeekStart && d <= lastWeekEnd) {
+                lastWeekRevenue += revenue;
+                lastWeekProfit += profit;
+            } else if (d >= prevWeekStart && d <= prevWeekEnd) {
+                prevWeekRevenue += revenue;
+                prevWeekProfit += profit;
+            }
+        });
+        
+        if (lastWeekRevenue > 0 || prevWeekRevenue > 0) {
+            result.push({
+                name: '🔗 ' + displayName,
                 lastWeekRevenue: Math.round(lastWeekRevenue),
                 lastWeekProfit: Math.round(lastWeekProfit),
                 prevWeekRevenue: Math.round(prevWeekRevenue),
