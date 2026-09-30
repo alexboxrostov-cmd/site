@@ -3085,7 +3085,7 @@ async function runAIAnalysis() {
         
         // Обрабатываем обычные маршруты
         document.querySelectorAll('.route-accordion:not(.connected-accordion)').forEach(function(acc) {
-            var routeName = acc.querySelector('.route-header').textContent.replace(' ▼', '').trim();
+            var routeName = acc.querySelector('[data-route-header]').getAttribute('data-route-header');
             
             // Проверяем, не исключён ли маршрут
             if (excludedRoutesFromAnalysis.indexOf(routeName) !== -1) {
@@ -3626,7 +3626,7 @@ function calculateWeeklyTrend(routesData) {
     var result = [];
     
     document.querySelectorAll('.route-accordion:not(.connected-accordion)').forEach(function(acc) {
-        var routeName = acc.querySelector('.route-header').textContent.replace(' ▼', '').trim();
+        var routeName = acc.querySelector('[data-route-header]').getAttribute('data-route-header');
         var content = acc.querySelector('.route-content');
         if (!content) return;
         
