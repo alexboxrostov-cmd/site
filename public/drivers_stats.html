@@ -1,0 +1,1942 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Статистика по водителям</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<style>
+* { box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 14px; background: #f5f7fa; color: #222; font-size: 13px; }
+h1 { margin: 0 0 14px; font-size: 20px; }
+h1 small { color: #888; font-weight: 400; font-size: 12px; margin-left: 8px; }
+
+.filters { background: #fff; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.filter-block { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 8px; }
+.filter-block:last-child { margin-bottom: 0; }
+.filter-block > label:first-child { font-weight: 600; color: #555; font-size: 12px; min-width: 90px; }
+.chk { display: inline-flex; align-items: center; gap: 4px; background: #f8f9fa; padding: 3px 9px; border-radius: 5px; border: 1px solid #e0e0e0; cursor: pointer; font-size: 12px; }
+.chk:hover { background: #e9ecef; }
+.chk input { margin: 0; }
+button.preset { padding: 4px 11px; font-size: 12px; cursor: pointer; border: 1px solid #ccc; background: #f8f9fa; border-radius: 5px; }
+button.preset:hover { background: #e9ecef; }
+button.preset.active { background: #2c3e50; color: #fff; border-color: #2c3e50; }
+button.primary { background: #27ae60; color: #fff; border: none; padding: 6px 18px; font-weight: 600; font-size: 12.5px; border-radius: 5px; cursor: pointer; margin-left: auto; }
+button.primary:hover { background: #229954; }
+button.primary:disabled { background: #95a5a6; cursor: not-allowed; }
+
+.ms-wrap { position: relative; display: inline-block; }
+.ms-btn { padding: 4px 11px; border: 1px solid #ccc; background: #fff; border-radius: 5px; cursor: pointer; font-size: 12px; min-width: 160px; text-align: left; }
+.ms-btn:hover { background: #f0f0f0; }
+.ms-dd { display: none; position: absolute; top: 100%; left: 0; z-index: 100; min-width: 280px; max-height: 320px; overflow-y: auto; background: #fff; border: 1px solid #aaa; border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 8px; margin-top: 2px; }
+.ms-dd.open { display: block; }
+.ms-dd .actions { display: flex; gap: 5px; padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid #eee; }
+.ms-dd .actions button { padding: 2px 9px; font-size: 11px; border: 1px solid #ccc; background: #f8f9fa; border-radius: 3px; cursor: pointer; }
+.ms-dd label { display: block; padding: 3px 6px; cursor: pointer; font-size: 12px; font-weight: 400; }
+.ms-dd label:hover { background: #f1f1f1; }
+
+.status { padding: 8px 14px; margin-bottom: 12px; background: #fff; border-radius: 6px; font-size: 12.5px; color: #666; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.status.error { color: #c0392b; background: #fdecea; }
+
+.driver-card { background: #fff; border-radius: 8px; margin-bottom: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.driver-head { padding: 10px 16px; display: flex; align-items: center; gap: 14px; cursor: pointer; border-left: 4px solid #3498db; user-select: none; }
+.driver-head:hover { background: #fafbfc; }
+.driver-head .arrow { font-size: 12px; color: #888; width: 12px; text-align: center; }
+.driver-head .fio { font-weight: 700; font-size: 14.5px; color: #2c3e50; }
+.driver-head .phone { font-size: 11.5px; color: #777; }
+.driver-head .cars-badge { font-size: 11px; background: #eaf4ff; color: #2980b9; padding: 3px 8px; border-radius: 12px; cursor: pointer; border: 1px solid #cfe4f7; font-weight: 600; }
+.driver-head .cars-badge:hover { background: #d5e9ff; }
+.driver-head .tk-badge { font-size: 11px; color: #6b5b95; background: #f3eefb; padding: 3px 8px; border-radius: 12px; border: 1px solid #e0d5f0; font-weight: 600; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.driver-body { display: none; padding: 0 12px 14px; border-top: 1px solid #eee; overflow-x: auto; }
+.driver-body.open { display: block; }
+
+.card-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 4px; }
+.btn-tool { padding: 5px 12px; font-size: 11.5px; border: 1px solid #ccc; background: #f8f9fa; border-radius: 5px; cursor: pointer; }
+.btn-tool:hover { background: #e9ecef; }
+.btn-tool.active { background: #2c3e50; color: #fff; border-color: #2c3e50; }
+.btn-tool.plan { border-color: #b58ad4; color: #8e44ad; }
+.btn-tool.plan.active { background: #8e44ad; color: #fff; border-color: #8e44ad; }
+.btn-tool.report { border-color: #dcdcdc; color: #5a6b7a; background: #f8f9fa; }
+.btn-tool.report:hover { background: #eef1f4; }
+.btn-tool.report.active { background: #dfe6ec; color: #2c3e50; border-color: #b0c4d4; }
+.btn-tool.cars { border-color: #85c1e9; color: #2980b9; }
+.btn-tool.settings { border-color: #ccc; color: #2c3e50; }
+.btn-tool.acts { border-color: #f0b27a; color: #b9770e; }
+.btn-tool.acts:hover { background: #fdf2e3; }
+
+.section-title { margin: 12px 0 4px; font-weight: 700; font-size: 12.5px; color: #2c3e50; }
+.section-title.plan { color: #8e44ad; }
+
+table.data-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+table.data-table th, table.data-table td { padding: 6px 8px; text-align: center; border: 1px solid #e0e5ec; vertical-align: middle; white-space: nowrap; }
+table.data-table th { background: #eef2f7; color: #3a4b5c; font-weight: 700; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.3px; }
+table.data-table th[title] { cursor: help; }
+table.data-table tbody tr:hover { background: #f0f5ff; }
+table.data-table td.num { font-variant-numeric: tabular-nums; text-align: right; }
+
+table.data-table tr.total-row td { background: #e8efff; border-top: 2px solid #99b1d6; font-weight: 700; }
+table.data-table tr.plan-total-row td { background: #f3e9fb; border-top: 2px solid #b58ad4; font-weight: 700; }
+table.data-table tr.month-row { cursor: pointer; background: #f8fafd; }
+table.data-table tr.month-row:hover { background: #eaf2ff; }
+table.data-table tr.month-row td:first-child { font-weight: 600; color: #2c3e50; text-align: left; }
+table.data-table tr.month-row .month-arrow { display: inline-block; width: 14px; color: #888; font-size: 10px; }
+table.data-table tr.route-row td:first-child { text-align: left; padding-left: 30px; color: #555; font-style: italic; }
+table.data-table tr.route-row td { background: #fcfdff; }
+
+
+
+.driver-card .plan-block { display: none; }
+.driver-card.show-plan .plan-block { display: block; }
+.plan-empty { padding: 10px; color: #999; font-size: 12px; background: #faf7fe; border-radius: 5px; margin: 6px 0; }
+table.data-table tr.formula-row td {
+  padding: 0 8px 4px !important;
+  background: #fcfbff;
+  border-top: none;
+  color: #999;
+  font-size: 10.5px;
+  font-style: italic;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.formula-sub { font-size: 10px; color: #999; font-style: italic; margin-top: 2px; font-weight: 400; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.nachisl-cell { cursor: help; }
+.cost-hint { font-size: 10px; color: #888; font-weight: 400; margin-left: 4px; }
+.cost-hint b { color: #555; font-weight: 600; }
+
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; }
+.modal-overlay.open { display: flex; align-items: center; justify-content: center; }
+.modal-box { background: #fff; border-radius: 8px; padding: 20px; max-width: 92vw; max-height: 90vh; overflow: auto; min-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 14px; font-size: 15px; font-weight: 700; }
+.modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: #888; line-height: 1; }
+.modal-close:hover { color: #e74c3c; }
+.modal-section { margin-bottom: 12px; padding: 10px 12px; background: #f8f9fa; border-radius: 5px; }
+.modal-section > label { font-weight: 700; display: block; margin-bottom: 8px; font-size: 12px; }
+.form-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.form-row > label { font-weight: 600; min-width: 180px; font-size: 12px; color: #555; }
+.form-row input[type="number"], .form-row input[type="text"] { padding: 5px 8px; border: 1px solid #aaa; border-radius: 4px; font-size: 12.5px; width: 100px; }
+.form-row input[type="text"] { width: 240px; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-end; padding-top: 12px; border-top: 1px solid #ddd; }
+.modal-footer button { padding: 7px 16px; border: none; border-radius: 5px; font-size: 12.5px; cursor: pointer; }
+.modal-footer .save { background: #2c3e50; color: #fff; }
+.modal-footer .save:hover { background: #1a252f; }
+.modal-footer .cancel { background: #e0e0e0; color: #333; }
+.modal-footer .cancel:hover { background: #c0c0c0; }
+
+.exclude-list { max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 6px; background: #fff; }
+.exclude-list label { display: block; padding: 3px 6px; font-size: 12px; cursor: pointer; }
+.exclude-list label:hover { background: #f1f1f1; }
+
+table.cars-list { border-collapse: collapse; width: 100%; }
+table.cars-list th, table.cars-list td { padding: 6px 10px; border: 1px solid #ddd; font-size: 12px; text-align: left; }
+table.cars-list th { background: #eef2f7; font-weight: 700; }
+table.cars-list tr.main td { background: #fff8e1; }
+table.cars-list .main-badge { background: #f39c12; color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 8px; margin-left: 6px; }
+table.cars-list td.name-cell { font-weight: 700; }
+
+/* Акты по маршрутам */
+table.acts-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.acts-table th, table.acts-table td { padding: 6px 10px; border: 1px solid #e0e5ec; text-align: center; }
+table.acts-table th { background: #eef2f7; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+table.acts-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.acts-table tr.paid td { background: #eafaf1; }
+table.acts-table tr.paid td:first-child { font-weight: 600; }
+table.acts-table tfoot td { background: #e8efff; font-weight: 700; border-top: 2px solid #99b1d6; }
+table.acts-table button.coin { background: none; border: none; font-size: 18px; cursor: pointer; padding: 0 4px; transition: transform 0.1s; }
+table.acts-table button.coin:hover { transform: scale(1.15); }
+table.acts-table tr.paid button.coin::after { content: " ✓"; color: #27ae60; font-size: 12px; }
+.acts-note { margin-top: 10px; font-size: 11px; color: #777; }
+.md-item { padding:8px 10px; border-bottom:1px solid #f0f0f0; cursor:pointer; }
+.md-item:hover { background:#f5f8fc; }
+.md-item.md-item-active { background:#e8f0fe; border-left:3px solid #3498db; padding-left:7px; }
+</style>
+</head>
+<body>
+
+<h1>Статистика по водителям <small id="loadInfo"></small></h1>
+
+<div class="filters">
+  <div class="filter-block">
+    <label>Склады:</label>
+    <label class="chk"><input type="checkbox" value="rostov_neft"> Ростов Нефтяной</label>
+    <label class="chk"><input type="checkbox" value="rostov_vodopad"> Ростов Водопадный</label>
+    <label class="chk"><input type="checkbox" value="krasnodar_vish"> Краснодар Вишняковая</label>
+    <label class="chk"><input type="checkbox" value="krasnodar_mar"> Краснодар Марьянская</label>
+    <label class="chk"><input type="checkbox" value="pyatigorsk"> Пятигорск</label>
+    <label class="chk"><input type="checkbox" value="shahty"> Шахты</label>
+  </div>
+  <div class="filter-block">
+    <label>Период:</label>
+    <button class="preset" data-months="1">Текущий</button>
+    <button class="preset active" data-months="2">2 мес</button>
+    <button class="preset" data-months="3">3 мес</button>
+    <button class="preset" data-months="6">6 мес</button>
+    <button class="preset" data-months="12">12 мес</button>
+  </div>
+  <div class="filter-block">
+    <label>Цена топлива, ₽/л:</label>
+    <input type="number" id="fuelPriceInput" min="0" step="1" value="60"
+           style="padding:4px 8px; border:1px solid #ccc; border-radius:5px; font-size:12px; width:80px;"
+           oninput="onFuelPriceChange(this.value)">
+    <span style="font-size:11px; color:#888;">(расход 10 л / 100 км)</span>
+  </div>
+  <div class="filter-block" id="driverSettingsBlock" style="justify-content: flex-end; display: none;">
+    <button class="btn-tool settings" id="btnDriverSettings" onclick="openDriverSettings()"
+            style="padding:6px 14px; font-size:12.5px;">⚙ Настройки водителей</button>
+  </div>
+  <div class="filter-block">
+    <label>Водители:</label>
+    <div class="ms-wrap" id="msDriversWrap">
+      <button class="ms-btn" id="msDriversBtn">Водители: все ▼</button>
+      <div class="ms-dd" id="msDriversDD"></div>
+    </div>
+    <label>Маршруты:</label>
+    <div class="ms-wrap" id="msRoutesWrap">
+      <button class="ms-btn" id="msRoutesBtn">Маршруты: все ▼</button>
+      <div class="ms-dd" id="msRoutesDD"></div>
+    </div>
+    <button class="primary" id="btnLoad">Загрузить</button>
+  </div>
+</div>
+
+<div class="status" id="status">Выберите склады и период, нажмите «Загрузить».</div>
+
+<div id="content"></div>
+
+<!-- Модалка машин -->
+<div class="modal-overlay" id="modalCars">
+  <div class="modal-box" style="min-width: 720px;">
+    <div class="modal-header">
+      <span id="carsTitle">Машины водителя</span>
+      <button class="modal-close" onclick="closeModal('modalCars')">✕</button>
+    </div>
+    <div id="carsBody"></div>
+  </div>
+</div>
+
+<!-- Модалка настроек -->
+<div class="modal-overlay" id="modalSettings">
+  <div class="modal-box" style="min-width: 620px;">
+    <div class="modal-header">
+      <span>Настройки: <span id="setDriverName"></span></span>
+      <button class="modal-close" onclick="closeModal('modalSettings')">✕</button>
+    </div>
+
+    <div class="modal-section">
+      <label>Фильтр маршрутов (не учитывать в статистике)</label>
+      <div class="exclude-list" id="setExcludeRoutes"></div>
+    </div>
+
+    <div class="modal-section">
+      <label>Стоимость рейса (план)</label>
+      <div class="form-row"><label>За рейс (фикс), ₽:</label><input type="number" id="setCostTrip" min="0" step="1" value="0"></div>
+      <div class="form-row"><label>За километр, ₽/км:</label><input type="number" id="setCostKm" min="0" step="1" value="0"></div>
+      <div class="form-row"><label>За килограмм, ₽/кг:</label><input type="number" id="setCostWeight" min="0" step="0.01" value="0"></div>
+      <div class="form-row"><label>За клиента, ₽/клиент:</label><input type="number" id="setCostClient" min="0" step="1" value="0"></div>
+    </div>
+
+    <div class="modal-section">
+      <label>Время</label>
+      <div class="form-row"><label>Время на 1 клиента, мин:</label><input type="number" id="setTimePerClient" min="0" step="1" value="0"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="cancel" onclick="closeModal('modalSettings')">Отмена</button>
+      <button class="save" onclick="saveSettings()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Новая модалка: настройки водителей (список + редактор) -->
+<div class="modal-overlay" id="modalDrivers">
+  <div class="modal-box" style="min-width: 960px; max-width: 96vw; width: 96vw;">
+    <div class="modal-header">
+      <span>Настройки водителей — база: <span id="mdBaseName"></span></span>
+      <button class="modal-close" onclick="closeModal('modalDrivers')">✕</button>
+    </div>
+
+    <div style="display:flex; gap:14px; height:70vh; min-height:520px;">
+
+      <div style="flex:0 0 280px; display:flex; flex-direction:column; border-right:1px solid #e0e0e0; padding-right:14px;">
+        <input type="text" id="mdSearch" placeholder="🔍 Поиск по ФИО…"
+               oninput="mdFilterList(this.value)"
+               style="padding:6px 10px; border:1px solid #ccc; border-radius:5px; font-size:12.5px; margin-bottom:8px; width:100%;">
+        <div id="mdList" style="flex:1; overflow-y:auto; border:1px solid #e0e0e0; border-radius:5px;"></div>
+        <div id="mdListInfo" style="font-size:11px; color:#777; margin-top:6px;"></div>
+      </div>
+
+      <div id="mdEditor" style="flex:1; overflow-y:auto; padding-left:4px;">
+        <div style="color:#888; padding:40px 20px; text-align:center;">
+          Выберите водителя слева, чтобы увидеть и изменить настройки.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Модалка актов по маршрутам -->
+<div class="modal-overlay" id="modalActs">
+  <div class="modal-box" style="min-width: 820px;">
+    <div class="modal-header">
+      <span>Акты: <span id="actsDriverName"></span></span>
+      <button class="modal-close" onclick="closeModal('modalActs')">✕</button>
+    </div>
+    <div id="actsBody">Загрузка…</div>
+    <div class="acts-note">🪙 — отметить рейс оплаченным. Повторный клик снимает отметку. Данные сохраняются автоматически.</div>
+  </div>
+</div>
+<!-- Модалка истории оплат -->
+<div class="modal-overlay" id="modalActsHistory">
+  <div class="modal-box" style="min-width: 820px; max-width: 95vw;">
+    <div class="modal-header">
+      <span>История оплат: <span id="actsHistoryTitle"></span></span>
+      <button class="modal-close" onclick="closeModal('modalActsHistory')">✕</button>
+    </div>
+    <div id="actsHistoryBody">Загрузка…</div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// КОНСТАНТЫ
+// ============================================================
+var BASE_INFO = {
+  'rostov_neft':    { name: 'Ростов Нефтяной',      color: '#E74C3C' },
+  'rostov_vodopad': { name: 'Ростов Водопадный',    color: '#3498DB' },
+  'krasnodar_vish': { name: 'Краснодар Вишняковая', color: '#2ECC71' },
+  'krasnodar_mar':  { name: 'Краснодар Марьянская', color: '#F1C40F' },
+  'pyatigorsk':     { name: 'Пятигорск',            color: '#9B59B6' },
+  'shahty':         { name: 'Шахты',                color: '#E67E22' }
+};
+var ALL_BASES = ['rostov_neft','rostov_vodopad','krasnodar_vish','krasnodar_mar','pyatigorsk','shahty'];
+var MONTH_NAMES_RU = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+var DAY_NAMES_SHORT = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+var UNKNOWN_DRIVER_ID = '__UNKNOWN__';
+
+// ============================================================
+// ГЛОБАЛЬНЫЕ
+// ============================================================
+var loadedDrivers = [];
+var loadedMonthly = {};
+var loadedFacts   = {};
+var loadedCalc    = {};
+var loadedSettings= {};
+var loadedActs    = {};   // loadedActs[driverId] = { 'base|||rowKey': { paid, amount, paidAt } }
+var loadedActsCache = {}; // loadedActsCache[driverId] = true (уже тянули с сервера)
+var selectedPeriod = { months: 2 };
+var msSelected = { drivers: null, routes: null };
+var isLoading = false;
+
+// ============================================================
+// УТИЛИТЫ
+// ============================================================
+function padZero(n) { return n < 10 ? '0' + n : '' + n; }
+function fmt(n) { if (n === undefined || n === null || isNaN(n)) return '0'; return Math.round(n).toLocaleString('ru-RU').replace(/,/g, ' '); }
+function fmtMoney(n) { return fmt(n) + ' ₽'; }
+function getLocalDateKey(d) { return d.getFullYear() + '-' + padZero(d.getMonth()+1) + '-' + padZero(d.getDate()); }
+function makeTimeKey(d) { return getLocalDateKey(d) + '_' + padZero(d.getHours()) + ':' + padZero(d.getMinutes()); }
+function getMonthKeyCompact(d) { return d.getFullYear() + padZero(d.getMonth()+1); }
+function formatMonthKey(mk) {
+  var y, m;
+  if (mk.indexOf('-') >= 0) { var p = mk.split('-'); y = p[0]; m = parseInt(p[1]); }
+  else { y = mk.slice(0,4); m = parseInt(mk.slice(4,6)); }
+  return MONTH_NAMES_RU[m - 1] + ' ' + y;
+}
+function normalizeRouteName(s) { return String(s == null ? '' : s).trim().toLowerCase(); }
+
+// Универсальный парсер времени (исправлен: поддержка "08:45", "8:5", "2 ч 30 мин", "0:35")
+function parseTimeToMin(t) {
+  if (t === null || t === undefined || t === '') return 0;
+  var s = String(t).trim();
+  if (!s) return 0;
+  var hhmm = s.match(/^(\d{1,2}):(\d{1,2})$/);
+  if (hhmm) return parseInt(hhmm[1]) * 60 + parseInt(hhmm[2]);
+  var hM = s.match(/(\d+)\s*ч/);
+  var mM = s.match(/(\d+)\s*мин/);
+  if (hM || mM) {
+    var h = hM ? parseInt(hM[1]) : 0;
+    var m = mM ? parseInt(mM[1]) : 0;
+    return h * 60 + m;
+  }
+  var n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+function formatMinutes(m) {
+  if (!m) return '0:00';
+  var h = Math.floor(m/60);
+  var mm = Math.round(m % 60);
+  return h + ':' + (mm < 10 ? '0' : '') + mm;
+}
+function escapeHtml(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
+function baseName(code) { return (BASE_INFO[code] && BASE_INFO[code].name) ? BASE_INFO[code].name : code; }
+
+// ============================================================
+// ЗАГРУЗКА ФАЙЛОВ
+// ============================================================
+function loadJS(url) {
+  return new Promise(function(resolve) {
+    var script = document.createElement('script');
+    script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_=' + Date.now();
+    script.onload = function() { var d = window.data; document.head.removeChild(script); resolve(d); };
+    script.onerror = function() { document.head.removeChild(script); resolve(null); };
+    document.head.appendChild(script);
+  });
+}
+function loadJSON(url) {
+  return fetch(url + (url.indexOf('?') >= 0 ? '&' : '?') + '_=' + Date.now())
+    .then(function(r) { return r.ok ? r.text() : '{}'; })
+    .then(function(t) { try { return JSON.parse(t); } catch(e) { return {}; } })
+    .catch(function() { return {}; });
+}
+function getMonthsForPeriod(monthsBack) {
+  var result = [];
+  var now = new Date();
+  for (var i = monthsBack - 1; i >= 0; i--) {
+    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    result.push({ y: d.getFullYear(), m: d.getMonth() + 1, key: getMonthKeyCompact(d) });
+  }
+  return result;
+}
+
+function getSelectedBases() {
+  var bases = [];
+  document.querySelectorAll('.filter-block input[type="checkbox"][value]').forEach(function(cb) {
+    if (cb.checked && cb.value && BASE_INFO[cb.value]) bases.push(cb.value);
+  });
+  return bases;
+}
+
+async function loadAll() {
+  if (isLoading) return;
+
+  var status = document.getElementById('status');
+  var btn = document.getElementById('btnLoad');
+  status.classList.remove('error');
+
+  var bases = getSelectedBases();
+  if (bases.length === 0) { alert('Выберите хотя бы один склад'); return; }
+
+  isLoading = true;
+  btn.disabled = true;
+  msSelected.drivers = null;
+  msSelected.routes = null;
+
+  try {
+    status.textContent = 'Загрузка водителей...';
+    var driversData = await loadJS('data/data_drivers.js');
+    loadedDrivers = (driversData && driversData.drivers) || [];
+
+    loadedMonthly = {}; loadedFacts = {}; loadedCalc = {}; loadedSettings = {};
+    // loadedActs и loadedActsCache НЕ сбрасываем — ленивый кэш, переиспользуется
+
+    var months = getMonthsForPeriod(selectedPeriod.months);
+
+    for (var b = 0; b < bases.length; b++) {
+      var base = bases[b];
+      if (!BASE_INFO[base]) continue;
+      status.textContent = 'Загрузка ' + baseName(base) + ' (' + (b+1) + '/' + bases.length + ')...';
+
+      loadedMonthly[base] = {};
+      for (var i = 0; i < months.length; i++) {
+        var mk = months[i];
+        var data = await loadJS('data/data_' + base + '_' + mk.key + '.js');
+        if (data && data.routes) loadedMonthly[base][mk.key] = data;
+      }
+
+      loadedFacts[base] = await loadJSON('save_route_data.php?base=' + encodeURIComponent(base));
+      loadedSettings[base] = await loadJSON('save_driver_data.php?base=' + encodeURIComponent(base));
+
+      loadedCalc[base] = {};
+      for (var j = 0; j < months.length; j++) {
+        var m2 = months[j];
+        loadedCalc[base][m2.key] = await loadJSON(
+          'get_route_calc_results.php?base=' + encodeURIComponent(base) + '&year=' + m2.y + '&month=' + m2.m
+        );
+      }
+    }
+
+    populateMultiselects();
+    status.textContent = 'Готово.';
+    showDriverSettingsButton();
+    render();
+  } catch (e) {
+    status.classList.add('error');
+    status.textContent = 'Ошибка загрузки: ' + (e && e.message ? e.message : e);
+    console.error('loadAll error:', e);
+  } finally {
+    isLoading = false;
+    btn.disabled = false;
+  }
+}
+
+// ============================================================
+// МУЛЬТИСЕЛЕКТЫ
+// ============================================================
+function populateMultiselects() {
+  var idsWithTrips = {};
+  for (var base in loadedMonthly) {
+    for (var mk in loadedMonthly[base]) {
+      var md = loadedMonthly[base][mk];
+      if (!md || !md.routes) continue;
+      md.routes.forEach(function(r) {
+        (r.Строки || []).forEach(function(row) {
+          if (row.Водитель && row.Водитель.id) idsWithTrips[row.Водитель.id] = row.Водитель;
+        });
+      });
+    }
+  }
+  var driversList = Object.keys(idsWithTrips).map(function(k) { return idsWithTrips[k]; });
+  driversList.sort(function(a,b) { return (a.ФИО || '').localeCompare(b.ФИО || ''); });
+
+  var ddD = document.getElementById('msDriversDD');
+  var html = '<div class="actions"><button onclick="msSelectAll(\'drivers\')">Все</button><button onclick="msSelectNone(\'drivers\')">Ничего</button></div>';
+  driversList.forEach(function(d) {
+    var checked = (msSelected.drivers === null || msSelected.drivers.indexOf(d.id) !== -1) ? 'checked' : '';
+    html += '<label><input type="checkbox" data-group="drivers" value="' + escapeAttr(d.id) + '" ' + checked + ' onchange="msChanged(\'drivers\')"> ' + escapeHtml(d.ФИО) + '</label>';
+  });
+  ddD.innerHTML = html;
+
+  var routeSet = {};
+  for (var base2 in loadedMonthly) {
+    for (var mk2 in loadedMonthly[base2]) {
+      var md2 = loadedMonthly[base2][mk2];
+      if (!md2 || !md2.routes) continue;
+      md2.routes.forEach(function(r) { if (r.Маршрут) routeSet[r.Маршрут] = true; });
+    }
+  }
+  var routesList = Object.keys(routeSet).sort();
+
+  var ddR = document.getElementById('msRoutesDD');
+  var htmlR = '<div class="actions"><button onclick="msSelectAll(\'routes\')">Все</button><button onclick="msSelectNone(\'routes\')">Ничего</button></div>';
+  routesList.forEach(function(r) {
+    var checked = (msSelected.routes === null || msSelected.routes.indexOf(r) !== -1) ? 'checked' : '';
+    htmlR += '<label><input type="checkbox" data-group="routes" value="' + escapeAttr(r) + '" ' + checked + ' onchange="msChanged(\'routes\')"> ' + escapeHtml(r) + '</label>';
+  });
+  ddR.innerHTML = htmlR;
+
+  updateMsBtn('drivers');
+  updateMsBtn('routes');
+}
+
+function toggleMs(group) {
+  var ddId = (group === 'drivers') ? 'msDriversDD' : 'msRoutesDD';
+  var dd = document.getElementById(ddId);
+  if (!dd) return;
+  var wasOpen = dd.classList.contains('open');
+  document.querySelectorAll('.ms-dd.open').forEach(function(d) { d.classList.remove('open'); });
+  if (!wasOpen) dd.classList.add('open');
+}
+function msSelectAll(group) {
+  document.querySelectorAll('input[data-group="' + group + '"]').forEach(function(cb) { cb.checked = true; });
+  msChanged(group);
+}
+function msSelectNone(group) {
+  document.querySelectorAll('input[data-group="' + group + '"]').forEach(function(cb) { cb.checked = false; });
+  msChanged(group);
+}
+function msChanged(group) {
+  var all = document.querySelectorAll('input[data-group="' + group + '"]');
+  var sel = [];
+  all.forEach(function(cb) { if (cb.checked) sel.push(cb.value); });
+  msSelected[group] = (sel.length === all.length) ? null : sel;
+  updateMsBtn(group);
+  render();
+}
+function updateMsBtn(group) {
+  var all = document.querySelectorAll('input[data-group="' + group + '"]');
+  var total = all.length;
+  var sel = 0;
+  all.forEach(function(cb) { if (cb.checked) sel++; });
+  var label = group === 'drivers' ? 'Водители' : 'Маршруты';
+  var btn = document.getElementById(group === 'drivers' ? 'msDriversBtn' : 'msRoutesBtn');
+  if (sel === total) btn.textContent = label + ': все ▼';
+  else btn.textContent = label + ': ' + sel + ' / ' + total + ' ▼';
+}
+
+// ============================================================
+// КЛАСТЕРИЗАЦИЯ (копия из logist_report.html, с группировкой по дню)
+// ============================================================
+function getLatestRouteSettings(routeData, routeName) {
+  var rd = routeData && routeData[routeName];
+  if (!rd || !rd.history || rd.history.length === 0) return null;
+  var last = rd.history[rd.history.length - 1];
+  return { settings: last.settings || {}, costs: last.costs || {} };
+}
+function getCostForPlan(dayCosts, planNumber) {
+  if (!dayCosts) return 0;
+  if (dayCosts[planNumber] !== undefined && dayCosts[planNumber] !== '') return parseFloat(dayCosts[planNumber]) || 0;
+  var maxKey = 0;
+  Object.keys(dayCosts).forEach(function(k) {
+    var n = parseInt(k);
+    if (n <= planNumber && n > maxKey && dayCosts[k] !== '' && dayCosts[k] !== null) maxKey = n;
+  });
+  return maxKey === 0 ? 0 : (parseFloat(dayCosts[maxKey]) || 0);
+}
+function assignPlansToGroup(rows, routeSettings) {
+  if (!routeSettings) { rows.forEach(function(r) { r._planNumber = 1; }); return; }
+  var firstFrom = parseTimeToMin(routeSettings.firstPlanFrom);
+  var firstTo   = parseTimeToMin(routeSettings.firstPlanTo);
+  var threshold = parseInt(routeSettings.threshold) || 90;
+  var minGap    = parseInt(routeSettings.minGap) || 15;
+  if (firstFrom > firstTo) { var t = firstFrom; firstFrom = firstTo; firstTo = t; }
+
+  rows.sort(function(a,b) { return new Date(a.ДатаВремя) - new Date(b.ДатаВремя); });
+
+  var inFirst = [], others = [];
+  rows.forEach(function(row) {
+    var d = new Date(row.ДатаВремя);
+    var mins = d.getHours()*60 + d.getMinutes();
+    row._mins = mins;
+    if (mins >= firstFrom && mins <= firstTo) inFirst.push(row);
+    else others.push(row);
+  });
+
+  inFirst.forEach(function(r) { r._planNumber = 1; });
+  var currentPlan = inFirst.length > 0 ? 1 : 0;
+  var currentStart = null, prevTime = null;
+
+  others.forEach(function(row) {
+    if (currentStart === null) {
+      currentPlan++;
+      currentStart = row._mins;
+      row._planNumber = currentPlan;
+    } else {
+      var gapFromStart = row._mins - currentStart;
+      var gapFromPrev = prevTime !== null ? (row._mins - prevTime) : 9999;
+      if (gapFromPrev <= minGap) row._planNumber = currentPlan;
+      else if (gapFromStart <= threshold) row._planNumber = currentPlan;
+      else { currentPlan++; currentStart = row._mins; row._planNumber = currentPlan; }
+    }
+    prevTime = row._mins;
+  });
+}
+
+// ============================================================
+// АГРЕГАЦИЯ
+// ============================================================
+function newBucket() {
+  return {
+    trips: 0, clients: 0, weight: 0, volume: 0,
+    sum: 0, sumWNDS: 0, margin: 0,
+    km: 0, timePSO: 0, timePlan: 0,
+    factCost: 0, planCost: 0,
+    factBaseSum: 0, factClientSum: 0,
+    planTripsSum: 0, planClientSum: 0
+  };
+}
+function addToBucket(b, r) {
+  b.trips += 1;
+  b.clients += r.clients;
+  b.weight += r.weight;
+  b.volume += r.volume;
+  b.sum += r.sum;
+  b.sumWNDS += r.sumWNDS;
+  b.margin += r.margin;
+  b.km += r.km;
+  b.timePSO += r.timePSO;
+  b.timePlan += r.timePlan;
+  b.factCost += r.factCost;
+  b.planCost += r.planCost;
+  b.factBaseSum += r.factBaseSum || 0;
+  b.factClientSum += r.factClientSum || 0;
+  b.planTripsSum += r.planTripsSum || 0;
+  b.planClientSum += r.planClientSum || 0;
+}
+
+function buildStats() {
+  // ---------- 1. Группируем строки по (base + route + date) для кластеризации ----------
+  var planGroups = {};
+  for (var base in loadedMonthly) {
+    for (var mk in loadedMonthly[base]) {
+      var md = loadedMonthly[base][mk];
+      if (!md || !md.routes) continue;
+      md.routes.forEach(function(routeItem) {
+        var routeName = routeItem.Маршрут || '';
+        var routeSettings = getLatestRouteSettings(loadedFacts[base], routeName);
+        (routeItem.Строки || []).forEach(function(row) {
+          var d = new Date(row.ДатаВремя);
+          var dateKey = getLocalDateKey(d);
+          var gkey = base + '||' + routeName + '||' + dateKey;
+          if (!planGroups[gkey]) planGroups[gkey] = {
+            rows: [], base: base, routeName: routeName, dateKey: dateKey,
+            settings: routeSettings ? routeSettings.settings : null
+          };
+          planGroups[gkey].rows.push(row);
+        });
+      });
+    }
+  }
+  for (var gk in planGroups) {
+    assignPlansToGroup(planGroups[gk].rows, planGroups[gk].settings);
+  }
+
+  // ---------- 2. Собираем группы стоимости: (base + route + date + plan) ----------
+  var costGroups = {};
+  for (var gk2 in planGroups) {
+    var pg = planGroups[gk2];
+    pg.rows.forEach(function(row) {
+      var planNum = row._planNumber || 1;
+      var ckey = pg.base + '||' + pg.routeName + '||' + pg.dateKey + '||' + planNum;
+      if (!costGroups[ckey]) costGroups[ckey] = {
+        base: pg.base, routeName: pg.routeName, dateKey: pg.dateKey,
+        planNumber: planNum, rows: []
+      };
+      costGroups[ckey].rows.push(row);
+    });
+  }
+
+  // ---------- 3. Считаем стоимость группы и раскидываем её по строкам поровну ----------
+  for (var ck in costGroups) {
+    var cg = costGroups[ck];
+    var rf = getLatestRouteSettings(loadedFacts[cg.base], cg.routeName);
+    var dayName = DAY_NAMES_SHORT[new Date(cg.rows[0].ДатаВремя).getDay()];
+
+    var dayCosts = rf ? (rf.costs || {})[dayName] : null;
+    var baseCost = getCostForPlan(dayCosts, cg.planNumber);
+    var clientRate = rf ? (parseFloat(rf.settings.clientCost) || 0) : 0;
+    var n = cg.rows.length;
+    var basePerRow = n > 0 ? baseCost / n : 0;
+
+    for (var i = 0; i < n; i++) {
+      var rr = cg.rows[i];
+      var rclients = rr.КолКлиентов || 0;
+      rr._groupBaseCost = basePerRow;
+      rr._groupClientCost = rclients * clientRate;
+      rr._groupFactCost = basePerRow + rr._groupClientCost;
+    }
+  }
+
+  // ---------- 4. Агрегация по водителям ----------
+  var result = {};
+  function ensureDriver(id, fio) {
+    if (!result[id]) {
+      var info = loadedDrivers.find(function(d) { return d.id === id; });
+      if (!info) info = { id: id, ФИО: fio, Телефон: '', cars: [], bases: [] };
+      result[id] = { info: info, totals: newBucket(), byMonth: {}, hasPlanSettings: false };
+    }
+    return result[id];
+  }
+
+  for (var base2 in loadedMonthly) {
+    for (var mk2 in loadedMonthly[base2]) {
+      var md2 = loadedMonthly[base2][mk2];
+      if (!md2 || !md2.routes) continue;
+      var monthKey = mk2.slice(0,4) + '-' + mk2.slice(4,6);
+
+      md2.routes.forEach(function(routeItem) {
+        var routeName = routeItem.Маршрут || '';
+        (routeItem.Строки || []).forEach(function(row) {
+          var driverId, driverFio;
+          if (row.Водитель && row.Водитель.id) {
+            driverId = row.Водитель.id;
+            driverFio = row.Водитель.ФИО;
+          } else {
+            driverId = UNKNOWN_DRIVER_ID;
+            driverFio = 'Неизвестный водитель';
+          }
+
+          if (msSelected.drivers !== null && msSelected.drivers.indexOf(driverId) === -1) return;
+          if (msSelected.routes !== null && msSelected.routes.indexOf(routeName) === -1) return;
+
+          // Ищем настройки во всех базах, где водитель работает (страховка от мультибазовых)
+          var driverSettings = getDriverSettingsAcrossBases(driverId);
+          if (driverSettings && driverSettings.excludeRoutes && driverSettings.excludeRoutes.length > 0) {
+            var excl = driverSettings.excludeRoutes.map(normalizeRouteName);
+            if (excl.indexOf(normalizeRouteName(routeName)) !== -1) return;
+          }
+
+          var d = ensureDriver(driverId, driverFio);
+
+          if (driverSettings && (
+              parseFloat(driverSettings.costTrip) ||
+              parseFloat(driverSettings.costKm) ||
+              parseFloat(driverSettings.costWeight) ||
+              parseFloat(driverSettings.costClient)
+          )) {
+            d.hasPlanSettings = true;
+          }
+
+          var clients = row.КолКлиентов || 0;
+          var sum = row.СуммаМаршрута || 0;
+          var weight = 0, volume = 0;
+          (row.Клиенты || []).forEach(function(c) { weight += c.Вес || 0; volume += c.Объем || 0; });
+          var sumWNDS = sum * 100 / 122;
+          var margin = sumWNDS * 0.17;
+
+          var dt = new Date(row.ДатаВремя);
+          var timeKey = makeTimeKey(dt);
+          var calc = loadedCalc[base2] && loadedCalc[base2][mk2] && loadedCalc[base2][mk2][routeName];
+          var km = 0, timeMin = 0;
+          if (calc && calc[timeKey]) {
+            km = parseFloat(calc[timeKey].km) || 0;
+            timeMin = parseTimeToMin(calc[timeKey].time);
+          }
+
+                    var st = driverSettings || {};
+          var planTrip = parseFloat(st.costTrip) || 0;
+          var planKm = parseFloat(st.costKm) || 0;
+          var planWeight = parseFloat(st.costWeight) || 0;
+          var planClient = parseFloat(st.costClient) || 0;
+
+          var planCost = planTrip + planKm * km + planWeight * weight + planClient * clients;
+          var planTimeMin = timeMin + (parseFloat(st.timePerClient) || 0) * clients;
+
+          var r = {
+            clients: clients, weight: weight, volume: volume,
+            sum: sum, sumWNDS: sumWNDS, margin: margin,
+            km: km, timePSO: timeMin, timePlan: planTimeMin,
+            factCost: row._groupFactCost || 0,
+            factBaseSum: row._groupBaseCost || 0,
+            factClientSum: row._groupClientCost || 0,
+            planCost: planCost,
+            planTripsSum: planTrip,
+            planClientSum: planClient * clients
+          };
+
+          addToBucket(d.totals, r);
+
+          if (!d.byMonth[monthKey]) d.byMonth[monthKey] = { totals: newBucket(), byRoute: {} };
+          addToBucket(d.byMonth[monthKey].totals, r);
+          if (!d.byMonth[monthKey].byRoute[routeName]) d.byMonth[monthKey].byRoute[routeName] = newBucket();
+          addToBucket(d.byMonth[monthKey].byRoute[routeName], r);
+        });
+      });
+    }
+  }
+  return result;
+}
+
+function getDriverLastSettings(base, driverId) {
+  var data = loadedSettings[base];
+  if (!data || !data[driverId]) return null;
+  var h = data[driverId].history || [];
+  if (h.length === 0) return null;
+  return h[h.length - 1].settings || {};
+}
+
+// Ищет последние настройки водителя по всем загруженным базам.
+// Если водитель работает на нескольких складах — берём настройки из любой,
+// где они есть (иначе при сохранении в одну базу на остальных он «теряет» фильтр).
+function getDriverSettingsAcrossBases(driverId) {
+  if (!driverId || driverId === UNKNOWN_DRIVER_ID) return null;
+  for (var b in loadedSettings) {
+    var s = getDriverLastSettings(b, driverId);
+    if (s) return s;
+  }
+  return null;
+}
+
+function getAnyDriverSettings(driverId) {
+  return getDriverSettingsAcrossBases(driverId);
+}
+
+// ============================================================
+// РЕНДЕР
+// ============================================================
+function render() {
+  if (Object.keys(loadedMonthly).length === 0) return;
+
+  var stats = buildStats();
+  var drivers = Object.keys(stats).map(function(id) { return stats[id]; });
+  drivers.sort(function(a, b) {
+    if (a.info.id === UNKNOWN_DRIVER_ID) return 1;
+    if (b.info.id === UNKNOWN_DRIVER_ID) return -1;
+    return (a.info.ФИО || '').localeCompare(b.info.ФИО || '');
+  });
+
+  document.getElementById('loadInfo').textContent = '— водителей: ' + drivers.length;
+
+  if (drivers.length === 0) {
+    document.getElementById('content').innerHTML = '<div class="status">Нет данных по выбранным фильтрам.</div>';
+    return;
+  }
+
+  var html = '';
+  drivers.forEach(function(d) {
+    var id = d.info.id;
+    var cars = d.info.cars || [];
+    var isUnknown = (id === UNKNOWN_DRIVER_ID);
+
+    html += '<div class="driver-card" data-driver-id="' + escapeAttr(id) + '">';
+
+       html += '<div class="driver-head" onclick="toggleDriver(this)">';
+    html += '<span class="arrow">▸</span>';
+    html += '<span class="fio">' + escapeHtml(d.info.ФИО || '—') + '</span>';
+    if (!isUnknown) {
+      html += '<span class="phone">' + escapeHtml(d.info.Телефон || '—') + '</span>';
+      if (cars.length > 0) {
+        html += '<span class="cars-badge" onclick="openCars(event, \'' + escapeAttr(id) + '\')" title="Показать все машины водителя">🚗 ' + cars.length + ' авто</span>';
+      }
+      var tkList = collectUniqueTK(cars);
+      if (tkList.length > 0) {
+        var tkText = tkList[0];
+        if (tkList.length > 1) tkText += ' + ещё ' + (tkList.length - 1);
+        var tkTitle = tkList.join('\n');
+        html += '<span class="tk-badge" title="' + escapeAttr(tkTitle) + '">🏢 ' + escapeHtml(tkText) + '</span>';
+      }
+    } else {
+      html += '<span class="phone" title="Строки без водителя из 1С">по документам без указания водителя</span>';
+    }
+    html += '</div>';
+
+    html += '<div class="driver-body">';
+
+    html += '<div class="card-tools">';
+    html += '<button class="btn-tool plan" onclick="toggleCardClass(this, \'show-plan\')">🔄 Перерасчёт</button>';
+    if (!isUnknown && cars.length > 0) {
+      html += '<button class="btn-tool cars" onclick="openCars(event, \'' + escapeAttr(id) + '\')">🚗 Машины водителя</button>';
+    }
+    if (!isUnknown) {
+      html += '<button class="btn-tool settings" onclick="openSettings(\'' + escapeAttr(id) + '\')">⚙ Настроить стоимости</button>';
+      html += '<button class="btn-tool acts" onclick="openDriverActs(\'' + escapeAttr(id) + '\')">📋 Акты по маршрутам</button>';
+    }
+    html += '</div>';
+
+        html += '<div class="section-title">📊 Факт — по месяцам (разверни месяц, чтобы увидеть маршруты)</div>';
+    html += renderStatsTable(d.totals, d.byMonth, 'fact', null);
+
+    html += '<div class="plan-block">';
+    html += '<div class="section-title plan">📊 Расчёт — по настройкам водителя</div>';
+    if (!d.hasPlanSettings) {
+      html += '<div class="plan-empty">У водителя не заданы ставки расчёта. Нажми «⚙ Настроить стоимости», чтобы заполнить.</div>';
+    } else {
+      var stForDriver = getDriverSettingsAcrossBases(d.info.id) || {};
+      html += renderStatsTable(d.totals, d.byMonth, 'plan', stForDriver);
+    }
+    html += '</div>';
+
+    html += '</div>';
+    html += '</div>';
+  });
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function renderStatsTable(totals, byMonth, mode, driverSettings) {
+  var isPlan = (mode === 'plan');
+  var st = driverSettings || {};
+  var costClientRate = parseFloat(st.costClient) || 0;
+  var costTripRate   = parseFloat(st.costTrip) || 0;
+  var fuelPrice      = window.fuelPrice || 0;
+
+  function headerRow() {
+    var h = '<tr>';
+    h += '<th style="text-align:left;">Период</th>';
+    h += '<th>Рейсов</th>';
+    h += '<th>Клиентов</th>';
+    h += '<th>Км</th>';
+    h += '<th>Вес</th>';
+    if (!isPlan) {
+      h += '<th>Клиентские, ₽</th>';
+      h += '<th>Стоимость за маршруты, ₽</th>';
+      h += '<th>Итого, ₽</th>';
+    } else {
+      h += '<th>Клиентские, ₽</th>';
+      h += '<th>За рейсы, ₽</th>';
+      h += '<th>Начисления, ₽</th>';
+      h += '<th>ФСС, ₽</th>';
+      h += '<th>Топливо, ₽</th>';
+      h += '<th>Итого, ₽</th>';
+    }
+    h += '</tr>';
+    return h;
+  }
+
+  function cellWithFormula(mainValue, formulaText, extraClass, extraAttrs, title) {
+    var h = '<td class="num' + (extraClass ? ' ' + extraClass : '') + '"';
+    if (extraAttrs) h += ' ' + extraAttrs;
+    if (title) h += ' title="' + escapeAttr(title) + '"';
+    h += '>';
+    h += '<span class="main-value">' + mainValue + '</span>';
+    if (formulaText) h += '<div class="formula-sub">' + formulaText + '</div>';
+    h += '</td>';
+    return h;
+  }
+
+  function factClientSum(b) {
+    // Клиентские_факт = factClientSum + вес*2 /(factClientSum / клиенты)
+    var cs = b.factClientSum || 0;
+    if (b.clients <= 0) return cs;
+    return cs + (b.weight * 2) / (cs / b.clients);
+  }
+
+  function cells(b) {
+    var h = '';
+    h += '<td>' + b.trips + '</td>';
+    h += '<td>' + b.clients + '</td>';
+    h += '<td class="num">' + b.km.toFixed(1) + '</td>';
+    h += '<td class="num">' + b.weight.toFixed(2) + '</td>';
+
+    if (!isPlan) {
+      // --- Факт ---
+     var cs = b.factClientSum || 0;
+      var clientTotal = factClientSum(b);
+      var clientFormula = '';
+      if (b.clients > 0 && cs > 0) {
+        clientFormula = fmt(cs) + ' + (' + b.weight.toFixed(2) + ' * 2) / (' +
+                        fmt(cs) + ' / ' + b.clients + ')';
+      }
+      h += cellWithFormula(fmt(clientTotal), clientFormula);
+
+      var baseCost = b.factBaseSum || 0;
+      h += cellWithFormula(fmt(baseCost), '');
+
+      var totalFact = clientTotal + baseCost;
+      var totalFormula = (clientTotal > 0 && baseCost > 0)
+        ? fmt(clientTotal) + ' + ' + fmt(baseCost) : '';
+      h += cellWithFormula(fmt(totalFact), totalFormula);
+    } else {
+      // --- План ---
+      var clientSum = b.planClientSum || 0;
+      var clientF = (costClientRate > 0 && b.clients > 0)
+        ? b.clients + ' × ' + fmt(costClientRate) + ' ₽' : '';
+      h += cellWithFormula(fmt(clientSum), clientF);
+
+      var tripSum = b.planTripsSum || 0;
+      var tripF = (costTripRate > 0 && b.trips > 0)
+        ? b.trips + ' × ' + fmt(costTripRate) + ' ₽' : '';
+      h += cellWithFormula(fmt(tripSum), tripF);
+
+      // Начисления = Клиентские + За рейсы
+      var nachisl = clientSum + tripSum;
+      var nachislF = '';
+      if (clientSum > 0 && tripSum > 0) nachislF = fmt(clientSum) + ' + ' + fmt(tripSum);
+      else if (clientSum > 0) nachislF = fmt(clientSum);
+      else if (tripSum > 0) nachislF = fmt(tripSum);
+      var ruke = Math.round(nachisl * 0.87);
+      var nachislTitle = 'Получение на руки: ' + fmt(ruke) + ' ₽ (минус 13% НДФЛ)';
+      h += cellWithFormula(fmt(nachisl), nachislF, 'nachisl-cell', null, nachislTitle);
+
+      // ФСС = Начисления × 30%
+      var fss = nachisl * 0.30;
+      var fssF = nachisl > 0 ? fmt(nachisl) + ' × 30%' : '';
+      h += cellWithFormula(fmt(fss), fssF, 'fss-cell');
+
+      // Топливо = КМ × 10л/100км × цена
+      var fuelCost = b.km * 0.10 * fuelPrice;
+      var fuelF = b.km > 0
+        ? b.km.toFixed(1) + ' км × 10/100 × ' + fmt(fuelPrice) + ' ₽' : '';
+      h += cellWithFormula(fmt(fuelCost), fuelF, 'fuel-cell', 'data-km="' + b.km.toFixed(2) + '"');
+
+      // Итого = Начисления + ФСС + Топливо
+      var total = nachisl + fss + fuelCost;
+      var totalF = nachisl > 0
+        ? fmt(nachisl) + ' + ' + fmt(fss) + ' + ' + fmt(fuelCost) : '';
+      h += cellWithFormula(fmt(total), totalF, 'total-cell',
+        'data-nachisl="' + nachisl.toFixed(2) + '" data-fss="' + fss.toFixed(2) + '" data-km="' + b.km.toFixed(2) + '"');
+    }
+
+    return h;
+  }
+
+  var html = '<table class="data-table"><thead>' + headerRow() + '</thead>';
+
+  var monthKeys = Object.keys(byMonth).sort().reverse();
+  monthKeys.forEach(function(mk) {
+    var m = byMonth[mk];
+    html += '<tbody class="month-group">';
+
+    html += '<tr class="month-row" data-month-key="' + escapeAttr(mk) + '" onclick="toggleMonthGroup(this)">';
+    html += '<td><span class="month-arrow">▶</span> ' + escapeHtml(formatMonthKey(mk)) + '</td>';
+    html += cells(m.totals);
+    html += '</tr>';
+
+    var routes = Object.keys(m.byRoute).sort();
+    routes.forEach(function(rname) {
+      var b = m.byRoute[rname];
+      html += '<tr class="route-row" style="display:none;">';
+      html += '<td>↳ ' + escapeHtml(rname) + '</td>';
+      html += cells(b);
+      html += '</tr>';
+    });
+
+    html += '</tbody>';
+  });
+
+  html += '</table>';
+  return html;
+}
+
+// ============================================================
+// РАСКРЫТИЕ / СКРЫТИЕ
+// ============================================================
+function toggleDriver(headEl) {
+  var body = headEl.nextElementSibling;
+  var arrow = headEl.querySelector('.arrow');
+  if (body.classList.contains('open')) { body.classList.remove('open'); arrow.textContent = '▸'; }
+  else { body.classList.add('open'); arrow.textContent = '▼'; }
+}
+
+function toggleMonthGroup(tr) {
+  var tbody = tr.parentElement;
+  var rows = tbody.querySelectorAll('.route-row');
+  if (rows.length === 0) return;
+  var visible = rows[0].style.display !== 'none';
+  rows.forEach(function(r) { r.style.display = visible ? 'none' : 'table-row'; });
+  var arrow = tr.querySelector('.month-arrow');
+  if (arrow) arrow.textContent = visible ? '▶' : '▼';
+}
+
+function toggleCardClass(btn, className) {
+  var el = btn;
+  while (el && !el.classList.contains('driver-card')) el = el.parentElement;
+  if (!el) return;
+  el.classList.toggle(className);
+  btn.classList.toggle('active', el.classList.contains(className));
+}
+
+// ============================================================
+// МОДАЛКА МАШИН
+// ============================================================
+function collectUniqueTK(cars) {
+  if (!cars || cars.length === 0) return [];
+  var seen = {};
+  var result = [];
+  cars.forEach(function(c) {
+    var tk = (c.ТранспортнаяКомпания || '').trim();
+    if (tk === '') return;
+    var key = tk.toLowerCase();
+    if (seen[key]) return;
+    seen[key] = true;
+    result.push(tk);
+  });
+  return result;
+}
+
+function openCars(event, driverId) {
+  if (event) event.stopPropagation();
+  var modal = document.getElementById('modalCars');
+  var info = loadedDrivers.find(function(d) { return d.id === driverId; });
+
+  if (!info) {
+    document.getElementById('carsTitle').textContent = 'Водитель не найден';
+    document.getElementById('carsBody').innerHTML =
+      '<p style="color:#888;">Водитель с ID <b>' + escapeHtml(driverId) +
+      '</b> отсутствует в data_drivers.js. Проверьте, попал ли он в выгрузку 1С.</p>';
+    modal.classList.add('open');
+    return;
+  }
+
+  document.getElementById('carsTitle').textContent = 'Машины: ' + info.ФИО;
+  var html = '';
+
+  if (!info.cars || info.cars.length === 0) {
+    html = '<p style="color:#888;">У водителя нет прикреплённых машин.</p>';
+  } else {
+    var keySet = {};
+    info.cars.forEach(function(c) {
+      Object.keys(c).forEach(function(k) { if (k !== 'is_main') keySet[k] = true; });
+    });
+
+    var preferred = ['Наименование', 'РегНомер', 'ТранспортнаяКомпания', 'Грузоподъемность', 'Вместимость'];
+    var keys = [];
+    preferred.forEach(function(k) { if (keySet[k]) { keys.push(k); delete keySet[k]; } });
+    Object.keys(keySet).sort().forEach(function(k) { keys.push(k); });
+
+       var headerMap = {
+      'Наименование': 'Машина',
+      'РегНомер': 'Рег. номер',
+      'ТранспортнаяКомпания': 'Транспортная компания',
+      'Грузоподъемность': 'Грузоподъёмность',
+      'Вместимость': 'Вместимость'
+    };
+
+    var basesText = (info.bases && info.bases.length > 0)
+      ? info.bases.map(function(b){ return baseName(b); }).join(', ')
+      : '—';
+
+    html = '<table class="cars-list"><thead><tr>';
+    keys.forEach(function(k) { html += '<th>' + escapeHtml(headerMap[k] || k) + '</th>'; });
+    html += '<th>Статус</th>';
+    html += '<th>Базы</th></tr></thead><tbody>';
+
+    info.cars.forEach(function(c) {
+      var cls = c.is_main ? 'main' : '';
+      html += '<tr class="' + cls + '">';
+      keys.forEach(function(k) {
+        var v = c[k];
+        var cellCls = (k === 'Наименование') ? ' class="name-cell"' : '';
+        var extra = (k === 'Наименование' && c.is_main) ? '<span class="main-badge">основная</span>' : '';
+        html += '<td' + cellCls + '>' + escapeHtml(v === undefined || v === null || v === '' ? '—' : v) + extra + '</td>';
+      });
+      html += '<td>' + (c.is_main ? 'используется по умолчанию' : 'дополнительная') + '</td>';
+      html += '<td style="font-size:11.5px; color:#555;">' + escapeHtml(basesText) + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+
+
+  document.getElementById('carsBody').innerHTML = html;
+  modal.classList.add('open');
+}
+
+// ============================================================
+// МОДАЛКА НАСТРОЕК
+// ============================================================
+var currentSettingsDriver = null;
+var currentSettingsBase = null;
+
+function findDriverBase(driverId) {
+  for (var b in loadedSettings) {
+    if (loadedSettings[b] && loadedSettings[b][driverId]) return b;
+  }
+  var info = loadedDrivers.find(function(d) { return d.id === driverId; });
+  if (info && info.bases && info.bases.length > 0) return info.bases[0];
+  return ALL_BASES[0];
+}
+
+function openSettings(driverId) {
+  currentSettingsDriver = driverId;
+  currentSettingsBase = findDriverBase(driverId);
+  var info = loadedDrivers.find(function(d) { return d.id === driverId; });
+  document.getElementById('setDriverName').textContent = info ? info.ФИО : driverId;
+
+  var st = getDriverLastSettings(currentSettingsBase, driverId) || {};
+
+  document.getElementById('setCostTrip').value = st.costTrip || 0;
+  document.getElementById('setCostKm').value = st.costKm || 0;
+  document.getElementById('setCostWeight').value = st.costWeight || 0;
+  document.getElementById('setCostClient').value = st.costClient || 0;
+  document.getElementById('setTimePerClient').value = st.timePerClient || 0;
+
+  var routeSet = {};
+  for (var b in loadedMonthly) {
+    for (var mk in loadedMonthly[b]) {
+      var md = loadedMonthly[b][mk];
+      if (!md || !md.routes) continue;
+      md.routes.forEach(function(r) { if (r.Маршрут) routeSet[r.Маршрут] = true; });
+    }
+  }
+  var routesList = Object.keys(routeSet).sort();
+  var excluded = (st.excludeRoutes || []).map(normalizeRouteName);
+  var html = '';
+  routesList.forEach(function(r) {
+    var checked = excluded.indexOf(normalizeRouteName(r)) !== -1 ? 'checked' : '';
+    html += '<label><input type="checkbox" value="' + escapeAttr(r) + '" ' + checked + '> ' + escapeHtml(r) + '</label>';
+  });
+  document.getElementById('setExcludeRoutes').innerHTML = html || '<span style="color:#888;">Нет маршрутов</span>';
+
+  document.getElementById('modalSettings').classList.add('open');
+}
+
+function saveSettings() {
+  if (!currentSettingsDriver) return;
+  var excluded = [];
+  document.querySelectorAll('#setExcludeRoutes input:checked').forEach(function(cb) { excluded.push(cb.value); });
+
+  var settings = {
+    excludeRoutes: excluded,
+    costTrip: parseFloat(document.getElementById('setCostTrip').value) || 0,
+    costKm: parseFloat(document.getElementById('setCostKm').value) || 0,
+    costWeight: parseFloat(document.getElementById('setCostWeight').value) || 0,
+    costClient: parseFloat(document.getElementById('setCostClient').value) || 0,
+    timePerClient: parseFloat(document.getElementById('setTimePerClient').value) || 0
+  };
+  var payload = {};
+  payload[currentSettingsDriver] = { action: 'saveSettings', settings: settings };
+
+  console.log('[saveSettings] base=' + currentSettingsBase + ', driver=' + currentSettingsDriver +
+              ', excludeRoutes=[' + excluded.join(', ') + ']');
+
+  fetch('save_driver_data.php?base=' + encodeURIComponent(currentSettingsBase), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(res) {
+    if (res && res.success) {
+      if (!loadedSettings[currentSettingsBase]) loadedSettings[currentSettingsBase] = {};
+      if (!loadedSettings[currentSettingsBase][currentSettingsDriver]) loadedSettings[currentSettingsBase][currentSettingsDriver] = { history: [] };
+      loadedSettings[currentSettingsBase][currentSettingsDriver].history.push({
+        savedAt: new Date().toISOString().slice(0,19),
+        settings: settings
+      });
+      renderPreservingUI();
+    } else {
+      alert('Ошибка сохранения: ' + (res.error || 'неизвестно'));
+    }
+  })
+  .catch(function(e) { alert('Ошибка сети: ' + e.message); });
+}
+
+// ============================================================
+// МОДАЛКА АКТОВ ПО МАРШРУТАМ
+// ============================================================
+function collectDriverActRows(driverId) {
+  // Убеждаемся, что _groupBaseCost / _groupClientCost / _planNumber проставлены
+  var needsRebuild = false;
+  outer:
+  for (var base in loadedMonthly) {
+    for (var mk in loadedMonthly[base]) {
+      var md = loadedMonthly[base][mk];
+      if (!md || !md.routes) continue;
+      for (var i = 0; i < md.routes.length; i++) {
+        var rows = md.routes[i].Строки || [];
+        for (var j = 0; j < rows.length; j++) {
+          if (rows[j]._groupBaseCost === undefined && rows[j]._groupClientCost === undefined) {
+            needsRebuild = true; break outer;
+          }
+        }
+      }
+    }
+  }
+  if (needsRebuild) buildStats(); // проставит _planNumber / _groupBaseCost / _groupClientCost
+
+  var out = [];
+  for (var base2 in loadedMonthly) {
+    for (var mk2 in loadedMonthly[base2]) {
+      var md2 = loadedMonthly[base2][mk2];
+      if (!md2 || !md2.routes) continue;
+      md2.routes.forEach(function(routeItem) {
+        var routeName = routeItem.Маршрут || '';
+        (routeItem.Строки || []).forEach(function(row) {
+          var rid = (row.Водитель && row.Водитель.id) ? row.Водитель.id : UNKNOWN_DRIVER_ID;
+          if (rid !== driverId) return;
+          var d = new Date(row.ДатаВремя);
+          var dateKey = getLocalDateKey(d);
+          var hh = padZero(d.getHours());
+          var mm = padZero(d.getMinutes());
+          var plan = row._planNumber || 1;
+          out.push({
+            base: base2,
+            routeName: routeName,
+            dateKey: dateKey,
+            timeStr: hh + ':' + mm,
+            planNumber: plan,
+            rowKey: routeName + '|||' + dateKey + '|||' + hh + ':' + mm + '|||' + plan,
+            baseCost: row._groupBaseCost || 0,
+            clientCost: row._groupClientCost || 0,
+            clients: row.КолКлиентов || 0
+          });
+        });
+      });
+    }
+  }
+  out.sort(function(a, b) {
+    if (a.dateKey !== b.dateKey) return a.dateKey < b.dateKey ? -1 : 1;
+    if (a.routeName !== b.routeName) return a.routeName < b.routeName ? -1 : 1;
+    return a.timeStr < b.timeStr ? -1 : 1;
+  });
+  return out;
+}
+
+function openDriverActs(driverId) {
+  var info = loadedDrivers.find(function(d){ return d.id === driverId; });
+  document.getElementById('actsDriverName').textContent = info ? info.ФИО : driverId;
+  document.getElementById('actsBody').textContent = 'Загрузка…';
+  document.getElementById('modalActs').classList.add('open');
+
+  function finish() { renderActsTable(driverId); }
+
+  if (loadedActsCache[driverId]) { finish(); return; }
+
+  fetch('save_driver_acts.php?driverId=' + encodeURIComponent(driverId) +
+        '&mode=state&_=' + Date.now())
+    .then(function(r){ return r.ok ? r.json() : {}; })
+    .then(function(res) {
+      loadedActs[driverId] = (res && res.state) ? res.state : {};
+      loadedActsCache[driverId] = true;
+      finish();
+    })
+    .catch(function(e) {
+      console.error('load acts:', e);
+      loadedActs[driverId] = {};
+      loadedActsCache[driverId] = true;
+      finish();
+    });
+}
+
+function renderActsTable(driverId) {
+  var rows = collectDriverActRows(driverId);
+  var acts = loadedActs[driverId] || {};
+
+  if (rows.length === 0) {
+    document.getElementById('actsBody').innerHTML =
+      '<p style="padding:20px;text-align:center;color:#888;">У водителя нет рейсов за выбранный период.</p>';
+    return;
+  }
+
+  var header = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">' +
+    '<div style="font-size:12px; color:#777;">Всего рейсов: ' + rows.length + '</div>' +
+    '<button class="btn-tool" onclick="openActsHistory(\'' + escapeAttr(driverId) + '\')" ' +
+    'style="background:#f39c12;color:#fff;border:none;">📜 История оплат</button>' +
+  '</div>';
+
+  var html = header + '<table class="acts-table"><thead><tr>' +
+    '<th>Маршрут</th><th>База</th><th>Дата</th><th>Время</th>' +
+    '<th>Стоимость маршрута</th><th>Клиентские</th><th>Итого</th>' +
+    '<th>Оплачено</th></tr></thead><tbody>';
+
+  var totalBase = 0, totalClient = 0, totalAll = 0, paidCount = 0;
+
+  rows.forEach(function(r) {
+    var rowTotal = r.baseCost + r.clientCost;
+    totalBase += r.baseCost;
+    totalClient += r.clientCost;
+    totalAll += rowTotal;
+
+    var stateKey = r.base + '|||' + r.rowKey;
+    var act = acts[stateKey];
+    var isPaid = !!(act && act.paid);
+    if (isPaid) paidCount++;
+
+    var dateFmt = r.dateKey.split('-').reverse().join('.');
+    html += '<tr class="' + (isPaid ? 'paid' : '') + '" data-state-key="' + escapeAttr(stateKey) + '">' +
+      '<td>' + escapeHtml(r.routeName) + '</td>' +
+      '<td style="font-size:11px; color:#777;">' + escapeHtml(baseName(r.base)) + '</td>' +
+      '<td>' + dateFmt + '</td>' +
+      '<td>' + r.timeStr + '</td>' +
+      '<td class="num">' + fmt(r.baseCost) + '</td>' +
+      '<td class="num">' + fmt(r.clientCost) + '</td>' +
+      '<td class="num"><b>' + fmt(rowTotal) + '</b></td>' +
+      '<td class="coin-cell"><button class="coin" title="' +
+          (isPaid ? 'Отменить оплату' : 'Отметить как оплачено') +
+          '" onclick="toggleActPaid(\'' + escapeAttr(driverId) + '\', \'' +
+          escapeAttr(r.base) + '\', \'' + escapeAttr(r.rowKey) + '\', ' + rowTotal + ')">🪙</button></td>' +
+    '</tr>';
+  });
+
+  html += '</tbody><tfoot><tr>' +
+    '<td colspan="4" style="text-align:right;">ИТОГО:</td>' +
+    '<td class="num">' + fmt(totalBase) + '</td>' +
+    '<td class="num">' + fmt(totalClient) + '</td>' +
+    '<td class="num">' + fmt(totalAll) + '</td>' +
+    '<td>' + paidCount + ' / ' + rows.length + '</td>' +
+    '</tr></tfoot></table>';
+
+  document.getElementById('actsBody').innerHTML = html;
+}
+
+function toggleActPaid(driverId, base, rowKey, amount) {
+  var stateKey = base + '|||' + rowKey;
+  var tr = document.querySelector('#actsBody tr[data-state-key="' + stateKey + '"]');
+  if (!tr) return;
+  var willBePaid = !tr.classList.contains('paid');
+
+  if (willBePaid) tr.classList.add('paid');
+  else tr.classList.remove('paid');
+
+  var btn = tr.querySelector('button.coin');
+  if (btn) btn.title = willBePaid ? 'Отменить оплату' : 'Отметить как оплачено';
+
+  if (!loadedActs[driverId]) loadedActs[driverId] = {};
+  if (willBePaid) {
+    loadedActs[driverId][stateKey] = {
+      base: base, rowKey: rowKey, paid: true,
+      amount: amount, paidAt: new Date().toISOString().slice(0,19)
+    };
+  } else {
+    delete loadedActs[driverId][stateKey];
+  }
+
+  var payload = {
+    driverId: driverId,
+    operations: [{ base: base, rowKey: rowKey, paid: willBePaid, amount: amount }]
+  };
+
+  fetch('save_driver_acts.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(res) {
+    if (!res || !res.success) {
+      if (willBePaid) tr.classList.remove('paid');
+      else tr.classList.add('paid');
+      if (btn) btn.title = willBePaid ? 'Отметить как оплачено' : 'Отменить оплату';
+      if (willBePaid) delete loadedActs[driverId][stateKey];
+      else loadedActs[driverId][stateKey] = { base: base, rowKey: rowKey, paid: true, amount: amount };
+      alert('Не удалось сохранить: ' + (res && res.error ? res.error : 'неизвестно'));
+    } else {
+      var tbody = tr.parentElement;
+      var paid = tbody.querySelectorAll('tr.paid').length;
+      var total = tbody.querySelectorAll('tr').length;
+      var tfoot = document.querySelector('#actsBody tfoot tr td:last-child');
+      if (tfoot) tfoot.textContent = paid + ' / ' + total;
+    }
+  })
+  .catch(function(e) {
+    if (willBePaid) tr.classList.remove('paid');
+    else tr.classList.add('paid');
+    alert('Ошибка сети: ' + e.message);
+  });
+}
+
+function openActsHistory(driverId) {
+  var info = loadedDrivers.find(function(d){ return d.id === driverId; });
+  var fio = info ? info.ФИО : driverId;
+  document.getElementById('actsHistoryTitle').textContent = fio;
+  document.getElementById('actsHistoryBody').textContent = 'Загрузка…';
+  document.getElementById('modalActsHistory').classList.add('open');
+
+  fetch('save_driver_acts.php?driverId=' + encodeURIComponent(driverId) +
+        '&mode=events&_=' + Date.now())
+    .then(function(r){ return r.ok ? r.json() : {}; })
+    .then(function(res) {
+      var events = (res && res.events) || [];
+      var body = document.getElementById('actsHistoryBody');
+      if (events.length === 0) {
+        body.innerHTML = '<p style="padding:20px;text-align:center;color:#888;">История пуста</p>';
+        return;
+      }
+
+      var html = '<table class="data-table" style="font-size:12px;">' +
+        '<thead><tr>' +
+          '<th>Дата и время</th>' +
+          '<th>Действие</th>' +
+          '<th>База</th>' +
+          '<th>Маршрут</th>' +
+          '<th>Дата рейса</th>' +
+          '<th>Сумма</th>' +
+        '</tr></thead><tbody>';
+
+      events.forEach(function(e) {
+        var parts = (e.rowKey || '').split('|||');
+        var routeName = parts[0] || '—';
+        var dateKey = parts[1] || '';
+        var timeStr = parts[2] || '';
+        var dateFmt = dateKey ? dateKey.split('-').reverse().join('.') : '';
+
+        var actionHtml = e.action === 'paid'
+          ? '<span style="color:#27ae60;font-weight:600;">✅ Оплачено</span>'
+          : '<span style="color:#e74c3c;font-weight:600;">❌ Отменено</span>';
+
+        html += '<tr>' +
+          '<td style="white-space:nowrap;">' + escapeHtml((e.ts || '').replace('T', ' ')) + '</td>' +
+          '<td>' + actionHtml + '</td>' +
+          '<td style="font-size:11px; color:#777;">' + escapeHtml(baseName(e.base || '')) + '</td>' +
+          '<td>' + escapeHtml(routeName) + '</td>' +
+          '<td>' + escapeHtml(dateFmt) + (timeStr ? ' ' + escapeHtml(timeStr) : '') + '</td>' +
+          '<td class="num">' + fmt(e.amount || 0) + '</td>' +
+        '</tr>';
+      });
+
+      html += '</tbody></table>';
+      html += '<p style="margin-top:10px; font-size:11px; color:#777;">Всего событий: ' +
+              (res.total || events.length) + '.</p>';
+
+      body.innerHTML = html;
+    })
+    .catch(function(e) {
+      document.getElementById('actsHistoryBody').innerHTML =
+        '<p style="color:#c0392b; padding:20px;">Ошибка: ' + escapeHtml(e.message) + '</p>';
+    });
+}
+
+// ============================================================
+// МОДАЛКА: НАСТРОЙКИ ВОДИТЕЛЕЙ
+// ============================================================
+var mdState = {
+  base: null,
+  drivers: [],
+  selectedId: null,
+  dirty: false
+};
+
+function openDriverSettings() {
+  var bases = getSelectedBases();
+  if (bases.length === 0) { alert('Выберите хотя бы один склад в фильтре'); return; }
+
+  var base = bases[0];
+  mdState.base = base;
+  mdState.selectedId = null;
+  mdState.dirty = false;
+
+  document.getElementById('mdBaseName').textContent = baseName(base);
+  document.getElementById('mdSearch').value = '';
+  document.getElementById('mdList').innerHTML = '<div style="padding:20px;color:#888;">Загрузка…</div>';
+  document.getElementById('mdEditor').innerHTML = '<div style="color:#888; padding:40px 20px; text-align:center;">Выберите водителя слева.</div>';
+  document.getElementById('mdListInfo').textContent = '';
+
+  document.getElementById('modalDrivers').classList.add('open');
+
+  var needFetch = !loadedSettings[base] || Object.keys(loadedSettings[base]).length === 0;
+  var p = needFetch
+    ? fetch('save_driver_data.php?base=' + encodeURIComponent(base) + '&_=' + Date.now())
+        .then(function(r){ return r.ok ? r.json() : {}; })
+        .then(function(data) { loadedSettings[base] = data || {}; })
+        .catch(function(){ loadedSettings[base] = loadedSettings[base] || {}; })
+    : Promise.resolve();
+
+  p.then(function() {
+    buildMdDriverList();
+    renderMdList();
+  });
+}
+
+function buildMdDriverList() {
+  var base = mdState.base;
+  var settingsData = loadedSettings[base] || {};
+  var map = {};
+
+  loadedDrivers.forEach(function(d) {
+    map[d.id] = {
+      id: d.id,
+      fio: d.ФИО || d.id,
+      phone: d.Телефон || '',
+      hasSettings: false,
+      settings: null,
+      savedAt: ''
+    };
+  });
+
+  Object.keys(settingsData).forEach(function(id) {
+    if (!map[id]) {
+      map[id] = { id: id, fio: id, phone: '', hasSettings: false, settings: null, savedAt: '' };
+    }
+    var h = settingsData[id].history || [];
+    var last = h.length > 0 ? h[h.length - 1] : null;
+    map[id].hasSettings = true;
+    map[id].settings = last ? (last.settings || {}) : {};
+    map[id].savedAt = last ? last.savedAt : '';
+  });
+
+  var tripIds = {};
+  for (var b in loadedMonthly) {
+    for (var mk in loadedMonthly[b]) {
+      var md = loadedMonthly[b][mk];
+      if (!md || !md.routes) continue;
+      md.routes.forEach(function(r) {
+        (r.Строки || []).forEach(function(row) {
+          if (row.Водитель && row.Водитель.id) tripIds[row.Водитель.id] = true;
+        });
+      });
+    }
+  }
+  Object.keys(map).forEach(function(id) { map[id].hasTrips = !!tripIds[id]; });
+
+  mdState.drivers = Object.keys(map).map(function(k){ return map[k]; });
+  mdState.drivers.sort(function(a, b) {
+    var aScore = (a.hasSettings ? 2 : 0) + (a.hasTrips ? 1 : 0);
+    var bScore = (b.hasSettings ? 2 : 0) + (b.hasTrips ? 1 : 0);
+    if (aScore !== bScore) return bScore - aScore;
+    return a.fio.localeCompare(b.fio);
+  });
+}
+
+function renderMdList(filter) {
+  var q = (filter || '').trim().toLowerCase();
+  var list = document.getElementById('mdList');
+  var rows = mdState.drivers.filter(function(d) {
+    if (!q) return true;
+    return d.fio.toLowerCase().indexOf(q) !== -1;
+  });
+
+  if (rows.length === 0) {
+    list.innerHTML = '<div style="padding:20px;color:#888;text-align:center;">Ничего не найдено</div>';
+    return;
+  }
+
+  var html = '';
+  rows.forEach(function(d) {
+    var sel = (d.id === mdState.selectedId) ? 'md-item-active' : '';
+    var marks = '';
+    if (d.hasSettings) marks += '<span title="Есть сохранённые настройки" style="color:#e67e22;">⚙</span>';
+    if (d.hasTrips)     marks += '<span title="Есть рейсы в загруженном периоде" style="color:#27ae60;"> •</span>';
+    html += '<div class="md-item ' + sel + '" data-id="' + escapeAttr(d.id) + '" onclick="mdSelect(\'' + escapeAttr(d.id) + '\')">' +
+              '<div style="font-size:12.5px; font-weight:600; color:#2c3e50;">' + escapeHtml(d.fio) + '</div>' +
+              '<div style="font-size:11px; color:#777;">' + (marks || '<span style="color:#ccc;">—</span>') + '</div>' +
+            '</div>';
+  });
+  list.innerHTML = html;
+
+  document.getElementById('mdListInfo').textContent =
+    'Показано: ' + rows.length + ' из ' + mdState.drivers.length;
+}
+
+function mdFilterList(q) { renderMdList(q); }
+
+function mdSelect(driverId) {
+  if (mdState.dirty) {
+    if (!confirm('Есть несохранённые изменения. Переключиться без сохранения?')) return;
+  }
+  mdState.selectedId = driverId;
+  mdState.dirty = false;
+  renderMdList(document.getElementById('mdSearch').value);
+  renderMdEditor();
+}
+
+function renderMdEditor() {
+  var d = mdState.drivers.find(function(x){ return x.id === mdState.selectedId; });
+  if (!d) {
+    document.getElementById('mdEditor').innerHTML =
+      '<div style="color:#888; padding:40px 20px; text-align:center;">Выберите водителя слева.</div>';
+    return;
+  }
+
+  var st = d.settings || {};
+  var excluded = (st.excludeRoutes || []).map(normalizeRouteName);
+
+  var routeSet = {};
+  for (var b in loadedMonthly) {
+    for (var mk in loadedMonthly[b]) {
+      var md = loadedMonthly[b][mk];
+      if (!md || !md.routes) continue;
+      md.routes.forEach(function(r){ if (r.Маршрут) routeSet[r.Маршрут] = true; });
+    }
+  }
+  (st.excludeRoutes || []).forEach(function(r){ routeSet[r] = true; });
+  var routesList = Object.keys(routeSet).sort();
+
+  var html = '';
+  html += '<div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;">';
+  html += '<div>';
+  html += '<div style="font-size:16px; font-weight:700; color:#2c3e50;">' + escapeHtml(d.fio) + '</div>';
+  if (d.phone) html += '<div style="font-size:12px; color:#777;">' + escapeHtml(d.phone) + '</div>';
+  html += '</div>';
+  html += '<div style="font-size:11px; color:#999;">' + escapeHtml(d.id) + '</div>';
+  html += '</div>';
+
+  html += '<div class="modal-section">';
+  html += '<label>Фильтр маршрутов (галочка = не учитывать в статистике)</label>';
+  if (routesList.length === 0) {
+    html += '<div style="color:#888; font-size:12px;">Нет маршрутов в загруженном периоде</div>';
+  } else {
+    html += '<div class="exclude-list" id="mdExcludeRoutes">';
+    routesList.forEach(function(r) {
+      var checked = excluded.indexOf(normalizeRouteName(r)) !== -1 ? 'checked' : '';
+      html += '<label><input type="checkbox" value="' + escapeAttr(r) + '" ' + checked + '> ' + escapeHtml(r) + '</label>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  html += '<div class="modal-section">';
+  html += '<label>Стоимость рейса (план)</label>';
+  html += '<div class="form-row"><label>За рейс (фикс), ₽:</label><input type="number" id="mdCostTrip" min="0" step="1" value="' + (st.costTrip || 0) + '"></div>';
+  html += '<div class="form-row"><label>За километр, ₽/км:</label><input type="number" id="mdCostKm" min="0" step="1" value="' + (st.costKm || 0) + '"></div>';
+  html += '<div class="form-row"><label>За килограмм, ₽/кг:</label><input type="number" id="mdCostWeight" min="0" step="0.01" value="' + (st.costWeight || 0) + '"></div>';
+  html += '<div class="form-row"><label>За клиента, ₽/клиент:</label><input type="number" id="mdCostClient" min="0" step="1" value="' + (st.costClient || 0) + '"></div>';
+  html += '</div>';
+
+  html += '<div class="modal-section">';
+  html += '<label>Время</label>';
+  html += '<div class="form-row"><label>Время на 1 клиента, мин:</label><input type="number" id="mdTimePerClient" min="0" step="1" value="' + (st.timePerClient || 0) + '"></div>';
+  html += '</div>';
+
+  html += '<div class="modal-footer" style="position:sticky; bottom:0; background:#fff; padding-top:12px; margin-top:14px;">';
+  html += '<button class="cancel" onclick="mdResetExcludes()" style="background:#f39c12;color:#fff;">🧹 Сбросить исключения</button>';
+  html += '<button class="cancel" onclick="mdDeleteDriver()" style="background:#e74c3c;color:#fff;">🗑 Удалить настройки</button>';
+  html += '<button class="save" onclick="mdSave()" style="margin-left:auto;">Сохранить</button>';
+  html += '</div>';
+
+  var editor = document.getElementById('mdEditor');
+  editor.innerHTML = html;
+
+  editor.querySelectorAll('input').forEach(function(inp) {
+    inp.addEventListener('input', function() { mdState.dirty = true; });
+    inp.addEventListener('change', function() { mdState.dirty = true; });
+  });
+}
+
+function mdResetExcludes() {
+  document.querySelectorAll('#mdExcludeRoutes input:checked').forEach(function(cb){ cb.checked = false; });
+  mdState.dirty = true;
+}
+
+function mdSave() {
+  if (!mdState.selectedId) return;
+  var driverId = mdState.selectedId;
+  var base = mdState.base;
+
+  var excluded = [];
+  document.querySelectorAll('#mdExcludeRoutes input:checked').forEach(function(cb){ excluded.push(cb.value); });
+
+  var settings = {
+    excludeRoutes: excluded,
+    costTrip: parseFloat(document.getElementById('mdCostTrip').value) || 0,
+    costKm: parseFloat(document.getElementById('mdCostKm').value) || 0,
+    costWeight: parseFloat(document.getElementById('mdCostWeight').value) || 0,
+    costClient: parseFloat(document.getElementById('mdCostClient').value) || 0,
+    timePerClient: parseFloat(document.getElementById('mdTimePerClient').value) || 0
+  };
+
+  var payload = {};
+  payload[driverId] = { action: 'saveSettings', settings: settings };
+
+  fetch('save_driver_data.php?base=' + encodeURIComponent(base), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(res) {
+    if (res && res.success) {
+      if (!loadedSettings[base]) loadedSettings[base] = {};
+      if (!loadedSettings[base][driverId]) loadedSettings[base][driverId] = { history: [] };
+      loadedSettings[base][driverId].history.push({
+        savedAt: new Date().toISOString().slice(0,19),
+        settings: settings
+      });
+      var d = mdState.drivers.find(function(x){ return x.id === driverId; });
+      if (d) { d.settings = settings; d.hasSettings = true; d.savedAt = new Date().toISOString(); }
+            mdState.dirty = false;
+      renderMdList(document.getElementById('mdSearch').value);
+      renderMdEditor();
+      renderPreservingUI();
+      showMdToast('Настройки сохранены');
+    } else {
+      alert('Ошибка: ' + (res && res.error ? res.error : 'неизвестно'));
+    }
+  })
+  .catch(function(e){ alert('Ошибка сети: ' + e.message); });
+}
+
+function mdDeleteDriver() {
+  if (!mdState.selectedId) return;
+  var d = mdState.drivers.find(function(x){ return x.id === mdState.selectedId; });
+  if (!confirm('Удалить все настройки водителя:\n\n' + d.fio + '\n\nОн вернётся в список на всех маршрутах.')) return;
+  document.querySelectorAll('#mdExcludeRoutes input:checked').forEach(function(cb){ cb.checked = false; });
+  document.getElementById('mdCostTrip').value = 0;
+  document.getElementById('mdCostKm').value = 0;
+  document.getElementById('mdCostWeight').value = 0;
+  document.getElementById('mdCostClient').value = 0;
+  document.getElementById('mdTimePerClient').value = 0;
+  mdState.dirty = true;
+  mdSave();
+}
+
+function showMdToast(text) {
+  var t = document.createElement('div');
+  t.textContent = text;
+  t.style.cssText = 'position:fixed; bottom:24px; left:50%; transform:translateX(-50%);' +
+                    'background:#27ae60; color:#fff; padding:10px 22px; border-radius:6px;' +
+                    'font-size:13px; z-index:3000; box-shadow:0 4px 12px rgba(0,0,0,0.2);';
+  document.body.appendChild(t);
+  setTimeout(function(){ t.style.opacity = '0'; t.style.transition = 'opacity .3s'; }, 1500);
+  setTimeout(function(){ t.remove(); }, 1900);
+}
+
+function showDriverSettingsButton() {
+  var block = document.getElementById('driverSettingsBlock');
+  if (block) block.style.display = '';
+}
+
+function renderPreservingUI() {
+  // 1. Запоминаем раскрытые карточки водителей
+  var openCards = {};
+  var openPlans = {};
+  document.querySelectorAll('.driver-card').forEach(function(card) {
+    var id = card.getAttribute('data-driver-id');
+    var body = card.querySelector('.driver-body');
+    if (body && body.classList.contains('open')) openCards[id] = true;
+    if (card.classList.contains('show-plan')) openPlans[id] = true;
+  });
+
+  // 2. Запоминаем раскрытые месяцы
+  var openMonths = {};
+  document.querySelectorAll('.month-row').forEach(function(row) {
+    var arrow = row.querySelector('.month-arrow');
+    if (arrow && arrow.textContent.indexOf('▼') !== -1) {
+      var key = row.getAttribute('data-month-key');
+      if (key) openMonths[key] = true;
+    }
+  });
+
+  // 3. Запоминаем раскрытые группы рейсов (▸/▼ у времени)
+  var openGroups = {};
+  document.querySelectorAll('.group-arrow').forEach(function(a) {
+    if (a.textContent.indexOf('▼') !== -1) {
+      var pid = a.getAttribute('data-parent-id');
+      if (pid) openGroups[pid] = true;
+    }
+  });
+
+  // 4. Перерисовываем
+  render();
+
+  // 5. Восстанавливаем карточки
+  document.querySelectorAll('.driver-card').forEach(function(card) {
+    var id = card.getAttribute('data-driver-id');
+    if (openCards[id]) {
+      var body = card.querySelector('.driver-body');
+      var arrow = card.querySelector('.arrow');
+      if (body) body.classList.add('open');
+      if (arrow) arrow.textContent = '▼';
+    }
+    if (openPlans[id]) {
+      card.classList.add('show-plan');
+      var planBtn = card.querySelector('.btn-tool.plan');
+      if (planBtn) planBtn.classList.add('active');
+    }
+  });
+
+  // 6. Восстанавливаем раскрытые месяцы
+  document.querySelectorAll('.month-row').forEach(function(row) {
+    var key = row.getAttribute('data-month-key');
+    if (key && openMonths[key]) {
+      var arrow = row.querySelector('.month-arrow');
+      if (arrow) arrow.textContent = '▼';
+      var tbody = row.parentElement;
+      tbody.querySelectorAll('.route-row').forEach(function(r) { r.style.display = ''; });
+    }
+  });
+}
+
+// ============================================================
+// ЦЕНА ТОПЛИВА — пересчёт всех таблиц расчёта
+// ============================================================
+window.fuelPrice = 60;
+
+function onFuelPriceChange(val) {
+  var price = parseFloat(val) || 0;
+  window.fuelPrice = price;
+
+  document.querySelectorAll('.plan-block').forEach(function(block) {
+    // Пересчёт колонки «Топливо»
+    block.querySelectorAll('.fuel-cell').forEach(function(td) {
+      var km = parseFloat(td.getAttribute('data-km')) || 0;
+      var cost = km * 0.10 * price;
+      var v = td.querySelector('.fuel-value');
+      if (v) v.textContent = fmt(cost);
+      var s = td.querySelector('.fuel-sub');
+      if (s) s.textContent = km > 0 ? km.toFixed(1) + ' км × 10/100 × ' + fmt(price) + ' ₽' : '';
+    });
+    // Пересчёт колонки «Итого»
+    block.querySelectorAll('.total-cell').forEach(function(td) {
+      var nachisl = parseFloat(td.getAttribute('data-nachisl')) || 0;
+      var fss     = parseFloat(td.getAttribute('data-fss')) || 0;
+      var km      = parseFloat(td.getAttribute('data-km')) || 0;
+      var fuel    = km * 0.10 * price;
+      var total   = nachisl + fss + fuel;
+      var v = td.querySelector('.total-value');
+      if (v) v.textContent = fmt(total);
+      var s = td.querySelector('.total-sub');
+      if (s) s.textContent = nachisl > 0 ? fmt(nachisl) + ' + ' + fmt(fss) + ' + ' + fmt(fuel) : '';
+    });
+  });
+}
+// ============================================================
+// ПРОЧЕЕ
+// ============================================================
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+document.addEventListener('click', function(e) {
+  document.querySelectorAll('.ms-dd.open').forEach(function(dd) {
+    var wrap = dd.parentElement;
+    if (!wrap.contains(e.target)) dd.classList.remove('open');
+  });
+});
+
+// ============================================================
+// ИНИЦИАЛИЗАЦИЯ
+// ============================================================
+document.querySelectorAll('button.preset').forEach(function(b) {
+  b.addEventListener('click', function() {
+    document.querySelectorAll('button.preset').forEach(function(x) { x.classList.remove('active'); });
+    this.classList.add('active');
+    selectedPeriod.months = parseInt(this.getAttribute('data-months'));
+  });
+});
+document.getElementById('msDriversBtn').addEventListener('click', function(e) { e.stopPropagation(); toggleMs('drivers'); });
+document.getElementById('msRoutesBtn').addEventListener('click', function(e) { e.stopPropagation(); toggleMs('routes'); });
+document.getElementById('btnLoad').addEventListener('click', function() { loadAll(); });
+</script>
+</body>
+</html>
