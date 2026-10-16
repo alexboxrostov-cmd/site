@@ -3194,6 +3194,7 @@ async function runAIAnalysis() {
         var curMonthStr = monthNames[currentMonth] + ' ' + currentYear;
         var analysis = generateAIAnalysis(routesData, curMonthStr);
         contentEl.innerHTML = analysis;
+        setupWeekTooltips();
         statusEl.textContent = '✅ Анализ завершён (' + routesData.length + ' маршрутов)';
         
     } catch (error) {
@@ -3726,6 +3727,24 @@ function generateAIAnalysis(routesData, curMonthStr) {
     html += '</div>';
     
     return html;
+}
+
+// Функция для инициализации tooltip'ов недель
+function setupWeekTooltips() {
+    document.querySelectorAll(".week-tooltip").forEach(function(el) {
+        el.addEventListener("mouseenter", function() {
+            var routeId = this.getAttribute("data-route");
+            var week = this.getAttribute("data-week");
+            var tooltip = document.getElementById("tooltip-" + routeId + "-" + week);
+            if (tooltip) tooltip.style.display = "block";
+        });
+        el.addEventListener("mouseleave", function() {
+            var routeId = this.getAttribute("data-route");
+            var week = this.getAttribute("data-week");
+            var tooltip = document.getElementById("tooltip-" + routeId + "-" + week);
+            if (tooltip) tooltip.style.display = "none";
+        });
+    });
 }
 
 function calculateWeeklyTrend(routesData) {
