@@ -3541,10 +3541,10 @@ function generateAIAnalysis(routesData, curMonthStr) {
     
     // Тренд по неделям с визуализацией и градациями
     if (weeklyAnalysis) {
-        // Добавляем расчёт изменения прибыли для сортировки
+        // Добавляем расчёт изменения прибыли для сортировки (сравниваем текущую с предыдущей)
         weeklyAnalysis.forEach(function(route) {
-            route.profitChange = route.prevWeekProfit !== 0 
-                ? ((route.lastWeekProfit - route.prevWeekProfit) / Math.abs(route.prevWeekProfit) * 100)
+            route.profitChange = route.lastWeekProfit !== 0 
+                ? ((route.currentWeekProfit - route.lastWeekProfit) / Math.abs(route.lastWeekProfit) * 100)
                 : 0;
         });
         
@@ -3554,7 +3554,7 @@ function generateAIAnalysis(routesData, curMonthStr) {
         });
         
         html += '<div style="background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6; margin-bottom: 15px;">';
-        html += '<h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 12pt; border-bottom: 2px solid #667eea; padding-bottom: 8px;">📅 Динамика: Последняя неделя vs Предыдущая</h4>';
+        html += '<h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 12pt; border-bottom: 2px solid #667eea; padding-bottom: 8px;">📅 Динамика: Три недели</h4>';
         
         // Легенда градаций
         html += '<div style="display: flex; gap: 15px; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; flex-wrap: wrap;">';
@@ -3567,23 +3567,23 @@ function generateAIAnalysis(routesData, curMonthStr) {
         html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">';
         
         weeklyAnalysis.forEach(function(route) {
-            var revenueChange = route.prevWeekRevenue > 0 
+            // Рассчитываем изменения
+            var lastWeekChange = route.prevWeekRevenue > 0 
                 ? ((route.lastWeekRevenue - route.prevWeekRevenue) / route.prevWeekRevenue * 100).toFixed(1)
                 : 'N/A';
-            var profitChange = route.prevWeekProfit !== 0 
-                ? ((route.lastWeekProfit - route.prevWeekProfit) / Math.abs(route.prevWeekProfit) * 100).toFixed(1)
+            var currentWeekChange = route.lastWeekRevenue > 0 
+                ? ((route.currentWeekRevenue - route.lastWeekRevenue) / route.lastWeekRevenue * 100).toFixed(1)
                 : 'N/A';
             
-            var revColor = revenueChange === 'N/A' ? '#666' : (parseFloat(revenueChange) >= 0 ? '#27ae60' : '#e74c3c');
-            var profColor = profitChange === 'N/A' ? '#666' : (parseFloat(profitChange) >= 0 ? '#27ae60' : '#e74c3c');
-            var revIcon = revenueChange === 'N/A' ? '➖' : (parseFloat(revenueChange) >= 0 ? '📈' : '📉');
-            var profIcon = profitChange === 'N/A' ? '➖' : (parseFloat(profitChange) >= 0 ? '📈' : '📉');
+            var currentWeekProfitChange = route.lastWeekProfit !== 0 
+                ? ((route.currentWeekProfit - route.lastWeekProfit) / Math.abs(route.lastWeekProfit) * 100).toFixed(1)
+                : 'N/A';
             
             // Определяем градацию
             var grade, gradeColor, gradeBg, gradeIcon;
-            var profitChangeNum = parseFloat(profitChange);
+            var profitChangeNum = parseFloat(currentWeekProfitChange);
             
-            if (profitChange === 'N/A' || profitChangeNum < 0) {
+            if (currentWeekProfitChange === 'N/A' || profitChangeNum < 0) {
                 grade = 'Отрицательная';
                 gradeColor = '#e74c3c';
                 gradeBg = '#fff5f5';
@@ -3605,6 +3605,9 @@ function generateAIAnalysis(routesData, curMonthStr) {
                 gradeIcon = '🚀';
             }
             
+            // Создаем уникальные ID для tooltip
+            var routeId = route.name.replace(/[^a-zA-Z0-9]/g, '_');
+            
             html += '<div style="background: ' + gradeBg + '; padding: 12px; border-radius: 6px; border-left: 4px solid ' + gradeColor + ';">';
             
             // Заголовок с градацией
@@ -3615,46 +3618,109 @@ function generateAIAnalysis(routesData, curMonthStr) {
             html += '</div>';
             html += '</div>';
             
-            // Оборот
-            html += '<div style="margin-bottom: 10px;">';
-            html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
-            html += '<span style="color: #7f8c8d; font-size: 9pt; text-transform: uppercase; font-weight: 600;">Оборот</span>';
-            html += '<span style="color: ' + revColor + '; font-size: 10pt; font-weight: bold;">' + revIcon + ' ' + (revenueChange === 'N/A' ? '—' : (parseFloat(revenueChange) >= 0 ? '+' : '') + revenueChange + '%') + '</span>';
-            html += '</div>';
-            html += '<div style="display: flex; justify-content: space-between; align-items: baseline;">';
-            html += '<div>';
-            html += '<div style="font-size: 8pt; color: #95a5a6;">Текущая неделя</div>';
-            html += '<div style="font-size: 12pt; font-weight: bold; color: #2c3e50;">' + fmt(route.lastWeekRevenue) + ' ₽</div>';
-            html += '</div>';
-            html += '<div style="text-align: right;">';
-            html += '<div style="font-size: 8pt; color: #95a5a6;">Предыдущая</div>';
-            html += '<div style="font-size: 10pt; color: #7f8c8d;">' + fmt(route.prevWeekRevenue) + ' ₽</div>';
-            html += '</div>';
-            html += '</div>';
+            // Три колонки для недель
+            html += '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">';
+            
+            // Неделя -2
+            var prevWeekArrow = '';
+            html += '<div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px; cursor: pointer;" class="week-tooltip" data-route="' + routeId + '" data-week="prev">';
+            html += '<div style="font-size: 8pt; color: #7f8c8d; margin-bottom: 4px;">Неделя -2</div>';
+            html += '<div style="font-size: 11pt; font-weight: bold; color: #2c3e50;">' + fmt(route.prevWeekRevenue) + ' ₽</div>';
+            html += '<div style="font-size: 9pt; color: #7f8c8d; margin-top: 2px;">' + fmt(route.prevWeekProfit) + ' ₽</div>';
             html += '</div>';
             
-            // Прибыль
-            html += '<div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(0,0,0,0.1);">';
-            html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
-            html += '<span style="color: #7f8c8d; font-size: 9pt; text-transform: uppercase; font-weight: 600;">Прибыль</span>';
-            html += '<span style="color: ' + profColor + '; font-size: 10pt; font-weight: bold;">' + profIcon + ' ' + (profitChange === 'N/A' ? '—' : (parseFloat(profitChange) >= 0 ? '+' : '') + profitChange + '%') + '</span>';
+            // Неделя -1
+            var lastWeekArrow = lastWeekChange !== 'N/A' ? (parseFloat(lastWeekChange) >= 0 ? ' ↑' : ' ↓') : '';
+            var lastWeekArrowColor = lastWeekChange !== 'N/A' ? (parseFloat(lastWeekChange) >= 0 ? '#27ae60' : '#e74c3c') : '#7f8c8d';
+            html += '<div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px; cursor: pointer;" class="week-tooltip" data-route="' + routeId + '" data-week="last">';
+            html += '<div style="font-size: 8pt; color: #7f8c8d; margin-bottom: 4px;">Неделя -1</div>';
+            html += '<div style="font-size: 11pt; font-weight: bold; color: #2c3e50;">' + fmt(route.lastWeekRevenue) + ' ₽</div>';
+            html += '<div style="font-size: 9pt; color: ' + lastWeekArrowColor + '; margin-top: 2px;">' + fmt(route.lastWeekProfit) + ' ₽' + lastWeekArrow + '</div>';
             html += '</div>';
-            html += '<div style="display: flex; justify-content: space-between; align-items: baseline;">';
-            html += '<div>';
-            html += '<div style="font-size: 8pt; color: #95a5a6;">Текущая неделя</div>';
-            html += '<div style="font-size: 12pt; font-weight: bold; color: ' + profColor + ';">' + fmt(route.lastWeekProfit) + ' ₽</div>';
+            
+            // Текущая неделя
+            var currentWeekArrow = currentWeekProfitChange !== 'N/A' ? (parseFloat(currentWeekProfitChange) >= 0 ? ' ↑' : ' ↓') : '';
+            var currentWeekArrowColor = currentWeekProfitChange !== 'N/A' ? (parseFloat(currentWeekProfitChange) >= 0 ? '#27ae60' : '#e74c3c') : '#7f8c8d';
+            html += '<div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.7); border-radius: 4px; border: 1px solid ' + gradeColor + '; cursor: pointer;" class="week-tooltip" data-route="' + routeId + '" data-week="current">';
+            html += '<div style="font-size: 8pt; color: #7f8c8d; margin-bottom: 4px;">Текущая 📊</div>';
+            html += '<div style="font-size: 11pt; font-weight: bold; color: #2c3e50;">' + fmt(route.currentWeekRevenue) + ' ₽</div>';
+            html += '<div style="font-size: 9pt; color: ' + currentWeekArrowColor + '; margin-top: 2px;">' + fmt(route.currentWeekProfit) + ' ₽' + currentWeekArrow + '</div>';
             html += '</div>';
-            html += '<div style="text-align: right;">';
-            html += '<div style="font-size: 8pt; color: #95a5a6;">Предыдущая</div>';
-            html += '<div style="font-size: 10pt; color: #7f8c8d;">' + fmt(route.prevWeekProfit) + ' ₽</div>';
+            
             html += '</div>';
+            
+            // Детализация по дням (скрытая, показывается при наведении)
+            html += '<div id="tooltip-' + routeId + '-prev" class="week-detail" style="display: none; margin-top: 10px; padding: 10px; background: white; border-radius: 4px; border: 1px solid #ddd; font-size: 9pt;">';
+            html += '<div style="font-weight: bold; margin-bottom: 5px;">Детализация Неделя -2:</div>';
+            if (route.prevWeekByDay) {
+                Object.keys(route.prevWeekByDay).forEach(function(dayKey) {
+                    var dayData = route.prevWeekByDay[dayKey];
+                    var dayDate = new Date(dayKey);
+                    var dayName = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][dayDate.getDay()];
+                    var dayNum = dayDate.getDate() + '.' + (dayDate.getMonth() + 1);
+                    html += '<div style="display: flex; justify-content: space-between; padding: 2px 0;">';
+                    html += '<span>' + dayName + ' ' + dayNum + ':</span>';
+                    html += '<span>' + fmt(dayData.revenue) + ' ₽ / ' + fmt(dayData.profit) + ' ₽</span>';
+                    html += '</div>';
+                });
+            }
             html += '</div>';
+            
+            html += '<div id="tooltip-' + routeId + '-last" class="week-detail" style="display: none; margin-top: 10px; padding: 10px; background: white; border-radius: 4px; border: 1px solid #ddd; font-size: 9pt;">';
+            html += '<div style="font-weight: bold; margin-bottom: 5px;">Детализация Неделя -1:</div>';
+            if (route.lastWeekByDay) {
+                Object.keys(route.lastWeekByDay).forEach(function(dayKey) {
+                    var dayData = route.lastWeekByDay[dayKey];
+                    var dayDate = new Date(dayKey);
+                    var dayName = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][dayDate.getDay()];
+                    var dayNum = dayDate.getDate() + '.' + (dayDate.getMonth() + 1);
+                    html += '<div style="display: flex; justify-content: space-between; padding: 2px 0;">';
+                    html += '<span>' + dayName + ' ' + dayNum + ':</span>';
+                    html += '<span>' + fmt(dayData.revenue) + ' ₽ / ' + fmt(dayData.profit) + ' ₽</span>';
+                    html += '</div>';
+                });
+            }
+            html += '</div>';
+            
+            html += '<div id="tooltip-' + routeId + '-current" class="week-detail" style="display: none; margin-top: 10px; padding: 10px; background: white; border-radius: 4px; border: 1px solid #ddd; font-size: 9pt;">';
+            html += '<div style="font-weight: bold; margin-bottom: 5px;">Детализация Текущая неделя:</div>';
+            if (route.currentWeekByDay) {
+                Object.keys(route.currentWeekByDay).forEach(function(dayKey) {
+                    var dayData = route.currentWeekByDay[dayKey];
+                    var dayDate = new Date(dayKey);
+                    var dayName = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][dayDate.getDay()];
+                    var dayNum = dayDate.getDate() + '.' + (dayDate.getMonth() + 1);
+                    var icon = dayData.isForecast ? '🔮' : '✅';
+                    html += '<div style="display: flex; justify-content: space-between; padding: 2px 0;">';
+                    html += '<span>' + icon + ' ' + dayName + ' ' + dayNum + ':</span>';
+                    html += '<span>' + fmt(dayData.revenue) + ' ₽ / ' + fmt(dayData.profit) + ' ₽</span>';
+                    html += '</div>';
+                });
+            }
             html += '</div>';
             
             html += '</div>';
         });
         
         html += '</div></div>';
+        
+        // JavaScript для показа/скрытия детализации
+        html += '<script>';
+        html += 'document.querySelectorAll(".week-tooltip").forEach(function(el) {';
+        html += '  el.addEventListener("mouseenter", function() {';
+        html += '    var routeId = this.getAttribute("data-route");';
+        html += '    var week = this.getAttribute("data-week");';
+        html += '    var tooltip = document.getElementById("tooltip-" + routeId + "-" + week);';
+        html += '    if (tooltip) tooltip.style.display = "block";';
+        html += '  });';
+        html += '  el.addEventListener("mouseleave", function() {';
+        html += '    var routeId = this.getAttribute("data-route");';
+        html += '    var week = this.getAttribute("data-week");';
+        html += '    var tooltip = document.getElementById("tooltip-" + routeId + "-" + week);';
+        html += '    if (tooltip) tooltip.style.display = "none";';
+        html += '  });';
+        html += '});';
+        html += '</script>';
     }
     
     html += '</div>';
@@ -3664,7 +3730,11 @@ function generateAIAnalysis(routesData, curMonthStr) {
 
 function calculateWeeklyTrend(routesData) {
     var now = new Date();
-    var lastWeekStart = getWeekStart(now);
+    var currentWeekStart = getWeekStart(now);
+    var currentWeekEnd = new Date(currentWeekStart);
+    currentWeekEnd.setDate(currentWeekEnd.getDate() + 6);
+    
+    var lastWeekStart = new Date(currentWeekStart);
     lastWeekStart.setDate(lastWeekStart.getDate() - 7);
     var lastWeekEnd = new Date(lastWeekStart);
     lastWeekEnd.setDate(lastWeekEnd.getDate() + 6);
@@ -3689,6 +3759,31 @@ function calculateWeeklyTrend(routesData) {
         if (!content) return;
         
         var rows = content.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+        
+        // Инициализируем данные по дням для всех трех недель
+        var currentWeekByDay = {};
+        var lastWeekByDay = {};
+        var prevWeekByDay = {};
+        
+        // Инициализируем все дни недели
+        for (var i = 0; i < 7; i++) {
+            var currentDay = new Date(currentWeekStart);
+            currentDay.setDate(currentDay.getDate() + i);
+            var currentDayKey = getLocalDateKey(currentDay);
+            currentWeekByDay[currentDayKey] = { revenue: 0, profit: 0, count: 0 };
+            
+            var lastDay = new Date(lastWeekStart);
+            lastDay.setDate(lastDay.getDate() + i);
+            var lastDayKey = getLocalDateKey(lastDay);
+            lastWeekByDay[lastDayKey] = { revenue: 0, profit: 0, count: 0 };
+            
+            var prevDay = new Date(prevWeekStart);
+            prevDay.setDate(prevDay.getDate() + i);
+            var prevDayKey = getLocalDateKey(prevDay);
+            prevWeekByDay[prevDayKey] = { revenue: 0, profit: 0, count: 0 };
+        }
+        
+        var currentWeekRevenue = 0, currentWeekProfit = 0;
         var lastWeekRevenue = 0, lastWeekProfit = 0;
         var prevWeekRevenue = 0, prevWeekProfit = 0;
         
@@ -3700,22 +3795,94 @@ function calculateWeeklyTrend(routesData) {
             var revenue = sum * 100 / 122;
             var profit = parseFloat(row.getAttribute('data-dohod')) || 0;
             
-            if (d >= lastWeekStart && d <= lastWeekEnd) {
+            if (d >= currentWeekStart && d <= currentWeekEnd) {
+                currentWeekRevenue += revenue;
+                currentWeekProfit += profit;
+                if (currentWeekByDay[dateKey]) {
+                    currentWeekByDay[dateKey].revenue += revenue;
+                    currentWeekByDay[dateKey].profit += profit;
+                    currentWeekByDay[dateKey].count++;
+                }
+            } else if (d >= lastWeekStart && d <= lastWeekEnd) {
                 lastWeekRevenue += revenue;
                 lastWeekProfit += profit;
+                if (lastWeekByDay[dateKey]) {
+                    lastWeekByDay[dateKey].revenue += revenue;
+                    lastWeekByDay[dateKey].profit += profit;
+                    lastWeekByDay[dateKey].count++;
+                }
             } else if (d >= prevWeekStart && d <= prevWeekEnd) {
                 prevWeekRevenue += revenue;
                 prevWeekProfit += profit;
+                if (prevWeekByDay[dateKey]) {
+                    prevWeekByDay[dateKey].revenue += revenue;
+                    prevWeekByDay[dateKey].profit += profit;
+                    prevWeekByDay[dateKey].count++;
+                }
             }
         });
         
-        if (lastWeekRevenue > 0 || prevWeekRevenue > 0) {
+        // Рассчитываем прогноз для текущей недели
+        var currentWeekForecastRevenue = 0;
+        var currentWeekForecastProfit = 0;
+        var currentWeekForecastByDay = {};
+        
+        Object.keys(currentWeekByDay).forEach(function(dayKey) {
+            var dayData = currentWeekByDay[dayKey];
+            var dayIndex = new Date(dayKey).getDay();
+            if (dayIndex === 0) dayIndex = 7; // Воскресенье = 7
+            dayIndex--; // 0-6 для Пн-Вс
+            
+            // Получаем соответствующие дни из предыдущих недель
+            var lastWeekDayKey = Object.keys(lastWeekByDay)[dayIndex];
+            var prevWeekDayKey = Object.keys(prevWeekByDay)[dayIndex];
+            
+            var lastWeekDayData = lastWeekByDay[lastWeekDayKey] || { revenue: 0, profit: 0 };
+            var prevWeekDayData = prevWeekByDay[prevWeekDayKey] || { revenue: 0, profit: 0 };
+            
+            // Если день уже прошёл (есть фактические данные)
+            if (dayData.count > 0) {
+                currentWeekForecastByDay[dayKey] = {
+                    revenue: dayData.revenue,
+                    profit: dayData.profit,
+                    count: dayData.count,
+                    isForecast: false
+                };
+            } else {
+                // Прогноз на основе средних значений
+                var avgRevenue = (lastWeekDayData.revenue + prevWeekDayData.revenue) / 2;
+                var avgProfit = (lastWeekDayData.profit + prevWeekDayData.profit) / 2;
+                
+                currentWeekForecastRevenue += avgRevenue;
+                currentWeekForecastProfit += avgProfit;
+                
+                currentWeekForecastByDay[dayKey] = {
+                    revenue: avgRevenue,
+                    profit: avgProfit,
+                    count: 0,
+                    isForecast: true
+                };
+            }
+        });
+        
+        // Общая сумма для текущей недели (факт + прогноз)
+        var totalCurrentWeekRevenue = currentWeekRevenue + currentWeekForecastRevenue;
+        var totalCurrentWeekProfit = currentWeekProfit + currentWeekForecastProfit;
+        
+        if (currentWeekRevenue > 0 || lastWeekRevenue > 0 || prevWeekRevenue > 0) {
             result.push({
                 name: routeName,
+                currentWeekRevenue: Math.round(totalCurrentWeekRevenue),
+                currentWeekProfit: Math.round(totalCurrentWeekProfit),
+                currentWeekFactRevenue: Math.round(currentWeekRevenue),
+                currentWeekFactProfit: Math.round(currentWeekProfit),
+                currentWeekByDay: currentWeekForecastByDay,
                 lastWeekRevenue: Math.round(lastWeekRevenue),
                 lastWeekProfit: Math.round(lastWeekProfit),
+                lastWeekByDay: lastWeekByDay,
                 prevWeekRevenue: Math.round(prevWeekRevenue),
-                prevWeekProfit: Math.round(prevWeekProfit)
+                prevWeekProfit: Math.round(prevWeekProfit),
+                prevWeekByDay: prevWeekByDay
             });
         }
     });
@@ -3738,6 +3905,31 @@ function calculateWeeklyTrend(routesData) {
         if (!content) return;
         
         var rows = content.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+        
+        // Инициализируем данные по дням для всех трех недель
+        var currentWeekByDay = {};
+        var lastWeekByDay = {};
+        var prevWeekByDay = {};
+        
+        // Инициализируем все дни недели
+        for (var i = 0; i < 7; i++) {
+            var currentDay = new Date(currentWeekStart);
+            currentDay.setDate(currentDay.getDate() + i);
+            var currentDayKey = getLocalDateKey(currentDay);
+            currentWeekByDay[currentDayKey] = { revenue: 0, profit: 0, count: 0 };
+            
+            var lastDay = new Date(lastWeekStart);
+            lastDay.setDate(lastDay.getDate() + i);
+            var lastDayKey = getLocalDateKey(lastDay);
+            lastWeekByDay[lastDayKey] = { revenue: 0, profit: 0, count: 0 };
+            
+            var prevDay = new Date(prevWeekStart);
+            prevDay.setDate(prevDay.getDate() + i);
+            var prevDayKey = getLocalDateKey(prevDay);
+            prevWeekByDay[prevDayKey] = { revenue: 0, profit: 0, count: 0 };
+        }
+        
+        var currentWeekRevenue = 0, currentWeekProfit = 0;
         var lastWeekRevenue = 0, lastWeekProfit = 0;
         var prevWeekRevenue = 0, prevWeekProfit = 0;
         
@@ -3749,22 +3941,94 @@ function calculateWeeklyTrend(routesData) {
             var revenue = sum * 100 / 122;
             var profit = parseFloat(row.getAttribute('data-dohod')) || 0;
             
-            if (d >= lastWeekStart && d <= lastWeekEnd) {
+            if (d >= currentWeekStart && d <= currentWeekEnd) {
+                currentWeekRevenue += revenue;
+                currentWeekProfit += profit;
+                if (currentWeekByDay[dateKey]) {
+                    currentWeekByDay[dateKey].revenue += revenue;
+                    currentWeekByDay[dateKey].profit += profit;
+                    currentWeekByDay[dateKey].count++;
+                }
+            } else if (d >= lastWeekStart && d <= lastWeekEnd) {
                 lastWeekRevenue += revenue;
                 lastWeekProfit += profit;
+                if (lastWeekByDay[dateKey]) {
+                    lastWeekByDay[dateKey].revenue += revenue;
+                    lastWeekByDay[dateKey].profit += profit;
+                    lastWeekByDay[dateKey].count++;
+                }
             } else if (d >= prevWeekStart && d <= prevWeekEnd) {
                 prevWeekRevenue += revenue;
                 prevWeekProfit += profit;
+                if (prevWeekByDay[dateKey]) {
+                    prevWeekByDay[dateKey].revenue += revenue;
+                    prevWeekByDay[dateKey].profit += profit;
+                    prevWeekByDay[dateKey].count++;
+                }
             }
         });
         
-        if (lastWeekRevenue > 0 || prevWeekRevenue > 0) {
+        // Рассчитываем прогноз для текущей недели
+        var currentWeekForecastRevenue = 0;
+        var currentWeekForecastProfit = 0;
+        var currentWeekForecastByDay = {};
+        
+        Object.keys(currentWeekByDay).forEach(function(dayKey) {
+            var dayData = currentWeekByDay[dayKey];
+            var dayIndex = new Date(dayKey).getDay();
+            if (dayIndex === 0) dayIndex = 7; // Воскресенье = 7
+            dayIndex--; // 0-6 для Пн-Вс
+            
+            // Получаем соответствующие дни из предыдущих недель
+            var lastWeekDayKey = Object.keys(lastWeekByDay)[dayIndex];
+            var prevWeekDayKey = Object.keys(prevWeekByDay)[dayIndex];
+            
+            var lastWeekDayData = lastWeekByDay[lastWeekDayKey] || { revenue: 0, profit: 0 };
+            var prevWeekDayData = prevWeekByDay[prevWeekDayKey] || { revenue: 0, profit: 0 };
+            
+            // Если день уже прошёл (есть фактические данные)
+            if (dayData.count > 0) {
+                currentWeekForecastByDay[dayKey] = {
+                    revenue: dayData.revenue,
+                    profit: dayData.profit,
+                    count: dayData.count,
+                    isForecast: false
+                };
+            } else {
+                // Прогноз на основе средних значений
+                var avgRevenue = (lastWeekDayData.revenue + prevWeekDayData.revenue) / 2;
+                var avgProfit = (lastWeekDayData.profit + prevWeekDayData.profit) / 2;
+                
+                currentWeekForecastRevenue += avgRevenue;
+                currentWeekForecastProfit += avgProfit;
+                
+                currentWeekForecastByDay[dayKey] = {
+                    revenue: avgRevenue,
+                    profit: avgProfit,
+                    count: 0,
+                    isForecast: true
+                };
+            }
+        });
+        
+        // Общая сумма для текущей недели (факт + прогноз)
+        var totalCurrentWeekRevenue = currentWeekRevenue + currentWeekForecastRevenue;
+        var totalCurrentWeekProfit = currentWeekProfit + currentWeekForecastProfit;
+        
+        if (currentWeekRevenue > 0 || lastWeekRevenue > 0 || prevWeekRevenue > 0) {
             result.push({
                 name: '🔗 ' + displayName,
+                currentWeekRevenue: Math.round(totalCurrentWeekRevenue),
+                currentWeekProfit: Math.round(totalCurrentWeekProfit),
+                currentWeekFactRevenue: Math.round(currentWeekRevenue),
+                currentWeekFactProfit: Math.round(currentWeekProfit),
+                currentWeekByDay: currentWeekForecastByDay,
                 lastWeekRevenue: Math.round(lastWeekRevenue),
                 lastWeekProfit: Math.round(lastWeekProfit),
+                lastWeekByDay: lastWeekByDay,
                 prevWeekRevenue: Math.round(prevWeekRevenue),
-                prevWeekProfit: Math.round(prevWeekProfit)
+                prevWeekProfit: Math.round(prevWeekProfit),
+                prevWeekByDay: prevWeekByDay
             });
         }
     });
