@@ -325,6 +325,31 @@ td[data-col-key="km"].km-has-value::after { content: " ✕"; color: #e74c3c; fon
     </div>
 </div>
 
+<!-- === НОВОЕ: Расширенный анализ маршрута === -->
+<div id="routeDetailedAnalysisSection" style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 10px; color: white;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2 style="margin: 0; font-size: 18pt;">📊 Расширенный анализ маршрута</h2>
+        <button onclick="openRouteAnalysisSettings()" style="padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.5); border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 10pt;">
+            ⚙️ Настройки анализа
+        </button>
+    </div>
+    <div id="routeAnalysisControls" style="margin-bottom: 15px;">
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <label style="font-weight: bold;">Выберите маршрут:</label>
+            <select id="routeAnalysisSelect" style="padding: 6px 12px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.9); color: #2c3e50; font-size: 10pt; min-width: 200px;">
+                <option value="">-- Выберите маршрут --</option>
+            </select>
+            <button id="btnRouteAnalyze" onclick="runRouteDetailedAnalysis()" style="padding: 8px 16px; background: #ffffff; color: #f5576c; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 10pt;">
+                🔍 Анализировать
+            </button>
+            <span id="routeAnalysisStatus" style="margin-left: 15px; font-size: 10pt;"></span>
+        </div>
+    </div>
+    <div id="routeAnalysisResult" style="background: rgba(255,255,255,0.95); color: #2c3e50; padding: 20px; border-radius: 8px; min-height: 100px; display: none;">
+        <div id="routeAnalysisContent"></div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="modalOverlay">
     <div class="modal-box">
         <div class="modal-header">
@@ -3194,7 +3219,7 @@ async function runAIAnalysis() {
         var curMonthStr = monthNames[currentMonth] + ' ' + currentYear;
         var analysis = generateAIAnalysis(routesData, curMonthStr);
         contentEl.innerHTML = analysis;
-        setupWeekTooltips();
+
         statusEl.textContent = '✅ Анализ завершён (' + routesData.length + ' маршрутов)';
         
     } catch (error) {
@@ -3623,8 +3648,18 @@ function generateAIAnalysis(routesData, curMonthStr) {
             html += '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">';
             
             // Неделя -2
-            var prevWeekArrow = '';
-            html += '<div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px; cursor: pointer;" class="week-tooltip" data-route="' + routeId + '" data-week="prev">';
+            var prevWeekTitle = 'Неделя -2:\nОборот: ' + fmt(route.prevWeekRevenue) + ' ₽\nПрибыль: ' + fmt(route.prevWeekProfit) + ' ₽';
+            if (route.prevWeekByDay) {
+                prevWeekTitle += '\n\nДетализация по дням:';
+                Object.keys(route.prevWeekByDay).forEach(function(dayKey) {
+                    var dayData = route.prevWeekByDay[dayKey];
+                    var dayDate = new Date(dayKey);
+                    var dayName = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][dayDate.getDay()];
+                    var dayNum = dayDate.getDate() + '.' + (dayDate.getMonth() + 1);
+                    prevWeekTitle += '\n' + dayName + ' ' + dayNum + ': ' + fmt(dayData.revenue) + ' ₽ / ' + fmt(dayData.profit) + ' ₽';
+                });
+            }
+            html += '<div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px;" title="' + prevWeekTitle.replace(/"/g, '&quot;') + '">';
             html += '<div style="font-size: 8pt; color: #7f8c8d; margin-bottom: 4px;">Неделя -2</div>';
             html += '<div style="font-size: 11pt; font-weight: bold; color: #2c3e50;">' + fmt(route.prevWeekRevenue) + ' ₽</div>';
             html += '<div style="font-size: 9pt; color: #7f8c8d; margin-top: 2px;">' + fmt(route.prevWeekProfit) + ' ₽</div>';
@@ -3633,7 +3668,18 @@ function generateAIAnalysis(routesData, curMonthStr) {
             // Неделя -1
             var lastWeekArrow = lastWeekChange !== 'N/A' ? (parseFloat(lastWeekChange) >= 0 ? ' ↑' : ' ↓') : '';
             var lastWeekArrowColor = lastWeekChange !== 'N/A' ? (parseFloat(lastWeekChange) >= 0 ? '#27ae60' : '#e74c3c') : '#7f8c8d';
-            html += '<div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px; cursor: pointer;" class="week-tooltip" data-route="' + routeId + '" data-week="last">';
+            var lastWeekTitle = 'Неделя -1:\nОборот: ' + fmt(route.lastWeekRevenue) + ' ₽\nПрибыль: ' + fmt(route.lastWeekProfit) + ' ₽\nИзменение: ' + lastWeekChange + '%';
+            if (route.lastWeekByDay) {
+                lastWeekTitle += '\n\nДетализация по дням:';
+                Object.keys(route.lastWeekByDay).forEach(function(dayKey) {
+                    var dayData = route.lastWeekByDay[dayKey];
+                    var dayDate = new Date(dayKey);
+                    var dayName = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][dayDate.getDay()];
+                    var dayNum = dayDate.getDate() + '.' + (dayDate.getMonth() + 1);
+                    lastWeekTitle += '\n' + dayName + ' ' + dayNum + ': ' + fmt(dayData.revenue) + ' ₽ / ' + fmt(dayData.profit) + ' ₽';
+                });
+            }
+            html += '<div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px;" title="' + lastWeekTitle.replace(/"/g, '&quot;') + '">';
             html += '<div style="font-size: 8pt; color: #7f8c8d; margin-bottom: 4px;">Неделя -1</div>';
             html += '<div style="font-size: 11pt; font-weight: bold; color: #2c3e50;">' + fmt(route.lastWeekRevenue) + ' ₽</div>';
             html += '<div style="font-size: 9pt; color: ' + lastWeekArrowColor + '; margin-top: 2px;">' + fmt(route.lastWeekProfit) + ' ₽' + lastWeekArrow + '</div>';
@@ -3642,62 +3688,22 @@ function generateAIAnalysis(routesData, curMonthStr) {
             // Текущая неделя
             var currentWeekArrow = currentWeekProfitChange !== 'N/A' ? (parseFloat(currentWeekProfitChange) >= 0 ? ' ↑' : ' ↓') : '';
             var currentWeekArrowColor = currentWeekProfitChange !== 'N/A' ? (parseFloat(currentWeekProfitChange) >= 0 ? '#27ae60' : '#e74c3c') : '#7f8c8d';
-            html += '<div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.7); border-radius: 4px; border: 1px solid ' + gradeColor + '; cursor: pointer;" class="week-tooltip" data-route="' + routeId + '" data-week="current">';
-            html += '<div style="font-size: 8pt; color: #7f8c8d; margin-bottom: 4px;">Текущая 📊</div>';
-            html += '<div style="font-size: 11pt; font-weight: bold; color: #2c3e50;">' + fmt(route.currentWeekRevenue) + ' ₽</div>';
-            html += '<div style="font-size: 9pt; color: ' + currentWeekArrowColor + '; margin-top: 2px;">' + fmt(route.currentWeekProfit) + ' ₽' + currentWeekArrow + '</div>';
-            html += '</div>';
-            
-            html += '</div>';
-            
-            // Детализация по дням (скрытая, показывается при наведении)
-            html += '<div id="tooltip-' + routeId + '-prev" class="week-detail" style="display: none; margin-top: 10px; padding: 10px; background: white; border-radius: 4px; border: 1px solid #ddd; font-size: 9pt;">';
-            html += '<div style="font-weight: bold; margin-bottom: 5px;">Детализация Неделя -2:</div>';
-            if (route.prevWeekByDay) {
-                Object.keys(route.prevWeekByDay).forEach(function(dayKey) {
-                    var dayData = route.prevWeekByDay[dayKey];
-                    var dayDate = new Date(dayKey);
-                    var dayName = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][dayDate.getDay()];
-                    var dayNum = dayDate.getDate() + '.' + (dayDate.getMonth() + 1);
-                    html += '<div style="display: flex; justify-content: space-between; padding: 2px 0;">';
-                    html += '<span>' + dayName + ' ' + dayNum + ':</span>';
-                    html += '<span>' + fmt(dayData.revenue) + ' ₽ / ' + fmt(dayData.profit) + ' ₽</span>';
-                    html += '</div>';
-                });
-            }
-            html += '</div>';
-            
-            html += '<div id="tooltip-' + routeId + '-last" class="week-detail" style="display: none; margin-top: 10px; padding: 10px; background: white; border-radius: 4px; border: 1px solid #ddd; font-size: 9pt;">';
-            html += '<div style="font-weight: bold; margin-bottom: 5px;">Детализация Неделя -1:</div>';
-            if (route.lastWeekByDay) {
-                Object.keys(route.lastWeekByDay).forEach(function(dayKey) {
-                    var dayData = route.lastWeekByDay[dayKey];
-                    var dayDate = new Date(dayKey);
-                    var dayName = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][dayDate.getDay()];
-                    var dayNum = dayDate.getDate() + '.' + (dayDate.getMonth() + 1);
-                    html += '<div style="display: flex; justify-content: space-between; padding: 2px 0;">';
-                    html += '<span>' + dayName + ' ' + dayNum + ':</span>';
-                    html += '<span>' + fmt(dayData.revenue) + ' ₽ / ' + fmt(dayData.profit) + ' ₽</span>';
-                    html += '</div>';
-                });
-            }
-            html += '</div>';
-            
-            html += '<div id="tooltip-' + routeId + '-current" class="week-detail" style="display: none; margin-top: 10px; padding: 10px; background: white; border-radius: 4px; border: 1px solid #ddd; font-size: 9pt;">';
-            html += '<div style="font-weight: bold; margin-bottom: 5px;">Детализация Текущая неделя:</div>';
+            var currentWeekTitle = 'Текущая неделя:\nОборот: ' + fmt(route.currentWeekRevenue) + ' ₽\nПрибыль: ' + fmt(route.currentWeekProfit) + ' ₽\nИзменение: ' + currentWeekProfitChange + '%';
             if (route.currentWeekByDay) {
+                currentWeekTitle += '\n\nДетализация по дням:';
                 Object.keys(route.currentWeekByDay).forEach(function(dayKey) {
                     var dayData = route.currentWeekByDay[dayKey];
                     var dayDate = new Date(dayKey);
                     var dayName = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][dayDate.getDay()];
                     var dayNum = dayDate.getDate() + '.' + (dayDate.getMonth() + 1);
                     var icon = dayData.isForecast ? '🔮' : '✅';
-                    html += '<div style="display: flex; justify-content: space-between; padding: 2px 0;">';
-                    html += '<span>' + icon + ' ' + dayName + ' ' + dayNum + ':</span>';
-                    html += '<span>' + fmt(dayData.revenue) + ' ₽ / ' + fmt(dayData.profit) + ' ₽</span>';
-                    html += '</div>';
+                    currentWeekTitle += '\n' + icon + ' ' + dayName + ' ' + dayNum + ': ' + fmt(dayData.revenue) + ' ₽ / ' + fmt(dayData.profit) + ' ₽';
                 });
             }
+            html += '<div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.7); border-radius: 4px; border: 1px solid ' + gradeColor + ';" title="' + currentWeekTitle.replace(/"/g, '&quot;') + '">';
+            html += '<div style="font-size: 8pt; color: #7f8c8d; margin-bottom: 4px;">Текущая 📊</div>';
+            html += '<div style="font-size: 11pt; font-weight: bold; color: #2c3e50;">' + fmt(route.currentWeekRevenue) + ' ₽</div>';
+            html += '<div style="font-size: 9pt; color: ' + currentWeekArrowColor + '; margin-top: 2px;">' + fmt(route.currentWeekProfit) + ' ₽' + currentWeekArrow + '</div>';
             html += '</div>';
             
             html += '</div>';
@@ -3711,23 +3717,7 @@ function generateAIAnalysis(routesData, curMonthStr) {
     return html;
 }
 
-// Функция для инициализации tooltip'ов недель
-function setupWeekTooltips() {
-    document.querySelectorAll(".week-tooltip").forEach(function(el) {
-        el.addEventListener("mouseenter", function() {
-            var routeId = this.getAttribute("data-route");
-            var week = this.getAttribute("data-week");
-            var tooltip = document.getElementById("tooltip-" + routeId + "-" + week);
-            if (tooltip) tooltip.style.display = "block";
-        });
-        el.addEventListener("mouseleave", function() {
-            var routeId = this.getAttribute("data-route");
-            var week = this.getAttribute("data-week");
-            var tooltip = document.getElementById("tooltip-" + routeId + "-" + week);
-            if (tooltip) tooltip.style.display = "none";
-        });
-    });
-}
+
 
 function calculateWeeklyTrend(routesData) {
     var now = new Date();
@@ -4149,6 +4139,268 @@ function saveAIExclusionSettings() {
     closeAIExclusionSettings();
     alert('✅ Настройки сохранены! Маршруты будут исключены из следующего анализа.');
 }
+
+// ============================================================
+// === НОВОЕ: РАСШИРЕННЫЙ АНАЛИЗ МАРШРУТА ===
+// ============================================================
+
+function populateRouteAnalysisSelect() {
+    var select = document.getElementById('routeAnalysisSelect');
+    if (!select) return;
+    
+    // Очищаем существующие опции кроме первой
+    select.innerHTML = '<option value="">-- Выберите маршрут --</option>';
+    
+    // Добавляем обычные маршруты
+    var routeAccordions = document.querySelectorAll('.route-accordion:not(.connected-accordion)');
+    routeAccordions.forEach(function(acc) {
+        var headerSummary = acc.querySelector('[data-route-header]');
+        if (headerSummary) {
+            var routeName = headerSummary.getAttribute('data-route-header');
+            var option = document.createElement('option');
+            option.value = routeName;
+            option.textContent = routeName;
+            select.appendChild(option);
+        }
+    });
+    
+    // Добавляем соединённые маршруты
+    var connectedAccordions = document.querySelectorAll('.route-accordion.connected-accordion');
+    connectedAccordions.forEach(function(acc) {
+        var connectedId = acc.getAttribute('data-connected-id');
+        var headerLeft = acc.querySelector('.route-header span:first-child');
+        if (headerLeft) {
+            var displayName = headerLeft.textContent.replace('🔗 ', '').split(' (')[0].trim();
+            var option = document.createElement('option');
+            option.value = 'connected_' + connectedId;
+            option.textContent = '🔗 ' + displayName;
+            select.appendChild(option);
+        }
+    });
+}
+
+function runRouteDetailedAnalysis() {
+    var select = document.getElementById('routeAnalysisSelect');
+    var statusEl = document.getElementById('routeAnalysisStatus');
+    var resultEl = document.getElementById('routeAnalysisResult');
+    var contentEl = document.getElementById('routeAnalysisContent');
+    var btnEl = document.getElementById('btnRouteAnalyze');
+    
+    if (!select || !select.value) {
+        alert('Пожалуйста, выберите маршрут для анализа');
+        return;
+    }
+    
+    btnEl.disabled = true;
+    statusEl.textContent = '⏳ Анализирую данные за год...';
+    resultEl.style.display = 'block';
+    contentEl.innerHTML = '<p style="text-align:center; color:#888;">Пожалуйста, подождите...</p>';
+    
+    try {
+        var routeName = select.value;
+        var analysis = generateRouteDetailedAnalysis(routeName);
+        contentEl.innerHTML = analysis;
+        statusEl.textContent = '✅ Анализ завершён';
+    } catch (error) {
+        console.error('Ошибка анализа маршрута:', error);
+        contentEl.innerHTML = '<p style="color:#e74c3c;">❌ Ошибка при анализе: ' + error.message + '</p>';
+        statusEl.textContent = '❌ Ошибка';
+    }
+    
+    btnEl.disabled = false;
+}
+
+function generateRouteDetailedAnalysis(routeName) {
+    var isConnected = routeName.indexOf('connected_') === 0;
+    var routeAccordion = null;
+    
+    if (isConnected) {
+        var connectedId = routeName.replace('connected_', '');
+        routeAccordion = document.querySelector('.route-accordion.connected-accordion[data-connected-id="' + connectedId + '"]');
+    } else {
+        routeAccordion = document.querySelector('[data-route-header="' + routeName + '"]');
+        if (routeAccordion) routeAccordion = routeAccordion.closest('.route-accordion');
+    }
+    
+    if (!routeAccordion) {
+        return '<p style="color:#e74c3c;">❌ Маршрут не найден</p>';
+    }
+    
+    var content = routeAccordion.querySelector('.route-content');
+    if (!content) {
+        return '<p style="color:#e74c3c;">❌ Данные маршрута недоступны</p>';
+    }
+    
+    var rows = content.querySelectorAll('tbody tr:not(.week-separator):not(.client-detail):not(.group-child)');
+    
+    // Собираем данные за год
+    var yearData = {
+        totalRevenue: 0,
+        totalCost: 0,
+        totalProfit: 0,
+        totalTrips: 0,
+        totalClients: 0,
+        totalKm: 0,
+        monthlyData: {},
+        weeklyData: {},
+        dailyData: {},
+        uniqueClients: new Set(),
+        exclusiveClients: new Set()
+    };
+    
+    var now = new Date();
+    var currentYear = now.getFullYear();
+    
+    rows.forEach(function(row) {
+        var dateKey = row.getAttribute('data-date-key') || '';
+        if (!dateKey) return;
+        
+        var d = new Date(dateKey);
+        if (d.getFullYear() !== currentYear) return;
+        
+        var sum = parseFloat(row.getAttribute('data-original-sum')) || 0;
+        var revenue = sum * 100 / 122;
+        var cost = parseFloat(row.getAttribute('data-total-cost')) || 0;
+        var profit = parseFloat(row.getAttribute('data-dohod')) || 0;
+        var clientsCount = parseInt(row.getAttribute('data-clients-count')) || 0;
+        var clients = row.getAttribute('data-clients') || '';
+        
+        yearData.totalRevenue += revenue;
+        yearData.totalCost += cost;
+        yearData.totalProfit += profit;
+        yearData.totalTrips++;
+        yearData.totalClients += clientsCount;
+        
+        // Собираем уникальных клиентов
+        if (clients) {
+            clients.split('|').forEach(function(client) {
+                yearData.uniqueClients.add(client.trim());
+            });
+        }
+        
+        // Месячная статистика
+        var monthKey = d.getFullYear() + '-' + (d.getMonth() + 1);
+        if (!yearData.monthlyData[monthKey]) {
+            yearData.monthlyData[monthKey] = { revenue: 0, cost: 0, profit: 0, trips: 0, clients: 0 };
+        }
+        yearData.monthlyData[monthKey].revenue += revenue;
+        yearData.monthlyData[monthKey].cost += cost;
+        yearData.monthlyData[monthKey].profit += profit;
+        yearData.monthlyData[monthKey].trips++;
+        yearData.monthlyData[monthKey].clients += clientsCount;
+        
+        // Недельная статистика
+        var weekNum = getWeekNumber(d);
+        var weekKey = d.getFullYear() + '-W' + weekNum;
+        if (!yearData.weeklyData[weekKey]) {
+            yearData.weeklyData[weekKey] = { revenue: 0, cost: 0, profit: 0, trips: 0, clients: 0 };
+        }
+        yearData.weeklyData[weekKey].revenue += revenue;
+        yearData.weeklyData[weekKey].cost += cost;
+        yearData.weeklyData[weekKey].profit += profit;
+        yearData.weeklyData[weekKey].trips++;
+        yearData.weeklyData[weekKey].clients += clientsCount;
+    });
+    
+    // Рассчитываем средние показатели
+    var avgRevenuePerTrip = yearData.totalTrips > 0 ? yearData.totalRevenue / yearData.totalTrips : 0;
+    var avgProfitPerTrip = yearData.totalTrips > 0 ? yearData.totalProfit / yearData.totalTrips : 0;
+    var avgClientsPerTrip = yearData.totalTrips > 0 ? yearData.totalClients / yearData.totalTrips : 0;
+    var avgCostPerKm = yearData.totalKm > 0 ? yearData.totalCost / yearData.totalKm : 0;
+    
+    // Формируем HTML отчёт
+    var html = '<div style="font-size: 10pt; line-height: 1.6;">';
+    
+    // Заголовок
+    html += '<h3 style="color:#2c3e50; margin-top:0; border-bottom: 2px solid #f5576c; padding-bottom: 10px;">📊 Детальный анализ маршрута: ' + routeName + '</h3>';
+    html += '<p style="color:#7f8c8d; font-size: 9pt;">Период анализа: ' + currentYear + ' год</p>';
+    
+    // Общая статистика
+    html += '<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;">';
+    html += '<h4 style="margin: 0 0 10px 0;">📈 Общая статистика за год</h4>';
+    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">';
+    html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Оборот</div><div style="font-size: 14pt; font-weight: bold;">' + fmt(yearData.totalRevenue) + ' ₽</div></div>';
+    html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Затраты</div><div style="font-size: 14pt; font-weight: bold;">' + fmt(yearData.totalCost) + ' ₽</div></div>';
+    html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Прибыль</div><div style="font-size: 14pt; font-weight: bold;">' + fmt(yearData.totalProfit) + ' ₽</div></div>';
+    html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Рейсов</div><div style="font-size: 14pt; font-weight: bold;">' + yearData.totalTrips + '</div></div>';
+    html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Клиентов</div><div style="font-size: 14pt; font-weight: bold;">' + yearData.totalClients + '</div></div>';
+    html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Уникальных</div><div style="font-size: 14pt; font-weight: bold;">' + yearData.uniqueClients.size + '</div></div>';
+    html += '</div></div>';
+    
+    // Средние показатели
+    html += '<div style="background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #f5576c;">';
+    html += '<h4 style="margin: 0 0 10px 0; color: #2c3e50;">📊 Средние показатели</h4>';
+    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">';
+    html += '<div><strong>Средний оборот за рейс:</strong> ' + fmt(avgRevenuePerTrip) + ' ₽</div>';
+    html += '<div><strong>Средняя прибыль за рейс:</strong> ' + fmt(avgProfitPerTrip) + ' ₽</div>';
+    html += '<div><strong>Среднее кол-во клиентов за рейс:</strong> ' + avgClientsPerTrip.toFixed(1) + '</div>';
+    if (yearData.totalKm > 0) {
+        html += '<div><strong>Средняя стоимость км:</strong> ' + avgCostPerKm.toFixed(2) + ' ₽</div>';
+    }
+    html += '</div></div>';
+    
+    // Месячная динамика
+    html += '<div style="background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #667eea;">';
+    html += '<h4 style="margin: 0 0 10px 0; color: #2c3e50;">📅 Месячная динамика</h4>';
+    html += '<table style="width: 100%; border-collapse: collapse; font-size: 9pt;">';
+    html += '<tr style="background: #f8f9fa;"><th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Месяц</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Оборот</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Прибыль</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Рейсов</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Клиентов</th></tr>';
+    
+    var monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    var sortedMonths = Object.keys(yearData.monthlyData).sort();
+    
+    sortedMonths.forEach(function(monthKey) {
+        var monthData = yearData.monthlyData[monthKey];
+        var monthNum = parseInt(monthKey.split('-')[1]) - 1;
+        var monthName = monthNames[monthNum];
+        
+        html += '<tr>';
+        html += '<td style="padding: 8px; border: 1px solid #ddd;">' + monthName + '</td>';
+        html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right; color: #3498db;">' + fmt(monthData.revenue) + ' ₽</td>';
+        html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right; color: ' + (monthData.profit >= 0 ? '#27ae60' : '#e74c3c') + ';">' + fmt(monthData.profit) + ' ₽</td>';
+        html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right;">' + monthData.trips + '</td>';
+        html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right;">' + monthData.clients + '</td>';
+        html += '</tr>';
+    });
+    
+    html += '</table></div>';
+    
+    // Рекомендации
+    html += '<div style="background: #fffbf0; padding: 15px; border-radius: 8px; border-left: 4px solid #f39c12;">';
+    html += '<h4 style="margin: 0 0 10px 0; color: #856404;">💡 Рекомендации</h4>';
+    html += '<ul style="margin-left: 20px; font-size: 9pt;">';
+    
+    if (yearData.totalProfit < 0) {
+        html += '<li><strong>Критично:</strong> Маршрут работает в убыток. Необходимо срочно пересмотреть ценообразование и затраты.</li>';
+    }
+    
+    if (avgClientsPerTrip < 5) {
+        html += '<li><strong>Загрузка:</strong> Низкая загрузка рейсов (' + avgClientsPerTrip.toFixed(1) + ' клиентов/рейс). Рассмотрите возможность консолидации заказов.</li>';
+    }
+    
+    var avgMargin = yearData.totalRevenue > 0 ? (yearData.totalProfit / yearData.totalRevenue * 100) : 0;
+    if (avgMargin < 10) {
+        html += '<li><strong>Маржинальность:</strong> Низкая маржа (' + avgMargin.toFixed(1) + '%). Оптимизируйте затраты или пересмотрите ценообразование.</li>';
+    } else if (avgMargin > 25) {
+        html += '<li><strong>Отлично:</strong> Высокая маржинальность (' + avgMargin.toFixed(1) + '%). Маршрут работает эффективно.</li>';
+    }
+    
+    html += '</ul></div>';
+    
+    html += '</div>';
+    
+    return html;
+}
+
+// Инициализация выпадающего списка при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        populateRouteAnalysisSelect();
+    }, 1000);
+});
 
 </script>
 </body>
