@@ -3581,7 +3581,7 @@ function generateAIAnalysis(routesData, curMonthStr) {
         });
         
         html += '<div style="background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6; margin-bottom: 15px;">';
-        html += '<h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 12pt; border-bottom: 2px solid #667eea; padding-bottom: 8px;">📅 Динамика: Три недели</h4>';
+        html += '<h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 12pt; border-bottom: 2px solid #667eea; padding-bottom: 8px;">📅 Динамика: Три недели <span style="font-size: 9pt; color: #7f8c8d; font-weight: normal;">(данные без НДС)</span></h4>';
         
         // Легенда градаций
         html += '<div style="display: flex; gap: 15px; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; flex-wrap: wrap;">';
@@ -4239,6 +4239,7 @@ function generateRouteDetailedAnalysis(routeName) {
     // Собираем данные за год
     var yearData = {
         totalRevenue: 0,
+        totalRevenueWithNDS: 0,
         totalCost: 0,
         totalProfit: 0,
         totalTrips: 0,
@@ -4248,7 +4249,10 @@ function generateRouteDetailedAnalysis(routeName) {
         weeklyData: {},
         dailyData: {},
         uniqueClients: new Set(),
-        exclusiveClients: new Set()
+        clientFrequency: {},
+        exclusiveClients: new Set(),
+        newClients: new Set(),
+        lostClients: new Set()
     };
     
     var now = new Date();
@@ -4269,40 +4273,57 @@ function generateRouteDetailedAnalysis(routeName) {
         var clients = row.getAttribute('data-clients') || '';
         
         yearData.totalRevenue += revenue;
+        yearData.totalRevenueWithNDS += sum;
         yearData.totalCost += cost;
         yearData.totalProfit += profit;
         yearData.totalTrips++;
         yearData.totalClients += clientsCount;
         
-        // Собираем уникальных клиентов
+        // Собираем уникальных клиентов и их частоту
         if (clients) {
             clients.split('|').forEach(function(client) {
-                yearData.uniqueClients.add(client.trim());
+                var clientName = client.trim();
+                if (clientName) {
+                    yearData.uniqueClients.add(clientName);
+                    yearData.clientFrequency[clientName] = (yearData.clientFrequency[clientName] || 0) + 1;
+                }
             });
         }
         
         // Месячная статистика
         var monthKey = d.getFullYear() + '-' + (d.getMonth() + 1);
         if (!yearData.monthlyData[monthKey]) {
-            yearData.monthlyData[monthKey] = { revenue: 0, cost: 0, profit: 0, trips: 0, clients: 0 };
+            yearData.monthlyData[monthKey] = { revenue: 0, revenueWithNDS: 0, cost: 0, profit: 0, trips: 0, clients: 0, uniqueClients: new Set() };
         }
         yearData.monthlyData[monthKey].revenue += revenue;
+        yearData.monthlyData[monthKey].revenueWithNDS += sum;
         yearData.monthlyData[monthKey].cost += cost;
         yearData.monthlyData[monthKey].profit += profit;
         yearData.monthlyData[monthKey].trips++;
         yearData.monthlyData[monthKey].clients += clientsCount;
+        if (clients) {
+            clients.split('|').forEach(function(client) {
+                if (client.trim()) yearData.monthlyData[monthKey].uniqueClients.add(client.trim());
+            });
+        }
         
         // Недельная статистика
         var weekNum = getWeekNumber(d);
         var weekKey = d.getFullYear() + '-W' + weekNum;
         if (!yearData.weeklyData[weekKey]) {
-            yearData.weeklyData[weekKey] = { revenue: 0, cost: 0, profit: 0, trips: 0, clients: 0 };
+            yearData.weeklyData[weekKey] = { revenue: 0, revenueWithNDS: 0, cost: 0, profit: 0, trips: 0, clients: 0, uniqueClients: new Set() };
         }
         yearData.weeklyData[weekKey].revenue += revenue;
+        yearData.weeklyData[weekKey].revenueWithNDS += sum;
         yearData.weeklyData[weekKey].cost += cost;
         yearData.weeklyData[weekKey].profit += profit;
         yearData.weeklyData[weekKey].trips++;
         yearData.weeklyData[weekKey].clients += clientsCount;
+        if (clients) {
+            clients.split('|').forEach(function(client) {
+                if (client.trim()) yearData.weeklyData[weekKey].uniqueClients.add(client.trim());
+            });
+        }
     });
     
     // Рассчитываем средние показатели
@@ -4310,6 +4331,26 @@ function generateRouteDetailedAnalysis(routeName) {
     var avgProfitPerTrip = yearData.totalTrips > 0 ? yearData.totalProfit / yearData.totalTrips : 0;
     var avgClientsPerTrip = yearData.totalTrips > 0 ? yearData.totalClients / yearData.totalTrips : 0;
     var avgCostPerKm = yearData.totalKm > 0 ? yearData.totalCost / yearData.totalKm : 0;
+    
+    // Топ клиенты по частоте
+    var topClients = Object.entries(yearData.clientFrequency)
+        .sort(function(a, b) { return b[1] - a[1]; })
+        .slice(0, 10);
+    
+    // Расчёт динамики по месяцам
+    var sortedMonths = Object.keys(yearData.monthlyData).sort();
+    var monthlyChanges = [];
+    for (var i = 1; i < sortedMonths.length; i++) {
+        var prevMonth = yearData.monthlyData[sortedMonths[i-1]];
+        var currMonth = yearData.monthlyData[sortedMonths[i]];
+        var revenueChange = prevMonth.revenue > 0 ? ((currMonth.revenue - prevMonth.revenue) / prevMonth.revenue * 100) : 0;
+        var profitChange = prevMonth.profit !== 0 ? ((currMonth.profit - prevMonth.profit) / Math.abs(prevMonth.profit) * 100) : 0;
+        monthlyChanges.push({
+            month: sortedMonths[i],
+            revenueChange: revenueChange,
+            profitChange: profitChange
+        });
+    }
     
     // Формируем HTML отчёт
     var html = '<div style="font-size: 10pt; line-height: 1.6;">';
@@ -4322,54 +4363,98 @@ function generateRouteDetailedAnalysis(routeName) {
     html += '<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;">';
     html += '<h4 style="margin: 0 0 10px 0;">📈 Общая статистика за год</h4>';
     html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">';
-    html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Оборот</div><div style="font-size: 14pt; font-weight: bold;">' + fmt(yearData.totalRevenue) + ' ₽</div></div>';
+    html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Оборот (без НДС)</div><div style="font-size: 14pt; font-weight: bold;">' + fmt(yearData.totalRevenue) + ' ₽</div></div>';
+    html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Оборот (с НДС)</div><div style="font-size: 14pt; font-weight: bold;">' + fmt(yearData.totalRevenueWithNDS) + ' ₽</div></div>';
     html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Затраты</div><div style="font-size: 14pt; font-weight: bold;">' + fmt(yearData.totalCost) + ' ₽</div></div>';
     html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Прибыль</div><div style="font-size: 14pt; font-weight: bold;">' + fmt(yearData.totalProfit) + ' ₽</div></div>';
     html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Рейсов</div><div style="font-size: 14pt; font-weight: bold;">' + yearData.totalTrips + '</div></div>';
-    html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Клиентов</div><div style="font-size: 14pt; font-weight: bold;">' + yearData.totalClients + '</div></div>';
-    html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Уникальных</div><div style="font-size: 14pt; font-weight: bold;">' + yearData.uniqueClients.size + '</div></div>';
+    html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Всего клиентов</div><div style="font-size: 14pt; font-weight: bold;">' + yearData.totalClients + '</div></div>';
+    html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Уникальных клиентов</div><div style="font-size: 14pt; font-weight: bold;">' + yearData.uniqueClients.size + '</div></div>';
+    html += '<div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 5px;"><div style="font-size: 9pt; opacity: 0.9;">Маржа</div><div style="font-size: 14pt; font-weight: bold;">' + (yearData.totalRevenue > 0 ? (yearData.totalProfit / yearData.totalRevenue * 100).toFixed(1) : 0) + '%</div></div>';
     html += '</div></div>';
     
     // Средние показатели
     html += '<div style="background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #f5576c;">';
     html += '<h4 style="margin: 0 0 10px 0; color: #2c3e50;">📊 Средние показатели</h4>';
     html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">';
-    html += '<div><strong>Средний оборот за рейс:</strong> ' + fmt(avgRevenuePerTrip) + ' ₽</div>';
+    html += '<div><strong>Средний оборот за рейс (без НДС):</strong> ' + fmt(avgRevenuePerTrip) + ' ₽</div>';
+    html += '<div><strong>Средний оборот за рейс (с НДС):</strong> ' + fmt(yearData.totalTrips > 0 ? yearData.totalRevenueWithNDS / yearData.totalTrips : 0) + ' ₽</div>';
     html += '<div><strong>Средняя прибыль за рейс:</strong> ' + fmt(avgProfitPerTrip) + ' ₽</div>';
     html += '<div><strong>Среднее кол-во клиентов за рейс:</strong> ' + avgClientsPerTrip.toFixed(1) + '</div>';
+    html += '<div><strong>Среднее кол-во уникальных клиентов в месяц:</strong> ' + (sortedMonths.length > 0 ? (yearData.uniqueClients.size / sortedMonths.length).toFixed(1) : 0) + '</div>';
     if (yearData.totalKm > 0) {
         html += '<div><strong>Средняя стоимость км:</strong> ' + avgCostPerKm.toFixed(2) + ' ₽</div>';
     }
     html += '</div></div>';
     
-    // Месячная динамика
+    // Топ клиентов
+    if (topClients.length > 0) {
+        html += '<div style="background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #9b59b6;">';
+        html += '<h4 style="margin: 0 0 10px 0; color: #2c3e50;">🏆 Топ-10 клиентов по частоте</h4>';
+        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">';
+        topClients.forEach(function(client, idx) {
+            var clientName = client[0];
+            var frequency = client[1];
+            var shortName = clientName.length > 40 ? clientName.substring(0, 40) + '...' : clientName;
+            html += '<div style="background: #f8f9fa; padding: 8px; border-radius: 4px; border-left: 3px solid #9b59b6;">';
+            html += '<div style="font-size: 8pt; color: #7f8c8d;">#' + (idx + 1) + '</div>';
+            html += '<div style="font-size: 9pt; font-weight: 600; color: #2c3e50;" title="' + clientName.replace(/"/g, '&quot;') + '">' + shortName + '</div>';
+            html += '<div style="font-size: 9pt; color: #9b59b6;">' + frequency + ' визитов</div>';
+            html += '</div>';
+        });
+        html += '</div></div>';
+    }
+    
+    // Месячная динамика с сравнением
     html += '<div style="background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #667eea;">';
-    html += '<h4 style="margin: 0 0 10px 0; color: #2c3e50;">📅 Месячная динамика</h4>';
-    html += '<table style="width: 100%; border-collapse: collapse; font-size: 9pt;">';
+    html += '<h4 style="margin: 0 0 10px 0; color: #2c3e50;">📅 Месячная динамика (сравнение)</h4>';
+    html += '<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 9pt; min-width: 800px;">';
     html += '<tr style="background: #f8f9fa;"><th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Месяц</th>';
-    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Оборот</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Оборот (без НДС)</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Оборот (с НДС)</th>';
     html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Прибыль</th>';
     html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Рейсов</th>';
-    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Клиентов</th></tr>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Клиентов</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Уник. клиентов</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Изм. оборота</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Изм. прибыли</th></tr>';
     
     var monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
     var sortedMonths = Object.keys(yearData.monthlyData).sort();
     
-    sortedMonths.forEach(function(monthKey) {
+    sortedMonths.forEach(function(monthKey, idx) {
         var monthData = yearData.monthlyData[monthKey];
         var monthNum = parseInt(monthKey.split('-')[1]) - 1;
         var monthName = monthNames[monthNum];
         
+        // Расчёт изменений
+        var revenueChange = '';
+        var profitChange = '';
+        if (idx > 0) {
+            var prevMonth = yearData.monthlyData[sortedMonths[idx-1]];
+            var revChange = prevMonth.revenue > 0 ? ((monthData.revenue - prevMonth.revenue) / prevMonth.revenue * 100) : 0;
+            var profChange = prevMonth.profit !== 0 ? ((monthData.profit - prevMonth.profit) / Math.abs(prevMonth.profit) * 100) : 0;
+            revenueChange = '<span style="color: ' + (revChange >= 0 ? '#27ae60' : '#e74c3c') + ';">' + (revChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(revChange).toFixed(1) + '%</span>';
+            profitChange = '<span style="color: ' + (profChange >= 0 ? '#27ae60' : '#e74c3c') + ';">' + (profChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(profChange).toFixed(1) + '%</span>';
+        } else {
+            revenueChange = '<span style="color: #95a5a6;">—</span>';
+            profitChange = '<span style="color: #95a5a6;">—</span>';
+        }
+        
         html += '<tr>';
-        html += '<td style="padding: 8px; border: 1px solid #ddd;">' + monthName + '</td>';
+        html += '<td style="padding: 8px; border: 1px solid #ddd; font-weight: 600;">' + monthName + '</td>';
         html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right; color: #3498db;">' + fmt(monthData.revenue) + ' ₽</td>';
-        html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right; color: ' + (monthData.profit >= 0 ? '#27ae60' : '#e74c3c') + ';">' + fmt(monthData.profit) + ' ₽</td>';
+        html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right; color: #2980b9;">' + fmt(monthData.revenueWithNDS) + ' ₽</td>';
+        html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right; color: ' + (monthData.profit >= 0 ? '#27ae60' : '#e74c3c') + '; font-weight: 600;">' + fmt(monthData.profit) + ' ₽</td>';
         html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right;">' + monthData.trips + '</td>';
         html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right;">' + monthData.clients + '</td>';
+        html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right; color: #9b59b6;">' + (monthData.uniqueClients ? monthData.uniqueClients.size : 0) + '</td>';
+        html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right;">' + revenueChange + '</td>';
+        html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right;">' + profitChange + '</td>';
         html += '</tr>';
     });
     
-    html += '</table></div>';
+    html += '</table></div></div>';
     
     // Рекомендации
     html += '<div style="background: #fffbf0; padding: 15px; border-radius: 8px; border-left: 4px solid #f39c12;">';
