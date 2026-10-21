@@ -1726,6 +1726,7 @@ function refreshData() {
         // Перерендериваем аккордеоны соединённых маршрутов
         setTimeout(function() { 
             renderConnectedAccordions();
+            populateRouteAnalysisSelect();
             window.scrollTo(0, scrollPos);
         }, 200);
     }).catch(function(err) {
@@ -3706,10 +3707,12 @@ function generateAIAnalysis(routesData, curMonthStr) {
             html += '<div style="font-size: 9pt; color: ' + currentWeekArrowColor + '; margin-top: 2px;">' + fmt(route.currentWeekProfit) + ' ₽' + currentWeekArrow + '</div>';
             html += '</div>';
             
-            html += '</div>';
+            html += '</div>'; // Закрываем grid трёх недель
+            html += '</div>'; // Закрываем карточку маршрута
         });
         
-        html += '</div></div>';
+        html += '</div>'; // Закрываем grid маршрутов
+        html += '</div>'; // Закрываем внешний контейнер
     }
     
     html += '</div>';
