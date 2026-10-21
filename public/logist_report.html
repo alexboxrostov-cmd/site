@@ -4182,7 +4182,7 @@ function populateRouteAnalysisSelect() {
     });
 }
 
-function runRouteDetailedAnalysis() {
+async function runRouteDetailedAnalysis() {
     var select = document.getElementById('routeAnalysisSelect');
     var statusEl = document.getElementById('routeAnalysisStatus');
     var resultEl = document.getElementById('routeAnalysisResult');
@@ -4195,13 +4195,19 @@ function runRouteDetailedAnalysis() {
     }
     
     btnEl.disabled = true;
-    statusEl.textContent = '⏳ Анализирую данные за год...';
+    statusEl.textContent = '⏳ Загружаю данные за прошлый год...';
     resultEl.style.display = 'block';
-    contentEl.innerHTML = '<p style="text-align:center; color:#888;">Пожалуйста, подождите...</p>';
+    contentEl.innerHTML = '<p style="text-align:center; color:#888;">Загрузка данных за текущий и прошлый год...</p>';
     
     try {
         var routeName = select.value;
-        var analysis = generateRouteDetailedAnalysis(routeName);
+        
+        // Загружаем данные за прошлый год
+        statusEl.textContent = '⏳ Загружаю данные за прошлый год...';
+        var lastYearData = await loadLastYearData();
+        
+        statusEl.textContent = '⏳ Анализирую данные...';
+        var analysis = await generateRouteDetailedAnalysis(routeName, lastYearData);
         contentEl.innerHTML = analysis;
         statusEl.textContent = '✅ Анализ завершён';
     } catch (error) {
@@ -4213,7 +4219,121 @@ function runRouteDetailedAnalysis() {
     btnEl.disabled = false;
 }
 
-function generateRouteDetailedAnalysis(routeName) {
+async function loadLastYearData() {
+    var now = new Date();
+    var lastYear = now.getFullYear() - 1;
+    var lastYearData = {};
+    
+    // Загружаем данные за все месяцы прошлого года
+    for (var month = 1; month <= 12; month++) {
+        var fileName = 'data_' + currentBase + '_' + lastYear + padZero(month) + '.js';
+        var urls = [
+            'data/' + fileName + '?_=' + Date.now(),
+            fileName + '?_=' + Date.now()
+        ];
+        
+        try {
+            var monthData = null;
+            for (var i = 0; i < urls.length; i++) {
+                var data = await loadScriptData(urls[i]);
+                if (data && data.routes) {
+                    monthData = data;
+                    break;
+                }
+            }
+            
+            if (monthData) {
+                lastYearData[lastYear + '-' + month] = monthData;
+            }
+        } catch (e) {
+            console.warn('Не удалось загрузить данные за ' + lastYear + '-' + month, e);
+        }
+    }
+    
+    return lastYearData;
+}
+
+// Вспомогательная функция для извлечения данных маршрута из месячных файлов
+function extractRouteDataFromMonths(monthsData, targetRouteName, year) {
+    var result = {
+        totalRevenue: 0,
+        totalRevenueWithNDS: 0,
+        totalCost: 0,
+        totalProfit: 0,
+        totalTrips: 0,
+        totalClients: 0,
+        totalKm: 0,
+        monthlyData: {},
+        weeklyData: {},
+        uniqueClients: new Set(),
+        clientFrequency: {},
+        clientSums: {},
+        workingDays: new Set()
+    };
+    
+    Object.keys(monthsData).forEach(function(monthKey) {
+        var monthData = monthsData[monthKey];
+        if (!monthData || !monthData.routes) return;
+        
+        // Ищем нужный маршрут
+        var route = monthData.routes.find(function(r) { 
+            return r.Маршрут === targetRouteName; 
+        });
+        
+        if (!route || !route.Строки) return;
+        
+        var monthNum = parseInt(monthKey.split('-')[1]);
+        var monthDataKey = year + '-' + monthNum;
+        
+        if (!result.monthlyData[monthDataKey]) {
+            result.monthlyData[monthDataKey] = { 
+                revenue: 0, revenueWithNDS: 0, cost: 0, profit: 0, 
+                trips: 0, clients: 0, uniqueClients: new Set(), workingDays: new Set() 
+            };
+        }
+        
+        route.Строки.forEach(function(row) {
+            var dateKey = row.ДатаВремя ? row.ДатаВремя.split(' ')[0] : '';
+            if (!dateKey) return;
+            
+            var d = new Date(dateKey);
+            var sum = row.СуммаМаршрута || 0;
+            var revenue = sum * 100 / 122;
+            var cost = 0; // Затраты рассчитываются отдельно
+            var profit = 0;
+            var clientsCount = row.КолКлиентов || 0;
+            
+            result.totalRevenue += revenue;
+            result.totalRevenueWithNDS += sum;
+            result.totalTrips++;
+            result.totalClients += clientsCount;
+            result.workingDays.add(dateKey);
+            
+            result.monthlyData[monthDataKey].revenue += revenue;
+            result.monthlyData[monthDataKey].revenueWithNDS += sum;
+            result.monthlyData[monthDataKey].trips++;
+            result.monthlyData[monthDataKey].clients += clientsCount;
+            result.monthlyData[monthDataKey].workingDays.add(dateKey);
+            
+            // Клиенты
+            if (row.Клиенты && Array.isArray(row.Клиенты)) {
+                row.Клиенты.forEach(function(client) {
+                    var clientName = client.Наименование || '';
+                    if (clientName) {
+                        result.uniqueClients.add(clientName);
+                        result.clientFrequency[clientName] = (result.clientFrequency[clientName] || 0) + 1;
+                        result.clientSums[clientName] = (result.clientSums[clientName] || 0) + revenue;
+                        result.monthlyData[monthDataKey].uniqueClients.add(clientName);
+                    }
+                });
+            }
+        });
+    });
+    
+    return result;
+}
+
+async function generateRouteDetailedAnalysis(routeName, lastYearData) {
     var isConnected = routeName.indexOf('connected_') === 0;
     var routeAccordion = null;
     
@@ -4242,6 +4362,41 @@ function generateRouteDetailedAnalysis(routeName) {
     var metricBoxStyle = 'background: #f8f9fa; padding: 12px; border-radius: 6px; display: flex; flex-direction: column;';
     var metricLabelStyle = 'font-size: 9pt; color: #7f8c8d; text-transform: uppercase; margin-bottom: 4px;';
     var metricValueStyle = 'font-size: 14pt; font-weight: 700; color: #2c3e50;';
+    
+    var now = new Date();
+    var currentYear = now.getFullYear();
+    var lastYear = currentYear - 1;
+    
+    // Загружаем данные за все месяцы текущего года
+    var currentYearData = {};
+    for (var month = 1; month <= 12; month++) {
+        var fileName = 'data_' + currentBase + '_' + currentYear + padZero(month) + '.js';
+        var urls = [
+            'data/' + fileName + '?_=' + Date.now(),
+            fileName + '?_=' + Date.now()
+        ];
+        
+        try {
+            for (var i = 0; i < urls.length; i++) {
+                var data = await loadScriptData(urls[i]);
+                if (data && data.routes) {
+                    currentYearData[currentYear + '-' + month] = data;
+                    break;
+                }
+            }
+        } catch (e) {
+            // Игнорируем ошибки загрузки
+        }
+    }
+    
+    // Извлекаем данные по маршруту за текущий год
+    var currentYearRouteData = extractRouteDataFromMonths(currentYearData, routeName, currentYear);
+    
+    // Извлекаем данные по маршруту за прошлый год
+    var lastYearRouteData = extractRouteDataFromMonths(lastYearData || {}, routeName, lastYear);
+    
+    // Используем данные из currentYearRouteData как основные
+    var allData = currentYearRouteData;
     
     // Собираем данные по всем маршрутам для бенчмарков
     var allRoutesData = [];
@@ -4304,99 +4459,13 @@ function generateRouteDetailedAnalysis(routeName) {
     // Доля в общих продажах
     var marketShare = totalCompanyRevenue > 0 ? (allData.totalRevenue / totalCompanyRevenue * 100) : 0;
     
-    // Собираем данные по текущему маршруту
-    var allData = {
-        totalRevenue: 0,
-        totalRevenueWithNDS: 0,
-        totalCost: 0,
-        totalProfit: 0,
-        totalTrips: 0,
-        totalClients: 0,
-        totalKm: 0,
-        monthlyData: {},
-        weeklyData: {},
-        uniqueClients: new Set(),
-        clientFrequency: {},
-        clientSums: {},
-        workingDays: new Set()
-    };
-    
-    var now = new Date();
-    var currentYear = now.getFullYear();
-    
-    rows.forEach(function(row) {
-        var dateKey = row.getAttribute('data-date-key') || '';
-        if (!dateKey) return;
-        
-        var d = new Date(dateKey);
-        if (d.getFullYear() !== currentYear) return;
-        
-        var sum = parseFloat(row.getAttribute('data-original-sum')) || 0;
-        var revenue = sum * 100 / 122;
-        var cost = parseFloat(row.getAttribute('data-total-cost')) || 0;
-        var profit = parseFloat(row.getAttribute('data-dohod')) || 0;
-        var clientsCount = parseInt(row.getAttribute('data-clients-count')) || 0;
-        var clients = row.getAttribute('data-clients') || '';
-        
-        allData.totalRevenue += revenue;
-        allData.totalRevenueWithNDS += sum;
-        allData.totalCost += cost;
-        allData.totalProfit += profit;
-        allData.totalTrips++;
-        allData.totalClients += clientsCount;
-        allData.workingDays.add(dateKey);
-        
-        // Клиенты
-        if (clients) {
-            clients.split('|').forEach(function(client) {
-                var clientName = client.trim();
-                if (clientName) {
-                    allData.uniqueClients.add(clientName);
-                    allData.clientFrequency[clientName] = (allData.clientFrequency[clientName] || 0) + 1;
-                    allData.clientSums[clientName] = (allData.clientSums[clientName] || 0) + revenue;
-                }
-            });
-        }
-        
-        // Месячная статистика
-        var monthKey = d.getFullYear() + '-' + (d.getMonth() + 1);
-        if (!allData.monthlyData[monthKey]) {
-            allData.monthlyData[monthKey] = { revenue: 0, revenueWithNDS: 0, cost: 0, profit: 0, trips: 0, clients: 0, uniqueClients: new Set(), workingDays: new Set() };
-        }
-        allData.monthlyData[monthKey].revenue += revenue;
-        allData.monthlyData[monthKey].revenueWithNDS += sum;
-        allData.monthlyData[monthKey].cost += cost;
-        allData.monthlyData[monthKey].profit += profit;
-        allData.monthlyData[monthKey].trips++;
-        allData.monthlyData[monthKey].clients += clientsCount;
-        allData.monthlyData[monthKey].workingDays.add(dateKey);
-        if (clients) {
-            clients.split('|').forEach(function(client) {
-                if (client.trim()) allData.monthlyData[monthKey].uniqueClients.add(client.trim());
-            });
-        }
-        
-        // Недельная статистика
-        var weekNum = getWeekNumber(d);
-        var weekKey = d.getFullYear() + '-W' + weekNum;
-        if (!allData.weeklyData[weekKey]) {
-            allData.weeklyData[weekKey] = { revenue: 0, revenueWithNDS: 0, cost: 0, profit: 0, trips: 0, clients: 0, uniqueClients: new Set() };
-        }
-        allData.weeklyData[weekKey].revenue += revenue;
-        allData.weeklyData[weekKey].revenueWithNDS += sum;
-        allData.weeklyData[weekKey].cost += cost;
-        allData.weeklyData[weekKey].profit += profit;
-        allData.weeklyData[weekKey].trips++;
-        allData.weeklyData[weekKey].clients += clientsCount;
-        if (clients) {
-            clients.split('|').forEach(function(client) {
-                if (client.trim()) allData.weeklyData[weekKey].uniqueClients.add(client.trim());
-            });
-        }
-    });
-    
-    // Пересчитываем долю в продажах после сбора данных
-    marketShare = totalCompanyRevenue > 0 ? (allData.totalRevenue / totalCompanyRevenue * 100) : 0;
+    // YoY сравнения
+    var yoyRevenueChange = lastYearRouteData.totalRevenue > 0 ? 
+        ((allData.totalRevenue - lastYearRouteData.totalRevenue) / lastYearRouteData.totalRevenue * 100) : 0;
+    var yoyProfitChange = lastYearRouteData.totalProfit > 0 ? 
+        ((allData.totalProfit - lastYearRouteData.totalProfit) / lastYearRouteData.totalProfit * 100) : 0;
+    var yoyClientsChange = lastYearRouteData.uniqueClients.size > 0 ? 
+        ((allData.uniqueClients.size - lastYearRouteData.uniqueClients.size) / lastYearRouteData.uniqueClients.size * 100) : 0;
     
     // Расчёты
     var sortedMonths = Object.keys(allData.monthlyData).sort();
@@ -4529,6 +4598,25 @@ function generateRouteDetailedAnalysis(routeName) {
     html += '<div><strong>Прогноз на месяц:</strong> ' + fmt(monthlyForecast) + ' ₽</div>';
     html += '<div><strong>Тренд:</strong> <span style="color: ' + (trendSlope >= 0 ? '#27ae60' : '#e74c3c') + '; font-weight: 600;">' + (trendSlope >= 0 ? '↑ Рост' : '↓ Падение') + ' (' + fmt(Math.abs(trendSlope)) + ' ₽/мес)</span></div>';
     html += '</div></div>';
+    
+    // YoY сравнение с прошлым годом
+    if (lastYearRouteData.totalRevenue > 0) {
+        html += '<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 6px; margin-bottom: 15px;">';
+        html += '<h5 style="margin: 0 0 10px 0; font-size: 10pt;">📊 Сравнение с прошлым годом (YoY)</h5>';
+        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 9pt;">';
+        html += '<div><strong>Оборот ' + lastYear + ':</strong> ' + fmt(lastYearRouteData.totalRevenue) + ' ₽</div>';
+        html += '<div><strong>Оборот ' + currentYear + ':</strong> ' + fmt(allData.totalRevenue) + ' ₽</div>';
+        html += '<div><strong>Изменение оборота:</strong> <span style="color: ' + (yoyRevenueChange >= 0 ? '#2ecc71' : '#ff6b6b') + '; font-weight: 600;">' + (yoyRevenueChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(yoyRevenueChange).toFixed(1) + '%</span></div>';
+        html += '<div><strong>Клиенты ' + lastYear + ':</strong> ' + lastYearRouteData.uniqueClients.size + '</div>';
+        html += '<div><strong>Клиенты ' + currentYear + ':</strong> ' + allData.uniqueClients.size + '</div>';
+        html += '<div><strong>Изменение клиентов:</strong> <span style="color: ' + (yoyClientsChange >= 0 ? '#2ecc71' : '#ff6b6b') + '; font-weight: 600;">' + (yoyClientsChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(yoyClientsChange).toFixed(1) + '%</span></div>';
+        if (lastYearRouteData.totalProfit > 0) {
+            html += '<div><strong>Прибыль ' + lastYear + ':</strong> ' + fmt(lastYearRouteData.totalProfit) + ' ₽</div>';
+            html += '<div><strong>Прибыль ' + currentYear + ':</strong> ' + fmt(allData.totalProfit) + ' ₽</div>';
+            html += '<div><strong>Изменение прибыли:</strong> <span style="color: ' + (yoyProfitChange >= 0 ? '#2ecc71' : '#ff6b6b') + '; font-weight: 600;">' + (yoyProfitChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(yoyProfitChange).toFixed(1) + '%</span></div>';
+        }
+        html += '</div></div>';
+    }
     
     // Месячная динамика
     html += '<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 9pt; min-width: 900px;">';
