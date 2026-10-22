@@ -4268,8 +4268,19 @@ function extractRouteDataFromMonths(monthsData, targetRouteName, year) {
         uniqueClients: new Set(),
         clientFrequency: {},
         clientSums: {},
+        clientMonthlySums: {}, // Для расчёта динамики клиентов
         workingDays: new Set()
     };
+    
+    // Получаем настройки стоимостей для маршрута
+    var routeSettings = getLatestSettings(targetRouteName);
+    var costsByDay = (routeSettings && routeSettings.costs) ? routeSettings.costs : null;
+    var clientCostRate = getClientCost(targetRouteName);
+    
+    // Получаем данные о км из routeCalcResults
+    var routeCalcResults = (routeData[targetRouteName] && routeData[targetRouteName].routeCalcResults) 
+        ? routeData[targetRouteName].routeCalcResults 
+        : {};
     
     Object.keys(monthsData).forEach(function(monthKey) {
         var monthData = monthsData[monthKey];
@@ -4287,7 +4298,7 @@ function extractRouteDataFromMonths(monthsData, targetRouteName, year) {
         
         if (!result.monthlyData[monthDataKey]) {
             result.monthlyData[monthDataKey] = { 
-                revenue: 0, revenueWithNDS: 0, cost: 0, profit: 0, 
+                revenue: 0, revenueWithNDS: 0, cost: 0, profit: 0, km: 0,
                 trips: 0, clients: 0, uniqueClients: new Set(), workingDays: new Set() 
             };
         }
@@ -4299,18 +4310,43 @@ function extractRouteDataFromMonths(monthsData, targetRouteName, year) {
             var d = new Date(dateKey);
             var sum = row.СуммаМаршрута || 0;
             var revenue = sum * 100 / 122;
-            var cost = 0; // Затраты рассчитываются отдельно
-            var profit = 0;
             var clientsCount = row.КолКлиентов || 0;
+            
+            // Рассчитываем затраты на основе настроек
+            var dayKey = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][d.getDay()];
+            var planNumber = 1; // Упрощённо, первая плановая
+            var baseCost = 0;
+            if (costsByDay && costsByDay[dayKey]) {
+                baseCost = getCostForPlan(costsByDay[dayKey], planNumber);
+            }
+            var clientCosts = clientsCount * clientCostRate;
+            var cost = baseCost + clientCosts;
+            
+            // Рассчитываем прибыль
+            var margin = revenue * 0.17;
+            var profit = margin - cost;
+            
+            // Получаем км из routeCalcResults
+            var timeKey = dateKey + '_' + (row.ДатаВремя ? row.ДатаВремя.split(' ')[1].substring(0, 5) : '00:00');
+            var km = 0;
+            if (routeCalcResults[timeKey] && routeCalcResults[timeKey].km) {
+                km = parseFloat(routeCalcResults[timeKey].km) || 0;
+            }
             
             result.totalRevenue += revenue;
             result.totalRevenueWithNDS += sum;
+            result.totalCost += cost;
+            result.totalProfit += profit;
             result.totalTrips++;
             result.totalClients += clientsCount;
+            result.totalKm += km;
             result.workingDays.add(dateKey);
             
             result.monthlyData[monthDataKey].revenue += revenue;
             result.monthlyData[monthDataKey].revenueWithNDS += sum;
+            result.monthlyData[monthDataKey].cost += cost;
+            result.monthlyData[monthDataKey].profit += profit;
+            result.monthlyData[monthDataKey].km += km;
             result.monthlyData[monthDataKey].trips++;
             result.monthlyData[monthDataKey].clients += clientsCount;
             result.monthlyData[monthDataKey].workingDays.add(dateKey);
@@ -4324,6 +4360,13 @@ function extractRouteDataFromMonths(monthsData, targetRouteName, year) {
                         result.clientFrequency[clientName] = (result.clientFrequency[clientName] || 0) + 1;
                         result.clientSums[clientName] = (result.clientSums[clientName] || 0) + revenue;
                         result.monthlyData[monthDataKey].uniqueClients.add(clientName);
+                        
+                        // Для расчёта динамики клиентов
+                        if (!result.clientMonthlySums[clientName]) {
+                            result.clientMonthlySums[clientName] = {};
+                        }
+                        result.clientMonthlySums[clientName][monthDataKey] = 
+                            (result.clientMonthlySums[clientName][monthDataKey] || 0) + revenue;
                     }
                 });
             }
@@ -4552,15 +4595,25 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
     // 0. Паспорт маршрута
     html += '<div style="' + blockStyle + '">';
     html += '<h4 style="' + titleStyle + '">📋 Паспорт маршрута</h4>';
+    
+    // YoY сравнение оборотов
+    var avgMonthlyRevenueCurrentYear = sortedMonths.length > 0 ? allData.totalRevenue / sortedMonths.length : 0;
+    var avgMonthlyRevenueLastYear = Object.keys(lastYearRouteData.monthlyData).length > 0 ? 
+        lastYearRouteData.totalRevenue / Object.keys(lastYearRouteData.monthlyData).length : 0;
+    
     html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 15px;">';
-    html += '<div style="' + metricBoxStyle + '"><div style="' + metricLabelStyle + '">Оборот (без НДС)</div><div style="' + metricValueStyle + '">' + fmt(allData.totalRevenue) + ' ₽</div></div>';
-    html += '<div style="' + metricBoxStyle + '"><div style="' + metricLabelStyle + '">Оборот (с НДС)</div><div style="' + metricValueStyle + '">' + fmt(allData.totalRevenueWithNDS) + ' ₽</div></div>';
-    html += '<div style="' + metricBoxStyle + '"><div style="' + metricLabelStyle + '">Затраты</div><div style="' + metricValueStyle + '; color: #e74c3c;">' + fmt(allData.totalCost) + ' ₽</div></div>';
-    html += '<div style="' + metricBoxStyle + '"><div style="' + metricLabelStyle + '">Прибыль</div><div style="' + metricValueStyle + '; color: ' + (allData.totalProfit >= 0 ? '#27ae60' : '#e74c3c') + ';">' + fmt(allData.totalProfit) + ' ₽</div></div>';
+    html += '<div style="' + metricBoxStyle + '"><div style="' + metricLabelStyle + '">Итого ' + lastYear + '</div><div style="' + metricValueStyle + '">' + fmt(lastYearRouteData.totalRevenue) + ' ₽</div></div>';
+    html += '<div style="' + metricBoxStyle + '"><div style="' + metricLabelStyle + '">Итого ' + currentYear + '</div><div style="' + metricValueStyle + '">' + fmt(allData.totalRevenue) + ' ₽</div></div>';
+    html += '<div style="' + metricBoxStyle + '"><div style="' + metricLabelStyle + '">Среднемесячный ' + lastYear + '</div><div style="' + metricValueStyle + '">' + fmt(avgMonthlyRevenueLastYear) + ' ₽</div></div>';
+    html += '<div style="' + metricBoxStyle + '"><div style="' + metricLabelStyle + '">Среднемесячный ' + currentYear + '</div><div style="' + metricValueStyle + '">' + fmt(avgMonthlyRevenueCurrentYear) + ' ₽</div></div>';
+    html += '<div style="' + metricBoxStyle + '"><div style="' + metricLabelStyle + '">Затраты (тек. год)</div><div style="' + metricValueStyle + '; color: #e74c3c;">' + fmt(allData.totalCost) + ' ₽</div></div>';
+    html += '<div style="' + metricBoxStyle + '"><div style="' + metricLabelStyle + '">Прибыль (тек. год)</div><div style="' + metricValueStyle + '; color: ' + (allData.totalProfit >= 0 ? '#27ae60' : '#e74c3c') + ';">' + fmt(allData.totalProfit) + ' ₽</div></div>';
     html += '<div style="' + metricBoxStyle + '"><div style="' + metricLabelStyle + '">Маржа</div><div style="' + metricValueStyle + '; color: ' + (avgMargin >= 20 ? '#27ae60' : avgMargin >= 10 ? '#f39c12' : '#e74c3c') + ';">' + avgMargin.toFixed(1) + '%</div></div>';
-    html += '<div style="' + metricBoxStyle + '"><div style="' + metricLabelStyle + '">Рейсов</div><div style="' + metricValueStyle + '">' + allData.totalTrips + '</div></div>';
+    html += '<div style="' + metricBoxStyle + '"><div style="' + metricLabelStyle + '">Рейсов (тек. год)</div><div style="' + metricValueStyle + '">' + allData.totalTrips + '</div></div>';
     html += '<div style="' + metricBoxStyle + '"><div style="' + metricLabelStyle + '">Уникальных клиентов</div><div style="' + metricValueStyle + '">' + allData.uniqueClients.size + '</div></div>';
+    html += '<div style="' + metricBoxStyle + '"><div style="' + metricLabelStyle + '">Всего визитов клиентов</div><div style="' + metricValueStyle + '">' + allData.totalClients + '</div></div>';
     html += '<div style="' + metricBoxStyle + '"><div style="' + metricLabelStyle + '">Дней работы</div><div style="' + metricValueStyle + '">' + allData.workingDays.size + '</div></div>';
+    html += '<div style="' + metricBoxStyle + '"><div style="' + metricLabelStyle + '">Километраж</div><div style="' + metricValueStyle + '">' + fmt(allData.totalKm) + ' км</div></div>';
     html += '</div>';
     
     // Бенчмарки
@@ -4701,22 +4754,126 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
     
     if (topClientsBySum.length > 0) {
         html += '<div>';
-        html += '<h5 style="margin: 0 0 10px 0; color: #34495e; font-size: 10pt;">💎 Топ-10 клиентов по сумме покупок</h5>';
-        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px;">';
+        html += '<h5 style="margin: 0 0 10px 0; color: #34495e; font-size: 10pt;">💎 Топ-10 клиентов по сумме покупок (с динамикой)</h5>';
+        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 8px;">';
         topClientsBySum.forEach(function(client, idx) {
             var clientName = client[0];
             var sum = client[1];
-            var shortName = clientName.length > 45 ? clientName.substring(0, 45) + '...' : clientName;
+            var shortName = clientName.length > 40 ? clientName.substring(0, 40) + '...' : clientName;
+            
+            // Расчёт динамики клиента
+            var clientDynamics = '';
+            if (allData.clientMonthlySums[clientName] && sortedMonths.length >= 2) {
+                var lastMonth = sortedMonths[sortedMonths.length - 1];
+                var prevMonth = sortedMonths[sortedMonths.length - 2];
+                var lastMonthSum = allData.clientMonthlySums[clientName][lastMonth] || 0;
+                var prevMonthSum = allData.clientMonthlySums[clientName][prevMonth] || 0;
+                
+                if (prevMonthSum > 0) {
+                    var change = ((lastMonthSum - prevMonthSum) / prevMonthSum * 100);
+                    if (change > 5) {
+                        clientDynamics = '<span style="color: #27ae60; font-size: 8pt; font-weight: 600;">↑ +' + change.toFixed(0) + '%</span>';
+                    } else if (change < -5) {
+                        clientDynamics = '<span style="color: #e74c3c; font-size: 8pt; font-weight: 600;">↓ ' + change.toFixed(0) + '%</span>';
+                    } else {
+                        clientDynamics = '<span style="color: #95a5a6; font-size: 8pt;">→ стабильно</span>';
+                    }
+                } else if (lastMonthSum > 0) {
+                    clientDynamics = '<span style="color: #27ae60; font-size: 8pt; font-weight: 600;">🆕 новый</span>';
+                }
+            }
+            
             html += '<div style="background: #f8f9fa; padding: 8px; border-radius: 4px; border-left: 3px solid #f39c12;">';
-            html += '<div style="display: flex; justify-content: space-between; align-items: center;">';
+            html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
             html += '<div><span style="font-size: 8pt; color: #7f8c8d;">#' + (idx + 1) + '</span> <span style="font-size: 9pt; font-weight: 600; color: #2c3e50;" title="' + clientName.replace(/"/g, '&quot;') + '">' + shortName + '</span></div>';
             html += '<div style="font-size: 9pt; color: #f39c12; font-weight: 600;">' + fmt(sum) + ' ₽</div>';
-            html += '</div></div>';
+            html += '</div>';
+            if (clientDynamics) {
+                html += '<div style="text-align: right;">' + clientDynamics + '</div>';
+            }
+            html += '</div>';
         });
         html += '</div></div>';
     }
     
     html += '</div>';
+    
+    // 2.5. Графики
+    if (sortedMonths.length > 1) {
+        html += '<div style="' + blockStyle + '">';
+        html += '<h4 style="' + titleStyle + '">📈 Графики динамики</h4>';
+        
+        // График оборота по месяцам
+        var maxRevenue = Math.max.apply(null, sortedMonths.map(function(m) { return allData.monthlyData[m].revenue; }));
+        var chartWidth = 800;
+        var chartHeight = 200;
+        var barWidth = (chartWidth - 40) / sortedMonths.length;
+        
+        html += '<div style="margin-bottom: 20px;">';
+        html += '<h5 style="margin: 0 0 10px 0; color: #34495e; font-size: 10pt;">💰 Динамика оборота (без НДС) по месяцам</h5>';
+        html += '<svg width="' + chartWidth + '" height="' + (chartHeight + 40) + '" style="background: #f8f9fa; border-radius: 6px;">';
+        
+        sortedMonths.forEach(function(monthKey, idx) {
+            var monthData = allData.monthlyData[monthKey];
+            var monthNum = parseInt(monthKey.split('-')[1]) - 1;
+            var monthName = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'][monthNum];
+            var barHeight = maxRevenue > 0 ? (monthData.revenue / maxRevenue * chartHeight) : 0;
+            var x = 20 + idx * barWidth;
+            var y = chartHeight - barHeight;
+            
+            html += '<rect x="' + x + '" y="' + y + '" width="' + (barWidth - 4) + '" height="' + barHeight + '" fill="#3498db" rx="2"/>';
+            html += '<text x="' + (x + barWidth / 2) + '" y="' + (chartHeight + 15) + '" text-anchor="middle" font-size="10" fill="#7f8c8d">' + monthName + '</text>';
+            html += '<text x="' + (x + barWidth / 2) + '" y="' + (y - 5) + '" text-anchor="middle" font-size="9" fill="#2c3e50">' + fmt(monthData.revenue) + '</text>';
+        });
+        
+        html += '</svg></div>';
+        
+        // График клиентов по месяцам
+        var maxClients = Math.max.apply(null, sortedMonths.map(function(m) { return allData.monthlyData[m].uniqueClients.size; }));
+        
+        html += '<div style="margin-bottom: 20px;">';
+        html += '<h5 style="margin: 0 0 10px 0; color: #34495e; font-size: 10pt;">👥 Динамика уникальных клиентов по месяцам</h5>';
+        html += '<svg width="' + chartWidth + '" height="' + (chartHeight + 40) + '" style="background: #f8f9fa; border-radius: 6px;">';
+        
+        sortedMonths.forEach(function(monthKey, idx) {
+            var monthData = allData.monthlyData[monthKey];
+            var monthNum = parseInt(monthKey.split('-')[1]) - 1;
+            var monthName = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'][monthNum];
+            var barHeight = maxClients > 0 ? (monthData.uniqueClients.size / maxClients * chartHeight) : 0;
+            var x = 20 + idx * barWidth;
+            var y = chartHeight - barHeight;
+            
+            html += '<rect x="' + x + '" y="' + y + '" width="' + (barWidth - 4) + '" height="' + barHeight + '" fill="#9b59b6" rx="2"/>';
+            html += '<text x="' + (x + barWidth / 2) + '" y="' + (chartHeight + 15) + '" text-anchor="middle" font-size="10" fill="#7f8c8d">' + monthName + '</text>';
+            html += '<text x="' + (x + barWidth / 2) + '" y="' + (y - 5) + '" text-anchor="middle" font-size="9" fill="#2c3e50">' + monthData.uniqueClients.size + '</text>';
+        });
+        
+        html += '</svg></div>';
+        
+        // График затрат по месяцам
+        var maxCost = Math.max.apply(null, sortedMonths.map(function(m) { return allData.monthlyData[m].cost; }));
+        
+        html += '<div>';
+        html += '<h5 style="margin: 0 0 10px 0; color: #34495e; font-size: 10pt;">🚚 Динамика затрат по месяцам</h5>';
+        html += '<svg width="' + chartWidth + '" height="' + (chartHeight + 40) + '" style="background: #f8f9fa; border-radius: 6px;">';
+        
+        sortedMonths.forEach(function(monthKey, idx) {
+            var monthData = allData.monthlyData[monthKey];
+            var monthNum = parseInt(monthKey.split('-')[1]) - 1;
+            var monthName = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'][monthNum];
+            var barHeight = maxCost > 0 ? (monthData.cost / maxCost * chartHeight) : 0;
+            var x = 20 + idx * barWidth;
+            var y = chartHeight - barHeight;
+            
+            html += '<rect x="' + x + '" y="' + y + '" width="' + (barWidth - 4) + '" height="' + barHeight + '" fill="#e67e22" rx="2"/>';
+            html += '<text x="' + (x + barWidth / 2) + '" y="' + (chartHeight + 15) + '" text-anchor="middle" font-size="10" fill="#7f8c8d">' + monthName + '</text>';
+            html += '<text x="' + (x + barWidth / 2) + '" y="' + (y - 5) + '" text-anchor="middle" font-size="9" fill="#2c3e50">' + fmt(monthData.cost) + '</text>';
+        });
+        
+        html += '</svg></div>';
+        
+        html += '</div>';
+    }
     
     // 3. Блок "Логистика"
     html += '<div style="' + blockStyle + '">';
