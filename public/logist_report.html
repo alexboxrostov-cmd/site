@@ -4723,82 +4723,84 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
     html += '</div>';
     html += '</div>';
     
-    // 2. Блок "Сумма (без НДС)" - главная таблица с факт/ожидание
+    // 2. Блок "Сумма (без НДС)" - только фактические данные
     html += '<div style="' + blockStyle + '">';
     html += '<h4 style="' + titleStyle + '">💰 Блок "Сумма" (без НДС)</h4>';
     
-    // Главная таблица по месяцам
+    // Главная таблица по месяцам - только факт
     html += '<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 13px;">';
     html += '<thead><tr style="background: #2c3e50; color: white;">';
     html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Месяц</th>';
-    html += '<th colspan="2" style="padding: 12px; text-align: center; font-weight: 600; border-left: 2px solid #34495e;">Оборот без НДС</th>';
-    html += '<th colspan="2" style="padding: 12px; text-align: center; font-weight: 600; border-left: 2px solid #34495e;">Оборот с НДС</th>';
-    html += '<th colspan="2" style="padding: 12px; text-align: center; font-weight: 600; border-left: 2px solid #34495e;">Прибыль</th>';
-    html += '<th style="padding: 12px; text-align: right; font-weight: 600; border-left: 2px solid #34495e;">Рейсы</th>';
+    html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Оборот без НДС</th>';
+    html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Оборот с НДС</th>';
+    html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Прибыль</th>';
+    html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Рейсы</th>';
     html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Клиенты</th>';
     html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Уник. клиенты</th>';
-    html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Доставки</th>';
-    html += '<th style="padding: 12px; text-align: center; font-weight: 600; border-left: 2px solid #34495e;">Изм. оборота</th>';
+    html += '<th style="padding: 12px; text-align: center; font-weight: 600;">Изм. оборота</th>';
     html += '<th style="padding: 12px; text-align: center; font-weight: 600;">Изм. прибыли</th>';
-    html += '</tr>';
-    html += '<tr style="background: #34495e; color: white;">';
-    html += '<th style="padding: 8px;"></th>';
-    html += '<th style="padding: 8px; text-align: right; font-size: 11px; border-left: 2px solid #2c3e50;">Факт</th>';
-    html += '<th style="padding: 8px; text-align: right; font-size: 11px;">Ожидание</th>';
-    html += '<th style="padding: 8px; text-align: right; font-size: 11px; border-left: 2px solid #2c3e50;">Факт</th>';
-    html += '<th style="padding: 8px; text-align: right; font-size: 11px;">Ожидание</th>';
-    html += '<th style="padding: 8px; text-align: right; font-size: 11px; border-left: 2px solid #2c3e50;">Факт</th>';
-    html += '<th style="padding: 8px; text-align: right; font-size: 11px;">Ожидание</th>';
-    html += '<th style="padding: 8px; border-left: 2px solid #2c3e50;"></th>';
-    html += '<th style="padding: 8px;"></th>';
-    html += '<th style="padding: 8px;"></th>';
-    html += '<th style="padding: 8px;"></th>';
-    html += '<th style="padding: 8px; border-left: 2px solid #2c3e50;"></th>';
-    html += '<th style="padding: 8px;"></th>';
     html += '</tr></thead><tbody>';
     
     var monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
-    var daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     
     sortedMonths.forEach(function(monthKey, idx) {
         var monthData = allData.monthlyData[monthKey];
         var monthNum = parseInt(monthKey.split('-')[1]) - 1;
         var monthName = monthNames[monthNum];
-        var daysCount = daysInMonth[monthNum];
         
-        // Расчёт ожидания (прогноза)
-        var avgDailyRevenue = monthData.workingDays.size > 0 ? monthData.revenue / monthData.workingDays.size : 0;
-        var expectedRevenue = avgDailyRevenue * daysCount;
-        var expectedRevenueWithNDS = expectedRevenue * 1.22;
-        var avgDailyProfit = monthData.workingDays.size > 0 ? monthData.profit / monthData.workingDays.size : 0;
-        var expectedProfit = avgDailyProfit * daysCount;
-        
-        // Изменения (факт vs ожидание)
-        var revenueChange = expectedRevenue > 0 ? ((monthData.revenue - expectedRevenue) / expectedRevenue * 100) : 0;
-        var profitChange = expectedProfit !== 0 ? ((monthData.profit - expectedProfit) / Math.abs(expectedProfit) * 100) : 0;
-        
-        var revenueChangeStr = '<span style="color: ' + (revenueChange >= 0 ? '#27ae60' : '#e74c3c') + '; font-weight: 600;">' + (revenueChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(revenueChange).toFixed(1) + '%</span>';
-        var profitChangeStr = '<span style="color: ' + (profitChange >= 0 ? '#27ae60' : '#e74c3c') + '; font-weight: 600;">' + (profitChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(profitChange).toFixed(1) + '%</span>';
+        // Изменения сравниваем с предыдущим месяцем
+        var revenueChange = '';
+        var profitChange = '';
+        if (idx > 0) {
+            var prevMonth = allData.monthlyData[sortedMonths[idx-1]];
+            var revChange = prevMonth.revenue > 0 ? ((monthData.revenue - prevMonth.revenue) / prevMonth.revenue * 100) : 0;
+            var profChange = prevMonth.profit !== 0 ? ((monthData.profit - prevMonth.profit) / Math.abs(prevMonth.profit) * 100) : 0;
+            revenueChange = '<span style="color: ' + (revChange >= 0 ? '#27ae60' : '#e74c3c') + '; font-weight: 600;">' + (revChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(revChange).toFixed(1) + '%</span>';
+            profitChange = '<span style="color: ' + (profChange >= 0 ? '#27ae60' : '#e74c3c') + '; font-weight: 600;">' + (profChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(profChange).toFixed(1) + '%</span>';
+        } else {
+            revenueChange = '<span style="color: #95a5a6;">—</span>';
+            profitChange = '<span style="color: #95a5a6;">—</span>';
+        }
         
         var rowBg = idx % 2 === 0 ? '#ffffff' : '#f8f9fa';
         html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid #e0e0e0;">';
         html += '<td style="padding: 12px; font-weight: 600;">' + monthName + '</td>';
-        html += '<td style="padding: 12px; text-align: right; color: #3498db; font-weight: 700; border-left: 2px solid #e0e0e0;" title="Факт: ' + fmt(monthData.revenue) + ' ₽">' + fmt(monthData.revenue) + ' ₽</td>';
-        html += '<td style="padding: 12px; text-align: right; color: #7f8c8d;" title="Ожидание: ' + fmt(expectedRevenue) + ' ₽">' + fmt(expectedRevenue) + ' ₽</td>';
-        html += '<td style="padding: 12px; text-align: right; color: #2980b9; font-weight: 700; border-left: 2px solid #e0e0e0;" title="Факт: ' + fmt(monthData.revenueWithNDS) + ' ₽">' + fmt(monthData.revenueWithNDS) + ' ₽</td>';
-        html += '<td style="padding: 12px; text-align: right; color: #7f8c8d;" title="Ожидание: ' + fmt(expectedRevenueWithNDS) + ' ₽">' + fmt(expectedRevenueWithNDS) + ' ₽</td>';
-        html += '<td style="padding: 12px; text-align: right; color: ' + (monthData.profit >= 0 ? '#27ae60' : '#e74c3c') + '; font-weight: 700; border-left: 2px solid #e0e0e0;" title="Факт: ' + fmt(monthData.profit) + ' ₽">' + fmt(monthData.profit) + ' ₽</td>';
-        html += '<td style="padding: 12px; text-align: right; color: #7f8c8d;" title="Ожидание: ' + fmt(expectedProfit) + ' ₽">' + fmt(expectedProfit) + ' ₽</td>';
-        html += '<td style="padding: 12px; text-align: right; border-left: 2px solid #e0e0e0;">' + monthData.trips + '</td>';
+        html += '<td style="padding: 12px; text-align: right; color: #3498db; font-weight: 700;">' + fmt(monthData.revenue) + ' ₽</td>';
+        html += '<td style="padding: 12px; text-align: right; color: #2980b9;">' + fmt(monthData.revenueWithNDS) + ' ₽</td>';
+        html += '<td style="padding: 12px; text-align: right; color: ' + (monthData.profit >= 0 ? '#27ae60' : '#e74c3c') + '; font-weight: 700;">' + fmt(monthData.profit) + ' ₽</td>';
+        html += '<td style="padding: 12px; text-align: right;">' + monthData.trips + '</td>';
         html += '<td style="padding: 12px; text-align: right;">' + monthData.clients + '</td>';
         html += '<td style="padding: 12px; text-align: right; color: #9b59b6; font-weight: 600;">' + monthData.uniqueClients.size + '</td>';
-        html += '<td style="padding: 12px; text-align: right;">' + monthData.trips + '</td>';
-        html += '<td style="padding: 12px; text-align: center; border-left: 2px solid #e0e0e0;">' + revenueChangeStr + '</td>';
-        html += '<td style="padding: 12px; text-align: center;">' + profitChangeStr + '</td>';
+        html += '<td style="padding: 12px; text-align: center;">' + revenueChange + '</td>';
+        html += '<td style="padding: 12px; text-align: center;">' + profitChange + '</td>';
         html += '</tr>';
     });
     
     html += '</tbody></table></div>';
+    
+    // Ожидание на текущий месяц (только для последнего месяца)
+    if (sortedMonths.length > 0) {
+        var lastMonthKey = sortedMonths[sortedMonths.length - 1];
+        var lastMonthData = allData.monthlyData[lastMonthKey];
+        var lastMonthNum = parseInt(lastMonthKey.split('-')[1]) - 1;
+        var lastMonthName = monthNames[lastMonthNum];
+        var daysCount = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][lastMonthNum];
+        
+        var avgDailyRevenue = lastMonthData.workingDays.size > 0 ? lastMonthData.revenue / lastMonthData.workingDays.size : 0;
+        var expectedRevenue = avgDailyRevenue * daysCount;
+        var avgDailyProfit = lastMonthData.workingDays.size > 0 ? lastMonthData.profit / lastMonthData.workingDays.size : 0;
+        var expectedProfit = avgDailyProfit * daysCount;
+        
+        html += '<div style="background: #e8f4f8; padding: 20px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #3498db;">';
+        html += '<h5 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 14px; font-weight: 600;">📊 Ожидание на ' + lastMonthName + ' ' + currentYear + '</h5>';
+        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; font-size: 14px;">';
+        html += '<div><span style="color: #7f8c8d; font-size: 12px;">Ожидаемый оборот:</span><br><strong style="font-size: 18px; color: #3498db;">' + fmt(expectedRevenue) + ' ₽</strong></div>';
+        html += '<div><span style="color: #7f8c8d; font-size: 12px;">Ожидаемая прибыль:</span><br><strong style="font-size: 18px; color: ' + (expectedProfit >= 0 ? '#27ae60' : '#e74c3c') + ';">' + fmt(expectedProfit) + ' ₽</strong></div>';
+        html += '<div><span style="color: #7f8c8d; font-size: 12px;">Средняя выручка за день:</span><br><strong style="font-size: 18px; color: #1a1a1a;">' + fmt(avgDailyRevenue) + ' ₽</strong></div>';
+        html += '<div><span style="color: #7f8c8d; font-size: 12px;">Дней в месяце:</span><br><strong style="font-size: 18px; color: #1a1a1a;">' + daysCount + '</strong></div>';
+        html += '</div></div>';
+    }
+    
     html += '</div>';
     
     // 3. Блок "Клиенты"
@@ -4812,7 +4814,7 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
     html += '<div><span style="color: #7f8c8d; font-size: 12px;">Всего уникальных клиентов (за год):</span><br><strong style="font-size: 18px; color: #1a1a1a;">' + allData.uniqueClients.size + '</strong></div>';
     html += '<div><span style="color: #7f8c8d; font-size: 12px;">Максимум в месяц:</span><br><strong style="font-size: 18px; color: #27ae60;">' + maxClientsPerMonth + '</strong></div>';
     html += '<div><span style="color: #7f8c8d; font-size: 12px;">Минимум в месяц:</span><br><strong style="font-size: 18px; color: #e74c3c;">' + minClientsPerMonth + '</strong></div>';
-    html += '<div><span style="color: #7f8c8d; font-size: 12px;">Средняя частота визитов в месяц:</span><br><strong style="font-size: 18px; color: #3498db;">' + avgMonthlyVisitFrequency.toFixed(1) + '</strong></div>';
+    html += '<div><span style="color: #7f8c8d; font-size: 12px;">Среднее кол-во визитов на 1 клиента в месяц:</span><br><strong style="font-size: 18px; color: #3498db;">' + avgMonthlyVisitFrequency.toFixed(1) + '</strong></div>';
     html += '</div></div>';
     
     // Топ-10 по обращениям (в месяц)
@@ -4824,7 +4826,6 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
         html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Клиент</th>';
         html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Обращений в месяц</th>';
         html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Всего визитов</th>';
-        html += '<th style="padding: 12px; text-align: right; font-weight: 600;">% успешных визитов</th>';
         html += '</tr></thead><tbody>';
         
         topClientsByFreq.forEach(function(client, idx) {
@@ -4836,15 +4837,11 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
             // Расчёт обращений в месяц
             var visitsPerMonth = sortedMonths.length > 0 ? (totalVisits / sortedMonths.length) : 0;
             
-            // Расчёт успешных визитов (предполагаем, что все визиты успешные, если есть данные)
-            var successRate = 100; // Временно 100%, можно улучшить логикой
-            
             var rowBg = idx % 2 === 0 ? '#ffffff' : '#f8f9fa';
             html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid #e0e0e0;">';
             html += '<td style="padding: 12px;" title="' + clientName.replace(/"/g, '&quot;') + '">' + shortName + '</td>';
             html += '<td style="padding: 12px; text-align: right; font-weight: 600; color: #9b59b6;">' + visitsPerMonth.toFixed(1) + '</td>';
             html += '<td style="padding: 12px; text-align: right; font-weight: 600; color: #1a1a1a;">' + totalVisits + '</td>';
-            html += '<td style="padding: 12px; text-align: right; font-weight: 600; color: #27ae60;">' + successRate.toFixed(0) + '%</td>';
             html += '</tr>';
         });
         html += '</tbody></table></div></div>';
@@ -4905,20 +4902,22 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
     
     html += '</div>';
     
-    // 2.5. Графики с осями и легендой
-    if (sortedMonths.length > 1) {
+    // 2.5. Графики сравнения 2025 vs 2026
+    if (sortedMonths.length > 1 && Object.keys(lastYearRouteData.monthlyData).length > 0) {
         html += '<div style="' + blockStyle + '">';
-        html += '<h4 style="' + titleStyle + '">📈 Графики динамики</h4>';
+        html += '<h4 style="' + titleStyle + '">📈 Графики динамики (2025 vs 2026)</h4>';
         
         var chartWidth = 900;
-        var chartHeight = 250;
+        var chartHeight = 280;
         var marginLeft = 80;
         var marginBottom = 50;
         var marginTop = 20;
         var marginRight = 20;
         var plotWidth = chartWidth - marginLeft - marginRight;
         var plotHeight = chartHeight - marginTop - marginBottom;
-        var barWidth = plotWidth / sortedMonths.length;
+        var barWidth = plotWidth / 12; // 12 месяцев
+        var groupWidth = barWidth * 0.8;
+        var barWidthSingle = groupWidth / 2;
         
         // График оборота по месяцам
         var maxRevenue = Math.max.apply(null, sortedMonths.map(function(m) { return allData.monthlyData[m].revenue; }));
@@ -4948,30 +4947,82 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
             var monthNum = parseInt(monthKey.split('-')[1]) - 1;
             var monthName = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'][monthNum];
             var barHeight = maxRevenue > 0 ? (monthData.revenue / maxRevenue * plotHeight) : 0;
-            var x = marginLeft + idx * barWidth + barWidth * 0.1;
-            var y = chartHeight - marginBottom - barHeight;
+        // График 1: Сравнение оборота 2025 vs 2026
+        var allRevenues = [];
+        for (var m = 1; m <= 12; m++) {
+            var key2026 = currentYear + '-' + m;
+            var key2025 = lastYear + '-' + m;
+            if (allData.monthlyData[key2026]) allRevenues.push(allData.monthlyData[key2026].revenue);
+            if (lastYearRouteData.monthlyData[key2025]) allRevenues.push(lastYearRouteData.monthlyData[key2025].revenue);
+        }
+        var maxRevenue = Math.max.apply(null, allRevenues) * 1.2;
+        
+        html += '<div style="margin-bottom: 30px;">';
+        html += '<h5 style="margin: 0 0 15px 0; color: #1a1a1a; font-size: 13px; font-weight: 600;">💰 Сравнение оборота (2025 vs 2026)</h5>';
+        html += '<svg width="' + chartWidth + '" height="' + chartHeight + '" style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px;">';
+        
+        // Оси
+        html += '<line x1="' + marginLeft + '" y1="' + marginTop + '" x2="' + marginLeft + '" y2="' + (chartHeight - marginBottom) + '" stroke="#333" stroke-width="2"/>';
+        html += '<line x1="' + marginLeft + '" y1="' + (chartHeight - marginBottom) + '" x2="' + (chartWidth - marginRight) + '" y2="' + (chartHeight - marginBottom) + '" stroke="#333" stroke-width="2"/>';
+        
+        // Деления оси Y
+        for (var i = 0; i <= 5; i++) {
+            var y = marginTop + (plotHeight / 5) * i;
+            var value = maxRevenue - (maxRevenue / 5) * i;
+            html += '<line x1="' + (marginLeft - 5) + '" y1="' + y + '" x2="' + marginLeft + '" y2="' + y + '" stroke="#333" stroke-width="1"/>';
+            html += '<text x="' + (marginLeft - 10) + '" y="' + (y + 4) + '" text-anchor="end" font-size="11" fill="#555">' + fmt(value) + '</text>';
+            html += '<line x1="' + marginLeft + '" y1="' + y + '" x2="' + (chartWidth - marginRight) + '" y2="' + y + '" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="2,2"/>';
+        }
+        
+        // Столбцы для каждого месяца
+        for (var m = 1; m <= 12; m++) {
+            var monthName = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'][m-1];
+            var key2026 = currentYear + '-' + m;
+            var key2025 = lastYear + '-' + m;
             
-            html += '<rect x="' + x + '" y="' + y + '" width="' + (barWidth * 0.8) + '" height="' + barHeight + '" fill="#3498db" rx="3"/>';
-            html += '<text x="' + (marginLeft + idx * barWidth + barWidth / 2) + '" y="' + (chartHeight - marginBottom + 20) + '" text-anchor="middle" font-size="11" fill="#555">' + monthName + '</text>';
-            html += '<text x="' + (x + barWidth * 0.4) + '" y="' + (y - 5) + '" text-anchor="middle" font-size="10" fill="#1a1a1a" font-weight="600">' + fmt(monthData.revenue) + '</text>';
-        });
+            var revenue2026 = allData.monthlyData[key2026] ? allData.monthlyData[key2026].revenue : 0;
+            var revenue2025 = lastYearRouteData.monthlyData[key2025] ? lastYearRouteData.monthlyData[key2025].revenue : 0;
+            
+            var x = marginLeft + (m - 1) * barWidth;
+            
+            // Столбец 2025
+            var barHeight2025 = maxRevenue > 0 ? (revenue2025 / maxRevenue * plotHeight) : 0;
+            var y2025 = chartHeight - marginBottom - barHeight2025;
+            html += '<rect x="' + (x + barWidth * 0.1) + '" y="' + y2025 + '" width="' + barWidthSingle + '" height="' + barHeight2025 + '" fill="#95a5a6" rx="2"/>';
+            
+            // Столбец 2026
+            var barHeight2026 = maxRevenue > 0 ? (revenue2026 / maxRevenue * plotHeight) : 0;
+            var y2026 = chartHeight - marginBottom - barHeight2026;
+            html += '<rect x="' + (x + barWidth * 0.1 + barWidthSingle) + '" y="' + y2026 + '" width="' + barWidthSingle + '" height="' + barHeight2026 + '" fill="#3498db" rx="2"/>';
+            
+            // Подпись месяца
+            html += '<text x="' + (x + barWidth / 2) + '" y="' + (chartHeight - marginBottom + 20) + '" text-anchor="middle" font-size="11" fill="#555">' + monthName + '</text>';
+        }
         
         // Подписи осей
         html += '<text x="' + (marginLeft + plotWidth / 2) + '" y="' + (chartHeight - 5) + '" text-anchor="middle" font-size="12" fill="#333" font-weight="600">Месяцы</text>';
         html += '<text x="15" y="' + (marginTop + plotHeight / 2) + '" text-anchor="middle" font-size="12" fill="#333" font-weight="600" transform="rotate(-90, 15, ' + (marginTop + plotHeight / 2) + ')">Оборот (₽)</text>';
         
         // Легенда
-        html += '<rect x="' + (chartWidth - 150) + '" y="10" width="20" height="12" fill="#3498db" rx="2"/>';
-        html += '<text x="' + (chartWidth - 125) + '" y="20" font-size="11" fill="#333">Оборот</text>';
+        html += '<rect x="' + (chartWidth - 200) + '" y="10" width="20" height="12" fill="#95a5a6" rx="2"/>';
+        html += '<text x="' + (chartWidth - 175) + '" y="20" font-size="11" fill="#333">' + lastYear + '</text>';
+        html += '<rect x="' + (chartWidth - 120) + '" y="10" width="20" height="12" fill="#3498db" rx="2"/>';
+        html += '<text x="' + (chartWidth - 95) + '" y="20" font-size="11" fill="#333">' + currentYear + '</text>';
         
         html += '</svg></div>';
         
-        // График клиентов по месяцам
-        var maxClients = Math.max.apply(null, sortedMonths.map(function(m) { return allData.monthlyData[m].uniqueClients.size; }));
-        maxClients = Math.ceil(maxClients * 1.2); // Добавляем 20% запаса сверху
+        // График 2: Сравнение клиентов 2025 vs 2026
+        var allClients = [];
+        for (var m = 1; m <= 12; m++) {
+            var key2026 = currentYear + '-' + m;
+            var key2025 = lastYear + '-' + m;
+            if (allData.monthlyData[key2026]) allClients.push(allData.monthlyData[key2026].uniqueClients.size);
+            if (lastYearRouteData.monthlyData[key2025]) allClients.push(lastYearRouteData.monthlyData[key2025].uniqueClients.size);
+        }
+        var maxClients = Math.max.apply(null, allClients) * 1.2;
         
         html += '<div style="margin-bottom: 30px;">';
-        html += '<h5 style="margin: 0 0 15px 0; color: #1a1a1a; font-size: 13px; font-weight: 600;">👥 Динамика уникальных клиентов по месяцам</h5>';
+        html += '<h5 style="margin: 0 0 15px 0; color: #1a1a1a; font-size: 13px; font-weight: 600;">👥 Сравнение уникальных клиентов (2025 vs 2026)</h5>';
         html += '<svg width="' + chartWidth + '" height="' + chartHeight + '" style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px;">';
         
         // Оси
@@ -4987,171 +5038,187 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
             html += '<line x1="' + marginLeft + '" y1="' + y + '" x2="' + (chartWidth - marginRight) + '" y2="' + y + '" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="2,2"/>';
         }
         
-        // Столбцы
-        sortedMonths.forEach(function(monthKey, idx) {
-            var monthData = allData.monthlyData[monthKey];
-            var monthNum = parseInt(monthKey.split('-')[1]) - 1;
-            var monthName = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'][monthNum];
-            var barHeight = maxClients > 0 ? (monthData.uniqueClients.size / maxClients * plotHeight) : 0;
-            var x = marginLeft + idx * barWidth + barWidth * 0.1;
-            var y = chartHeight - marginBottom - barHeight;
+        // Столбцы для каждого месяца
+        for (var m = 1; m <= 12; m++) {
+            var monthName = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'][m-1];
+            var key2026 = currentYear + '-' + m;
+            var key2025 = lastYear + '-' + m;
             
-            html += '<rect x="' + x + '" y="' + y + '" width="' + (barWidth * 0.8) + '" height="' + barHeight + '" fill="#9b59b6" rx="3"/>';
-            html += '<text x="' + (marginLeft + idx * barWidth + barWidth / 2) + '" y="' + (chartHeight - marginBottom + 20) + '" text-anchor="middle" font-size="11" fill="#555">' + monthName + '</text>';
-            html += '<text x="' + (x + barWidth * 0.4) + '" y="' + (y - 5) + '" text-anchor="middle" font-size="10" fill="#1a1a1a" font-weight="600">' + monthData.uniqueClients.size + '</text>';
-        });
+            var clients2026 = allData.monthlyData[key2026] ? allData.monthlyData[key2026].uniqueClients.size : 0;
+            var clients2025 = lastYearRouteData.monthlyData[key2025] ? lastYearRouteData.monthlyData[key2025].uniqueClients.size : 0;
+            
+            var x = marginLeft + (m - 1) * barWidth;
+            
+            // Столбец 2025
+            var barHeight2025 = maxClients > 0 ? (clients2025 / maxClients * plotHeight) : 0;
+            var y2025 = chartHeight - marginBottom - barHeight2025;
+            html += '<rect x="' + (x + barWidth * 0.1) + '" y="' + y2025 + '" width="' + barWidthSingle + '" height="' + barHeight2025 + '" fill="#95a5a6" rx="2"/>';
+            
+            // Столбец 2026
+            var barHeight2026 = maxClients > 0 ? (clients2026 / maxClients * plotHeight) : 0;
+            var y2026 = chartHeight - marginBottom - barHeight2026;
+            html += '<rect x="' + (x + barWidth * 0.1 + barWidthSingle) + '" y="' + y2026 + '" width="' + barWidthSingle + '" height="' + barHeight2026 + '" fill="#9b59b6" rx="2"/>';
+            
+            // Подпись месяца
+            html += '<text x="' + (x + barWidth / 2) + '" y="' + (chartHeight - marginBottom + 20) + '" text-anchor="middle" font-size="11" fill="#555">' + monthName + '</text>';
+        }
         
         // Подписи осей
         html += '<text x="' + (marginLeft + plotWidth / 2) + '" y="' + (chartHeight - 5) + '" text-anchor="middle" font-size="12" fill="#333" font-weight="600">Месяцы</text>';
         html += '<text x="15" y="' + (marginTop + plotHeight / 2) + '" text-anchor="middle" font-size="12" fill="#333" font-weight="600" transform="rotate(-90, 15, ' + (marginTop + plotHeight / 2) + ')">Клиенты</text>';
         
         // Легенда
-        html += '<rect x="' + (chartWidth - 150) + '" y="10" width="20" height="12" fill="#9b59b6" rx="2"/>';
-        html += '<text x="' + (chartWidth - 125) + '" y="20" font-size="11" fill="#333">Клиенты</text>';
-        
-        html += '</svg></div>';
-        
-        // График затрат по месяцам
-        var maxCost = Math.max.apply(null, sortedMonths.map(function(m) { return allData.monthlyData[m].cost; }));
-        maxCost = maxCost * 1.2; // Добавляем 20% запаса сверху
-        
-        html += '<div>';
-        html += '<h5 style="margin: 0 0 15px 0; color: #1a1a1a; font-size: 13px; font-weight: 600;">🚚 Динамика затрат по месяцам</h5>';
-        html += '<svg width="' + chartWidth + '" height="' + chartHeight + '" style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px;">';
-        
-        // Оси
-        html += '<line x1="' + marginLeft + '" y1="' + marginTop + '" x2="' + marginLeft + '" y2="' + (chartHeight - marginBottom) + '" stroke="#333" stroke-width="2"/>';
-        html += '<line x1="' + marginLeft + '" y1="' + (chartHeight - marginBottom) + '" x2="' + (chartWidth - marginRight) + '" y2="' + (chartHeight - marginBottom) + '" stroke="#333" stroke-width="2"/>';
-        
-        // Деления оси Y
-        for (var i = 0; i <= 5; i++) {
-            var y = marginTop + (plotHeight / 5) * i;
-            var value = maxCost - (maxCost / 5) * i;
-            html += '<line x1="' + (marginLeft - 5) + '" y1="' + y + '" x2="' + marginLeft + '" y2="' + y + '" stroke="#333" stroke-width="1"/>';
-            html += '<text x="' + (marginLeft - 10) + '" y="' + (y + 4) + '" text-anchor="end" font-size="11" fill="#555">' + fmt(value) + '</text>';
-            html += '<line x1="' + marginLeft + '" y1="' + y + '" x2="' + (chartWidth - marginRight) + '" y2="' + y + '" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="2,2"/>';
-        }
-        
-        // Столбцы
-        sortedMonths.forEach(function(monthKey, idx) {
-            var monthData = allData.monthlyData[monthKey];
-            var monthNum = parseInt(monthKey.split('-')[1]) - 1;
-            var monthName = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'][monthNum];
-            var barHeight = maxCost > 0 ? (monthData.cost / maxCost * plotHeight) : 0;
-            var x = marginLeft + idx * barWidth + barWidth * 0.1;
-            var y = chartHeight - marginBottom - barHeight;
-            
-            html += '<rect x="' + x + '" y="' + y + '" width="' + (barWidth * 0.8) + '" height="' + barHeight + '" fill="#e67e22" rx="3"/>';
-            html += '<text x="' + (marginLeft + idx * barWidth + barWidth / 2) + '" y="' + (chartHeight - marginBottom + 20) + '" text-anchor="middle" font-size="11" fill="#555">' + monthName + '</text>';
-            html += '<text x="' + (x + barWidth * 0.4) + '" y="' + (y - 5) + '" text-anchor="middle" font-size="10" fill="#1a1a1a" font-weight="600">' + fmt(monthData.cost) + '</text>';
-        });
+        html += '<rect x="' + (chartWidth - 200) + '" y="10" width="20" height="12" fill="#95a5a6" rx="2"/>';
+        html += '<text x="' + (chartWidth - 175) + '" y="20" font-size="11" fill="#333">' + lastYear + '</text>';
+        html += '<rect x="' + (chartWidth - 120) + '" y="10" width="20" height="12" fill="#9b59b6" rx="2"/>';
+        html += '<text x="' + (chartWidth - 95) + '" y="20" font-size="11" fill="#333">' + currentYear + '</text>';
         
         html += '</svg></div>';
         
         html += '</div>';
     }
     
-    // 3. Блок "Логистика"
+    // 4. Блок "Логистика" - таблица по месяцам
     html += '<div style="' + blockStyle + '">';
-    html += '<h4 style="' + titleStyle + '">🚚 Блок "Логистика" (без НДС)</h4>';
+    html += '<h4 style="' + titleStyle + '">🚚 Блок "Логистика"</h4>';
     
-    html += '<div style="background: #f8f9fa; padding: 15px; border-radius: 6px;">';
-    html += '<h5 style="margin: 0 0 10px 0; color: #34495e; font-size: 10pt;">📊 Показатели логистики</h5>';
-    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 9pt;">';
-    html += '<div><strong>Общие затраты:</strong> ' + fmt(allData.totalCost) + ' ₽</div>';
-    html += '<div><strong>Затраты на рейс:</strong> ' + fmt(allData.totalTrips > 0 ? allData.totalCost / allData.totalTrips : 0) + ' ₽</div>';
-    html += '<div><strong>Затраты на клиента:</strong> ' + fmt(allData.totalClients > 0 ? allData.totalCost / allData.totalClients : 0) + ' ₽</div>';
-    html += '<div><strong>Доля затрат в обороте:</strong> ' + (allData.totalRevenue > 0 ? (allData.totalCost / allData.totalRevenue * 100).toFixed(1) : 0) + '%</div>';
-    if (allData.totalKm > 0) {
-        html += '<div><strong>Средняя стоимость км:</strong> ' + avgCostPerKm.toFixed(2) + ' ₽</div>';
-        html += '<div><strong>Оборот на 1 км:</strong> ' + fmt(avgRevenuePerKm) + ' ₽</div>';
-    }
-    html += '</div></div>';
+    html += '<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 13px;">';
+    html += '<thead><tr style="background: #2c3e50; color: white;">';
+    html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Месяц</th>';
+    html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Затраты ' + currentYear + '</th>';
+    html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Затраты ' + lastYear + '</th>';
+    html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Рейсов</th>';
+    html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Затраты на рейс</th>';
+    html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Уник. клиенты</th>';
+    html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Затраты на клиента</th>';
+    html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Доля в обороте</th>';
+    html += '</tr></thead><tbody>';
     
+    sortedMonths.forEach(function(monthKey, idx) {
+        var monthData = allData.monthlyData[monthKey];
+        var monthNum = parseInt(monthKey.split('-')[1]) - 1;
+        var monthName = monthNames[monthNum];
+        
+        // Данные за прошлый год
+        var lastYearKey = lastYear + '-' + (monthNum + 1);
+        var lastYearMonthData = lastYearRouteData.monthlyData[lastYearKey];
+        var lastYearCost = lastYearMonthData ? lastYearMonthData.cost : 0;
+        
+        var costPerTrip = monthData.trips > 0 ? monthData.cost / monthData.trips : 0;
+        var costPerClient = monthData.uniqueClients.size > 0 ? monthData.cost / monthData.uniqueClients.size : 0;
+        var costShare = monthData.revenue > 0 ? (monthData.cost / monthData.revenue * 100) : 0;
+        
+        var rowBg = idx % 2 === 0 ? '#ffffff' : '#f8f9fa';
+        html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid #e0e0e0;">';
+        html += '<td style="padding: 12px; font-weight: 600;">' + monthName + '</td>';
+        html += '<td style="padding: 12px; text-align: right; color: #e74c3c; font-weight: 700;">' + fmt(monthData.cost) + ' ₽</td>';
+        html += '<td style="padding: 12px; text-align: right; color: #7f8c8d;">' + fmt(lastYearCost) + ' ₽</td>';
+        html += '<td style="padding: 12px; text-align: right;">' + monthData.trips + '</td>';
+        html += '<td style="padding: 12px; text-align: right; font-weight: 600;">' + fmt(costPerTrip) + ' ₽</td>';
+        html += '<td style="padding: 12px; text-align: right; color: #9b59b6; font-weight: 600;">' + monthData.uniqueClients.size + '</td>';
+        html += '<td style="padding: 12px; text-align: right; font-weight: 600;">' + fmt(costPerClient) + ' ₽</td>';
+        html += '<td style="padding: 12px; text-align: right; font-weight: 600; color: ' + (costShare > 70 ? '#e74c3c' : costShare > 50 ? '#f39c12' : '#27ae60') + ';">' + costShare.toFixed(1) + '%</td>';
+        html += '</tr>';
+    });
+    
+    html += '</tbody></table></div>';
     html += '</div>';
     
-    // 4. Блок "Эффективность"
+    // 5. Блок "Эффективность" - 3 кубика
     html += '<div style="' + blockStyle + '">';
-    html += '<h4 style="' + titleStyle + '">⚡ Блок "Эффективность и сводный вывод"</h4>';
+    html += '<h4 style="' + titleStyle + '">⚡ Блок "Эффективность"</h4>';
     
-    html += '<div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 15px;">';
-    html += '<h5 style="margin: 0 0 10px 0; color: #34495e; font-size: 10pt;">📊 Ключевые показатели эффективности</h5>';
-    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 9pt;">';
-    html += '<div><strong>Маржинальность:</strong> <span style="color: ' + (avgMargin >= 20 ? '#27ae60' : avgMargin >= 10 ? '#f39c12' : '#e74c3c') + '; font-weight: 600;">' + avgMargin.toFixed(1) + '%</span></div>';
-    html += '<div><strong>Прибыль на рейс:</strong> ' + fmt(avgProfitPerTrip) + ' ₽</div>';
-    html += '<div><strong>Прибыль на клиента:</strong> ' + fmt(allData.totalClients > 0 ? allData.totalProfit / allData.totalClients : 0) + ' ₽</div>';
-    html += '</div></div>';
+    // Расчёт чистой маржи
+    var grossMargin = allData.totalRevenue * 0.17; // 17% маржа без НДС
+    var netMargin = grossMargin - allData.totalCost;
+    var netMarginPercent = allData.totalRevenue > 0 ? (netMargin / allData.totalRevenue * 100) : 0;
+    var costPercent = allData.totalRevenue > 0 ? (allData.totalCost / allData.totalRevenue * 100) : 0;
     
-    // Светофор
-    html += '<div style="background: #f8f9fa; padding: 15px; border-radius: 6px;">';
-    html += '<h5 style="margin: 0 0 10px 0; color: #34495e; font-size: 10pt;">🚦 Индикаторы состояния</h5>';
-    html += '<div style="display: flex; gap: 15px; flex-wrap: wrap;">';
+    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">';
     
-    var sumStatus = avgMargin >= 20 ? '🟢 Отлично' : avgMargin >= 10 ? '🟡 Нормально' : '🔴 Критично';
-    var clientStatus = avgClientsPerTrip >= 8 ? '🟢 Отлично' : avgClientsPerTrip >= 5 ? '🟡 Нормально' : '🔴 Критично';
-    var costStatus = allData.totalRevenue > 0 && (allData.totalCost / allData.totalRevenue) < 0.7 ? '🟢 Отлично' : '🔴 Критично';
-    
-    html += '<div style="background: white; padding: 10px; border-radius: 4px; flex: 1; min-width: 150px;"><strong>Сумма:</strong> ' + sumStatus + '</div>';
-    html += '<div style="background: white; padding: 10px; border-radius: 4px; flex: 1; min-width: 150px;"><strong>Клиенты:</strong> ' + clientStatus + '</div>';
-    html += '<div style="background: white; padding: 10px; border-radius: 4px; flex: 1; min-width: 150px;"><strong>Логистика:</strong> ' + costStatus + '</div>';
-    html += '</div></div>';
-    
+    // Кубик 1: Общая маржинальность
+    html += '<div style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%); color: white; padding: 25px; border-radius: 10px; text-align: center; box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);">';
+    html += '<div style="font-size: 12px; opacity: 0.9; margin-bottom: 10px;">Общая маржинальность</div>';
+    html += '<div style="font-size: 32px; font-weight: 700; margin-bottom: 5px;">' + avgMargin.toFixed(1) + '%</div>';
+    html += '<div style="font-size: 16px; opacity: 0.9;">' + fmt(grossMargin) + ' ₽</div>';
     html += '</div>';
     
-    // 5. Блок "ИИ-анализ"
+    // Кубик 2: Затраты на маршрут
+    html += '<div style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white; padding: 25px; border-radius: 10px; text-align: center; box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);">';
+    html += '<div style="font-size: 12px; opacity: 0.9; margin-bottom: 10px;">Затраты на маршрут</div>';
+    html += '<div style="font-size: 32px; font-weight: 700; margin-bottom: 5px;">' + costPercent.toFixed(1) + '%</div>';
+    html += '<div style="font-size: 16px; opacity: 0.9;">' + fmt(allData.totalCost) + ' ₽</div>';
+    html += '</div>';
+    
+    // Кубик 3: Чистая маржа
+    var netMarginColor = netMargin >= 0 ? '#3498db' : '#e67e22';
+    var netMarginGradient = netMargin >= 0 ? 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)' : 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)';
+    html += '<div style="background: ' + netMarginGradient + '; color: white; padding: 25px; border-radius: 10px; text-align: center; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);">';
+    html += '<div style="font-size: 12px; opacity: 0.9; margin-bottom: 10px;">Чистая маржа</div>';
+    html += '<div style="font-size: 32px; font-weight: 700; margin-bottom: 5px;">' + netMarginPercent.toFixed(1) + '%</div>';
+    html += '<div style="font-size: 16px; opacity: 0.9;">' + fmt(netMargin) + ' ₽</div>';
+    html += '</div>';
+    
+    html += '</div>';
+    html += '</div>';
+    
+    // 6. Блок "ИИ-анализ" - с четкой базой сравнения
     html += '<div style="background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #9b59b6;">';
     html += '<h4 style="margin: 0 0 20px 0; font-size: 16px; font-weight: 600; color: #2c3e50;">🤖 ИИ-анализ и рекомендации</h4>';
     html += '<div style="background: #ffffff; padding: 20px; border-radius: 6px; border: 1px solid #e0e0e0;">';
     
-    // Генерация связного текста
-    var aiText = '<p style="margin: 0 0 10px 0; font-size: 14px; line-height: 1.8; color: #1a1a1a;">';
+    // Генерация связного текста с базой сравнения
+    var aiText = '<div style="font-size: 14px; line-height: 1.8; color: #1a1a1a;">';
     
+    // Анализ прибыли
     if (allData.totalProfit < 0) {
-        aiText += '<strong style="color: #e74c3c;">⚠️ КРИТИЧНО:</strong> Маршрут "' + routeName + '" работает в убыток с общей потерей ' + fmt(Math.abs(allData.totalProfit)) + ' ₽. Необходимо срочно пересмотреть ценообразование и оптимизировать затраты.<br><br>';
+        aiText += '<p style="margin: 0 0 15px 0;"><strong style="color: #e74c3c;">⚠️ Убыточность:</strong> Маршрут работает в убыток. Потеря за год составила ' + fmt(Math.abs(allData.totalProfit)) + ' ₽ при обороте ' + fmt(allData.totalRevenue) + ' ₽.</p>';
+    } else {
+        aiText += '<p style="margin: 0 0 15px 0;"><strong style="color: #27ae60;">✅ Прибыльность:</strong> Маршрут прибыльный. Прибыль за год составила ' + fmt(allData.totalProfit) + ' ₽ при обороте ' + fmt(allData.totalRevenue) + ' ₽.</p>';
     }
     
-    if (avgMargin < 10) {
-        aiText += '<strong style="color: #f39c12;">⚡ ВНИМАНИЕ:</strong> Низкая маржинальность маршрута (' + avgMargin.toFixed(1) + '%) значительно ниже целевого показателя (20%). Рассмотрите повышение цен или снижение логистических затрат.<br><br>';
-    } else if (avgMargin > 25) {
-        aiText += '<strong style="color: #27ae60;">✅ ОТЛИЧНО:</strong> Высокая маржинальность (' + avgMargin.toFixed(1) + '%) свидетельствует об эффективной работе маршрута.<br><br>';
+    // Сравнение с прошлым годом
+    if (lastYearRouteData.totalRevenue > 0) {
+        var yoyChange = ((allData.totalRevenue - lastYearRouteData.totalRevenue) / lastYearRouteData.totalRevenue * 100);
+        if (yoyChange > 0) {
+            aiText += '<p style="margin: 0 0 15px 0;"><strong style="color: #27ae60;">📈 Рост к ' + lastYear + ' году:</strong> Оборот вырос на ' + yoyChange.toFixed(1) + '% (с ' + fmt(lastYearRouteData.totalRevenue) + ' ₽ до ' + fmt(allData.totalRevenue) + ' ₽).</p>';
+        } else {
+            aiText += '<p style="margin: 0 0 15px 0;"><strong style="color: #e74c3c;">📉 Падение к ' + lastYear + ' году:</strong> Оборот снизился на ' + Math.abs(yoyChange).toFixed(1) + '% (с ' + fmt(lastYearRouteData.totalRevenue) + ' ₽ до ' + fmt(allData.totalRevenue) + ' ₽).</p>';
+        }
     }
     
-    if (avgClientsPerTrip < 5) {
-        aiText += '<strong style="color: #f39c12;">📊 ЗАГРУЗКА:</strong> Низкая загрузка рейсов (' + avgClientsPerTrip.toFixed(1) + ' клиентов/рейс). Рассмотрите консолидацию заказов или оптимизацию маршрутов.<br><br>';
-    } else if (avgClientsPerTrip > 10) {
-        aiText += '<strong style="color: #27ae60;">📊 ЗАГРУЗКА:</strong> Отличная загрузка рейсов (' + avgClientsPerTrip.toFixed(1) + ' клиентов/рейс) обеспечивает высокую эффективность.<br><br>';
+    // Анализ загрузки
+    aiText += '<p style="margin: 0 0 15px 0;"><strong>📊 Загрузка:</strong> Средняя загрузка рейсов составляет ' + avgClientsPerTrip.toFixed(1) + ' клиентов на рейс. Всего за год выполнено ' + allData.totalTrips + ' рейсов.</p>';
+    
+    // Анализ удержания клиентов
+    if (retentionRate > 0) {
+        aiText += '<p style="margin: 0 0 15px 0;"><strong>👥 Удержание клиентов:</strong> ' + retentionRate.toFixed(1) + '% клиентов вернулись в следующем месяце. ' + (100 - retentionRate).toFixed(1) + '% клиентов не вернулись.</p>';
     }
     
-    if (retentionRate < 50) {
-        aiText += '<strong style="color: #e74c3c;">👥 ОТТОК:</strong> Критически низкий уровень удержания клиентов (' + retentionRate.toFixed(1) + '%). Необходимо внедрить программы лояльности и улучшить качество обслуживания.<br><br>';
-    } else if (retentionRate >= 70) {
-        aiText += '<strong style="color: #27ae60;">👥 УДЕРЖАНИЕ:</strong> Высокий уровень удержания клиентов (' + retentionRate.toFixed(1) + '%) свидетельствует о стабильной клиентской базе.<br><br>';
+    // Анализ концентрации
+    if (top5Concentration > 0 && top5Concentration <= 100) {
+        aiText += '<p style="margin: 0 0 15px 0;"><strong>💼 Концентрация:</strong> Топ-5 клиентов обеспечивают ' + top5Concentration.toFixed(1) + '% оборота маршрута.</p>';
     }
     
-    if (top5Concentration > 50 && top5Concentration <= 100) {
-        aiText += '<strong style="color: #f39c12;">💼 КОНЦЕНТРАЦИЯ:</strong> Высокая концентрация клиентской базы: топ-5 клиентов обеспечивают ' + top5Concentration.toFixed(1) + '% оборота. Это создаёт риски при потере ключевых клиентов.<br><br>';
-    }
-    
+    // Анализ затрат
     var costRatio = allData.totalRevenue > 0 ? (allData.totalCost / allData.totalRevenue * 100) : 0;
-    if (costRatio > 80) {
-        aiText += '<strong style="color: #e74c3c;">🚚 ЛОГИСТИКА:</strong> Критически высокая доля затрат (' + costRatio.toFixed(1) + '% от оборота). Срочно оптимизируйте логистику и пересмотрите маршруты доставки.<br><br>';
-    } else if (costRatio > 60) {
-        aiText += '<strong style="color: #f39c12;">🚚 ЛОГИСТИКА:</strong> Высокая доля затрат (' + costRatio.toFixed(1) + '% от оборота). Рассмотрите оптимизацию маршрутов и консолидацию доставок.<br><br>';
+    aiText += '<p style="margin: 0 0 15px 0;"><strong>🚚 Затраты:</strong> Доля логистических затрат составляет ' + costRatio.toFixed(1) + '% от оборота (' + fmt(allData.totalCost) + ' ₽ из ' + fmt(allData.totalRevenue) + ' ₽).</p>';
+    
+    // Анализ тренда
+    if (trendSlope !== 0) {
+        if (trendSlope > 0) {
+            aiText += '<p style="margin: 0 0 15px 0;"><strong>📈 Тренд:</strong> Положительная динамика роста оборота на ' + fmt(trendSlope) + ' ₽ в месяц.</p>';
+        } else {
+            aiText += '<p style="margin: 0 0 15px 0;"><strong>📉 Тренд:</strong> Отрицательная динамика падения оборота на ' + fmt(Math.abs(trendSlope)) + ' ₽ в месяц.</p>';
+        }
     }
     
-    if (trendSlope > 0) {
-        aiText += '<strong style="color: #27ae60;">📈 ТРЕНД:</strong> Положительная динамика роста оборота (' + fmt(trendSlope) + ' ₽/месяц). Маршрут демонстрирует устойчивый рост.<br><br>';
-    } else if (trendSlope < 0) {
-        aiText += '<strong style="color: #e74c3c;">📉 ТРЕНД:</strong> Отрицательная динамика (' + fmt(Math.abs(trendSlope)) + ' ₽/месяц). Необходимо проанализировать причины падения и принять меры.<br><br>';
+    // Доля рынка
+    if (marketShare > 0 && marketShare <= 100) {
+        aiText += '<p style="margin: 0 0 15px 0;"><strong>🎯 Доля рынка:</strong> Маршрут обеспечивает ' + marketShare.toFixed(1) + '% от общих продаж компании.</p>';
     }
     
-    if (marketShare < 5 && marketShare >= 0) {
-        aiText += '<strong style="color: #f39c12;">🎯 ДОЛЯ РЫНКА:</strong> Низкая доля в общих продажах компании (' + marketShare.toFixed(1) + '%). Рассмотрите возможности расширения клиентской базы и увеличения частоты доставок.<br><br>';
-    } else if (marketShare > 20 && marketShare <= 100) {
-        aiText += '<strong style="color: #27ae60;">🎯 ДОЛЯ РЫНКА:</strong> Высокая доля в общих продажах (' + marketShare.toFixed(1) + '%). Маршрут является ключевым для компании.<br><br>';
-    }
-    
-    aiText += '</p>';
+    aiText += '</div>';
     
     html += aiText;
     html += '</div></div>';
