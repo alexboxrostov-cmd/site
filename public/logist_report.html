@@ -4327,7 +4327,8 @@ function extractRouteDataFromMonths(monthsData, targetRouteName, year) {
             var profit = margin - cost;
             
             // Получаем км из routeCalcResults
-            var timeKey = dateKey + '_' + (row.ДатаВремя ? row.ДатаВремя.split(' ')[1].substring(0, 5) : '00:00');
+            var timeParts = row.ДатаВремя ? row.ДатаВремя.split(' ') : [];
+            var timeKey = dateKey + '_' + (timeParts[1] ? timeParts[1].substring(0, 5) : '00:00');
             var km = 0;
             if (routeCalcResults[timeKey] && routeCalcResults[timeKey].km) {
                 km = parseFloat(routeCalcResults[timeKey].km) || 0;
@@ -4740,8 +4741,9 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
         html += '<h5 style="margin: 0 0 10px 0; color: #34495e; font-size: 10pt;">🏆 Топ-10 клиентов по частоте визитов</h5>';
         html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px;">';
         topClientsByFreq.forEach(function(client, idx) {
-            var clientName = client[0];
-            var frequency = client[1];
+            var clientName = client[0] || '';
+            var frequency = client[1] || 0;
+            if (!clientName) return;
             var shortName = clientName.length > 45 ? clientName.substring(0, 45) + '...' : clientName;
             html += '<div style="background: #f8f9fa; padding: 8px; border-radius: 4px; border-left: 3px solid #9b59b6;">';
             html += '<div style="display: flex; justify-content: space-between; align-items: center;">';
@@ -4757,8 +4759,9 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
         html += '<h5 style="margin: 0 0 10px 0; color: #34495e; font-size: 10pt;">💎 Топ-10 клиентов по сумме покупок (с динамикой)</h5>';
         html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 8px;">';
         topClientsBySum.forEach(function(client, idx) {
-            var clientName = client[0];
-            var sum = client[1];
+            var clientName = client[0] || '';
+            var sum = client[1] || 0;
+            if (!clientName) return;
             var shortName = clientName.length > 40 ? clientName.substring(0, 40) + '...' : clientName;
             
             // Расчёт динамики клиента
