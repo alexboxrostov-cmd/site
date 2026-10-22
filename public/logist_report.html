@@ -4352,6 +4352,19 @@ function extractRouteDataFromMonths(monthsData, targetRouteName, year) {
             result.monthlyData[monthDataKey].clients += clientsCount;
             result.monthlyData[monthDataKey].workingDays.add(dateKey);
             
+            // Недельная статистика
+            var weekNum = getWeekNumber(d);
+            var weekKey = d.getFullYear() + '-W' + weekNum;
+            if (!result.weeklyData[weekKey]) {
+                result.weeklyData[weekKey] = { revenue: 0, revenueWithNDS: 0, cost: 0, profit: 0, trips: 0, clients: 0, uniqueClients: new Set() };
+            }
+            result.weeklyData[weekKey].revenue += revenue;
+            result.weeklyData[weekKey].revenueWithNDS += sum;
+            result.weeklyData[weekKey].cost += cost;
+            result.weeklyData[weekKey].profit += profit;
+            result.weeklyData[weekKey].trips++;
+            result.weeklyData[weekKey].clients += clientsCount;
+            
             // Клиенты
             if (row.Клиенты && Array.isArray(row.Клиенты)) {
                 row.Клиенты.forEach(function(client) {
@@ -4490,8 +4503,19 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
         });
     });
     
-    // Расчёт бенчмарков
-    var totalCompanyRevenue = allRoutesData.reduce(function(s, r) { return s + r.revenue; }, 0);
+    // Расчёт бенчмарков - используем данные из allData (загруженные за год)
+    // Пересчитываем totalCompanyRevenue из тех же месячных файлов
+    var totalCompanyRevenue = 0;
+    document.querySelectorAll('.route-accordion:not(.connected-accordion)').forEach(function(acc) {
+        var headerSummary = acc.querySelector('[data-route-header]');
+        if (!headerSummary) return;
+        var rName = headerSummary.getAttribute('data-route-header');
+        
+        // Извлекаем данные за год из загруженных файлов
+        var routeYearData = extractRouteDataFromMonths(currentYearData, rName, currentYear);
+        totalCompanyRevenue += routeYearData.totalRevenue;
+    });
+    
     var avgRouteRevenue = allRoutesData.length > 0 ? totalCompanyRevenue / allRoutesData.length : 0;
     var avgRouteCost = allRoutesData.length > 0 ? allRoutesData.reduce(function(s, r) { return s + r.cost; }, 0) / allRoutesData.length : 0;
     var avgRouteClients = allRoutesData.length > 0 ? allRoutesData.reduce(function(s, r) { return s + r.uniqueClients; }, 0) / allRoutesData.length : 0;
@@ -4500,8 +4524,8 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
     var sortedByRevenue = allRoutesData.slice().sort(function(a, b) { return b.revenue - a.revenue; });
     var routeRank = sortedByRevenue.findIndex(function(r) { return r.name === routeName; }) + 1;
     
-    // Доля в общих продажах
-    var marketShare = totalCompanyRevenue > 0 ? (allData.totalRevenue / totalCompanyRevenue * 100) : 0;
+    // Доля в общих продажах - делим оборот маршрута на общий оборот компании
+    var marketShare = totalCompanyRevenue > 0 ? Math.min((allData.totalRevenue / totalCompanyRevenue * 100), 100) : 0;
     
     // YoY сравнения
     var yoyRevenueChange = lastYearRouteData.totalRevenue > 0 ? 
@@ -4511,9 +4535,22 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
     var yoyClientsChange = lastYearRouteData.uniqueClients.size > 0 ? 
         ((allData.uniqueClients.size - lastYearRouteData.uniqueClients.size) / lastYearRouteData.uniqueClients.size * 100) : 0;
     
-    // Расчёты
-    var sortedMonths = Object.keys(allData.monthlyData).sort();
-    var sortedWeeks = Object.keys(allData.weeklyData).sort();
+    // Расчёты - сортировка по календарю, а не алфавиту
+    var sortedMonths = Object.keys(allData.monthlyData).sort(function(a, b) {
+        var dateA = new Date(a + '-01');
+        var dateB = new Date(b + '-01');
+        return dateA - dateB;
+    });
+    var sortedWeeks = Object.keys(allData.weeklyData).sort(function(a, b) {
+        var partsA = a.split('-W');
+        var partsB = b.split('-W');
+        var yearA = parseInt(partsA[0]);
+        var weekA = parseInt(partsA[1]);
+        var yearB = parseInt(partsB[0]);
+        var weekB = parseInt(partsB[1]);
+        if (yearA !== yearB) return yearA - yearB;
+        return weekA - weekB;
+    });
     var currentMonth = sortedMonths[sortedMonths.length - 1];
     var prevMonth = sortedMonths.length > 1 ? sortedMonths[sortedMonths.length - 2] : null;
     var currentWeek = sortedWeeks[sortedWeeks.length - 1];
@@ -4545,11 +4582,11 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
         churnRate = 100 - retentionRate;
     }
     
-    // Концентрация клиентов
+    // Концентрация клиентов - делим на оборот МАРШРУТА, а не компании
     var top5Sum = topClientsBySum.slice(0, 5).reduce(function(s, c) { return s + c[1]; }, 0);
     var top10Sum = topClientsBySum.slice(0, 10).reduce(function(s, c) { return s + c[1]; }, 0);
-    var top5Concentration = allData.totalRevenue > 0 ? (top5Sum / allData.totalRevenue * 100) : 0;
-    var top10Concentration = allData.totalRevenue > 0 ? (top10Sum / allData.totalRevenue * 100) : 0;
+    var top5Concentration = allData.totalRevenue > 0 ? Math.min((top5Sum / allData.totalRevenue * 100), 100) : 0;
+    var top10Concentration = allData.totalRevenue > 0 ? Math.min((top10Sum / allData.totalRevenue * 100), 100) : 0;
     
     // YTD
     var ytdRevenue = allData.totalRevenue;
@@ -4586,11 +4623,11 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
     // Формируем HTML
     var html = '<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; font-size: 10pt; line-height: 1.6; color: #2c3e50;">';
     
-    // Заголовок
-    html += '<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 12px; margin-bottom: 25px;">';
-    html += '<h3 style="margin: 0 0 10px 0; font-size: 18pt; font-weight: 700;">📊 Расширенный анализ маршрута</h3>';
-    html += '<div style="font-size: 14pt; font-weight: 600; margin-bottom: 8px;">' + routeName + '</div>';
-    html += '<div style="font-size: 9pt; opacity: 0.9;">Период анализа: ' + currentYear + ' год | Дней работы: ' + allData.workingDays.size + ' | Рейсов: ' + allData.totalTrips + '</div>';
+    // Заголовок - профессиональный деловой стиль
+    html += '<div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white; padding: 30px; border-radius: 8px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">';
+    html += '<h3 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">📊 Расширенный анализ маршрута</h3>';
+    html += '<div style="font-size: 18px; font-weight: 600; margin-bottom: 10px;">' + routeName + '</div>';
+    html += '<div style="font-size: 14px; opacity: 0.9;">Период анализа: ' + currentYear + ' год | Дней работы: ' + allData.workingDays.size + ' | Рейсов: ' + allData.totalTrips + '</div>';
     html += '</div>';
     
     // 0. Паспорт маршрута
@@ -4655,19 +4692,19 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
     
     // YoY сравнение с прошлым годом
     if (lastYearRouteData.totalRevenue > 0) {
-        html += '<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 6px; margin-bottom: 15px;">';
-        html += '<h5 style="margin: 0 0 10px 0; font-size: 10pt;">📊 Сравнение с прошлым годом (YoY)</h5>';
-        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 9pt;">';
-        html += '<div><strong>Оборот ' + lastYear + ':</strong> ' + fmt(lastYearRouteData.totalRevenue) + ' ₽</div>';
-        html += '<div><strong>Оборот ' + currentYear + ':</strong> ' + fmt(allData.totalRevenue) + ' ₽</div>';
-        html += '<div><strong>Изменение оборота:</strong> <span style="color: ' + (yoyRevenueChange >= 0 ? '#2ecc71' : '#ff6b6b') + '; font-weight: 600;">' + (yoyRevenueChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(yoyRevenueChange).toFixed(1) + '%</span></div>';
-        html += '<div><strong>Клиенты ' + lastYear + ':</strong> ' + lastYearRouteData.uniqueClients.size + '</div>';
-        html += '<div><strong>Клиенты ' + currentYear + ':</strong> ' + allData.uniqueClients.size + '</div>';
-        html += '<div><strong>Изменение клиентов:</strong> <span style="color: ' + (yoyClientsChange >= 0 ? '#2ecc71' : '#ff6b6b') + '; font-weight: 600;">' + (yoyClientsChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(yoyClientsChange).toFixed(1) + '%</span></div>';
+        html += '<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #3498db;">';
+        html += '<h5 style="margin: 0 0 15px 0; font-size: 14px; font-weight: 600; color: #2c3e50;">📊 Сравнение с прошлым годом (YoY)</h5>';
+        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; font-size: 14px;">';
+        html += '<div><span style="color: #7f8c8d; font-size: 12px;">Оборот ' + lastYear + ':</span><br><strong style="font-size: 18px; color: #1a1a1a;">' + fmt(lastYearRouteData.totalRevenue) + ' ₽</strong></div>';
+        html += '<div><span style="color: #7f8c8d; font-size: 12px;">Оборот ' + currentYear + ':</span><br><strong style="font-size: 18px; color: #1a1a1a;">' + fmt(allData.totalRevenue) + ' ₽</strong></div>';
+        html += '<div><span style="color: #7f8c8d; font-size: 12px;">Изменение оборота:</span><br><strong style="font-size: 18px; color: ' + (yoyRevenueChange >= 0 ? '#27ae60' : '#e74c3c') + ';">' + (yoyRevenueChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(yoyRevenueChange).toFixed(1) + '%</strong></div>';
+        html += '<div><span style="color: #7f8c8d; font-size: 12px;">Клиенты ' + lastYear + ':</span><br><strong style="font-size: 18px; color: #1a1a1a;">' + lastYearRouteData.uniqueClients.size + '</strong></div>';
+        html += '<div><span style="color: #7f8c8d; font-size: 12px;">Клиенты ' + currentYear + ':</span><br><strong style="font-size: 18px; color: #1a1a1a;">' + allData.uniqueClients.size + '</strong></div>';
+        html += '<div><span style="color: #7f8c8d; font-size: 12px;">Изменение клиентов:</span><br><strong style="font-size: 18px; color: ' + (yoyClientsChange >= 0 ? '#27ae60' : '#e74c3c') + ';">' + (yoyClientsChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(yoyClientsChange).toFixed(1) + '%</strong></div>';
         if (lastYearRouteData.totalProfit > 0) {
-            html += '<div><strong>Прибыль ' + lastYear + ':</strong> ' + fmt(lastYearRouteData.totalProfit) + ' ₽</div>';
-            html += '<div><strong>Прибыль ' + currentYear + ':</strong> ' + fmt(allData.totalProfit) + ' ₽</div>';
-            html += '<div><strong>Изменение прибыли:</strong> <span style="color: ' + (yoyProfitChange >= 0 ? '#2ecc71' : '#ff6b6b') + '; font-weight: 600;">' + (yoyProfitChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(yoyProfitChange).toFixed(1) + '%</span></div>';
+            html += '<div><span style="color: #7f8c8d; font-size: 12px;">Прибыль ' + lastYear + ':</span><br><strong style="font-size: 18px; color: #1a1a1a;">' + fmt(lastYearRouteData.totalProfit) + ' ₽</strong></div>';
+            html += '<div><span style="color: #7f8c8d; font-size: 12px;">Прибыль ' + currentYear + ':</span><br><strong style="font-size: 18px; color: #1a1a1a;">' + fmt(allData.totalProfit) + ' ₽</strong></div>';
+            html += '<div><span style="color: #7f8c8d; font-size: 12px;">Изменение прибыли:</span><br><strong style="font-size: 18px; color: ' + (yoyProfitChange >= 0 ? '#27ae60' : '#e74c3c') + ';">' + (yoyProfitChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(yoyProfitChange).toFixed(1) + '%</strong></div>';
         }
         html += '</div></div>';
     }
@@ -4756,16 +4793,28 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
     
     if (topClientsBySum.length > 0) {
         html += '<div>';
-        html += '<h5 style="margin: 0 0 10px 0; color: #34495e; font-size: 10pt;">💎 Топ-10 клиентов по сумме покупок (с динамикой)</h5>';
-        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 8px;">';
+        html += '<h5 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 14px; font-weight: 600;">💎 Топ-10 клиентов по сумме покупок</h5>';
+        html += '<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 14px;">';
+        html += '<thead><tr style="background: #2c3e50; color: white;">';
+        html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Место</th>';
+        html += '<th style="padding: 12px; text-align: left; font-weight: 600;">Название клиента</th>';
+        html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Сумма (₽)</th>';
+        html += '<th style="padding: 12px; text-align: right; font-weight: 600;">Доля</th>';
+        html += '<th style="padding: 12px; text-align: center; font-weight: 600;">Динамика</th>';
+        html += '</tr></thead><tbody>';
+        
         topClientsBySum.forEach(function(client, idx) {
             var clientName = client[0] || '';
             var sum = client[1] || 0;
             if (!clientName) return;
-            var shortName = clientName.length > 40 ? clientName.substring(0, 40) + '...' : clientName;
+            var shortName = clientName.length > 50 ? clientName.substring(0, 50) + '...' : clientName;
+            
+            // Расчёт доли в обороте маршрута
+            var share = allData.totalRevenue > 0 ? (sum / allData.totalRevenue * 100) : 0;
+            var progressBar = '<div style="background: #e0e0e0; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 4px;"><div style="background: #3498db; height: 100%; width: ' + Math.min(share, 100) + '%;"></div></div>';
             
             // Расчёт динамики клиента
-            var clientDynamics = '';
+            var clientDynamics = '<span style="color: #95a5a6;">—</span>';
             if (allData.clientMonthlySums[clientName] && sortedMonths.length >= 2) {
                 var lastMonth = sortedMonths[sortedMonths.length - 1];
                 var prevMonth = sortedMonths[sortedMonths.length - 2];
@@ -4775,28 +4824,27 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
                 if (prevMonthSum > 0) {
                     var change = ((lastMonthSum - prevMonthSum) / prevMonthSum * 100);
                     if (change > 5) {
-                        clientDynamics = '<span style="color: #27ae60; font-size: 8pt; font-weight: 600;">↑ +' + change.toFixed(0) + '%</span>';
+                        clientDynamics = '<span style="color: #27ae60; font-weight: 600;">↑ +' + change.toFixed(1) + '%</span>';
                     } else if (change < -5) {
-                        clientDynamics = '<span style="color: #e74c3c; font-size: 8pt; font-weight: 600;">↓ ' + change.toFixed(0) + '%</span>';
+                        clientDynamics = '<span style="color: #e74c3c; font-weight: 600;">↓ ' + change.toFixed(1) + '%</span>';
                     } else {
-                        clientDynamics = '<span style="color: #95a5a6; font-size: 8pt;">→ стабильно</span>';
+                        clientDynamics = '<span style="color: #95a5a6;">→ 0%</span>';
                     }
                 } else if (lastMonthSum > 0) {
-                    clientDynamics = '<span style="color: #27ae60; font-size: 8pt; font-weight: 600;">🆕 новый</span>';
+                    clientDynamics = '<span style="color: #27ae60; font-weight: 600;">🆕 новый</span>';
                 }
             }
             
-            html += '<div style="background: #f8f9fa; padding: 8px; border-radius: 4px; border-left: 3px solid #f39c12;">';
-            html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
-            html += '<div><span style="font-size: 8pt; color: #7f8c8d;">#' + (idx + 1) + '</span> <span style="font-size: 9pt; font-weight: 600; color: #2c3e50;" title="' + clientName.replace(/"/g, '&quot;') + '">' + shortName + '</span></div>';
-            html += '<div style="font-size: 9pt; color: #f39c12; font-weight: 600;">' + fmt(sum) + ' ₽</div>';
-            html += '</div>';
-            if (clientDynamics) {
-                html += '<div style="text-align: right;">' + clientDynamics + '</div>';
-            }
-            html += '</div>';
+            var rowBg = idx % 2 === 0 ? '#ffffff' : '#f8f9fa';
+            html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid #e0e0e0;">';
+            html += '<td style="padding: 12px; text-align: center; font-weight: 600; color: #7f8c8d;">' + (idx + 1) + '</td>';
+            html += '<td style="padding: 12px;" title="' + clientName.replace(/"/g, '&quot;') + '">' + shortName + progressBar + '</td>';
+            html += '<td style="padding: 12px; text-align: right; font-weight: 700; color: #1a1a1a; font-size: 16px;">' + fmt(sum) + ' ₽</td>';
+            html += '<td style="padding: 12px; text-align: right; font-weight: 600; color: #3498db;">' + share.toFixed(1) + '%</td>';
+            html += '<td style="padding: 12px; text-align: center;">' + clientDynamics + '</td>';
+            html += '</tr>';
         });
-        html += '</div></div>';
+        html += '</tbody></table></div></div>';
     }
     
     html += '</div>';
@@ -4818,6 +4866,7 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
         
         // График оборота по месяцам
         var maxRevenue = Math.max.apply(null, sortedMonths.map(function(m) { return allData.monthlyData[m].revenue; }));
+        maxRevenue = maxRevenue * 1.2; // Добавляем 20% запаса сверху
         
         html += '<div style="margin-bottom: 30px;">';
         html += '<h5 style="margin: 0 0 15px 0; color: #1a1a1a; font-size: 13px; font-weight: 600;">💰 Динамика оборота (без НДС) по месяцам</h5>';
@@ -4863,6 +4912,7 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
         
         // График клиентов по месяцам
         var maxClients = Math.max.apply(null, sortedMonths.map(function(m) { return allData.monthlyData[m].uniqueClients.size; }));
+        maxClients = Math.ceil(maxClients * 1.2); // Добавляем 20% запаса сверху
         
         html += '<div style="margin-bottom: 30px;">';
         html += '<h5 style="margin: 0 0 15px 0; color: #1a1a1a; font-size: 13px; font-weight: 600;">👥 Динамика уникальных клиентов по месяцам</h5>';
@@ -4907,6 +4957,7 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
         
         // График затрат по месяцам
         var maxCost = Math.max.apply(null, sortedMonths.map(function(m) { return allData.monthlyData[m].cost; }));
+        maxCost = maxCost * 1.2; // Добавляем 20% запаса сверху
         
         html += '<div>';
         html += '<h5 style="margin: 0 0 15px 0; color: #1a1a1a; font-size: 13px; font-weight: 600;">🚚 Динамика затрат по месяцам</h5>';
@@ -4992,12 +5043,12 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
     html += '</div>';
     
     // 5. Блок "ИИ-анализ"
-    html += '<div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 25px;">';
-    html += '<h4 style="margin: 0 0 15px 0; font-size: 12pt;">🤖 ИИ-анализ и рекомендации</h4>';
-    html += '<div style="background: rgba(255,255,255,0.95); color: #2c3e50; padding: 15px; border-radius: 8px;">';
+    html += '<div style="background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #9b59b6;">';
+    html += '<h4 style="margin: 0 0 20px 0; font-size: 16px; font-weight: 600; color: #2c3e50;">🤖 ИИ-анализ и рекомендации</h4>';
+    html += '<div style="background: #ffffff; padding: 20px; border-radius: 6px; border: 1px solid #e0e0e0;">';
     
     // Генерация связного текста
-    var aiText = '<p style="margin: 0 0 10px 0; font-size: 10pt; line-height: 1.6;">';
+    var aiText = '<p style="margin: 0 0 10px 0; font-size: 14px; line-height: 1.8; color: #1a1a1a;">';
     
     if (allData.totalProfit < 0) {
         aiText += '<strong style="color: #e74c3c;">⚠️ КРИТИЧНО:</strong> Маршрут "' + routeName + '" работает в убыток с общей потерей ' + fmt(Math.abs(allData.totalProfit)) + ' ₽. Необходимо срочно пересмотреть ценообразование и оптимизировать затраты.<br><br>';
@@ -5021,7 +5072,7 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
         aiText += '<strong style="color: #27ae60;">👥 УДЕРЖАНИЕ:</strong> Высокий уровень удержания клиентов (' + retentionRate.toFixed(1) + '%) свидетельствует о стабильной клиентской базе.<br><br>';
     }
     
-    if (top5Concentration > 50) {
+    if (top5Concentration > 50 && top5Concentration <= 100) {
         aiText += '<strong style="color: #f39c12;">💼 КОНЦЕНТРАЦИЯ:</strong> Высокая концентрация клиентской базы: топ-5 клиентов обеспечивают ' + top5Concentration.toFixed(1) + '% оборота. Это создаёт риски при потере ключевых клиентов.<br><br>';
     }
     
@@ -5038,9 +5089,9 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
         aiText += '<strong style="color: #e74c3c;">📉 ТРЕНД:</strong> Отрицательная динамика (' + fmt(Math.abs(trendSlope)) + ' ₽/месяц). Необходимо проанализировать причины падения и принять меры.<br><br>';
     }
     
-    if (marketShare < 5) {
+    if (marketShare < 5 && marketShare >= 0) {
         aiText += '<strong style="color: #f39c12;">🎯 ДОЛЯ РЫНКА:</strong> Низкая доля в общих продажах компании (' + marketShare.toFixed(1) + '%). Рассмотрите возможности расширения клиентской базы и увеличения частоты доставок.<br><br>';
-    } else if (marketShare > 20) {
+    } else if (marketShare > 20 && marketShare <= 100) {
         aiText += '<strong style="color: #27ae60;">🎯 ДОЛЯ РЫНКА:</strong> Высокая доля в общих продажах (' + marketShare.toFixed(1) + '%). Маршрут является ключевым для компании.<br><br>';
     }
     
