@@ -4940,12 +4940,6 @@ async function generateRouteDetailedAnalysis(routeName, lastYearData) {
             html += '<line x1="' + marginLeft + '" y1="' + y + '" x2="' + (chartWidth - marginRight) + '" y2="' + y + '" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="2,2"/>';
         }
         
-        // Столбцы и подписи оси X
-        sortedMonths.forEach(function(monthKey, idx) {
-            var monthData = allData.monthlyData[monthKey];
-            var monthNum = parseInt(monthKey.split('-')[1]) - 1;
-            var monthName = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'][monthNum];
-            var barHeight = maxRevenue > 0 ? (monthData.revenue / maxRevenue * plotHeight) : 0;
         // График 1: Сравнение оборота 2025 vs 2026
         var allRevenues = [];
         for (var m = 1; m <= 12; m++) {
