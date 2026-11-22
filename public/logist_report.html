@@ -342,6 +342,9 @@ td[data-col-key="km"].km-has-value::after { content: " ✕"; color: #e74c3c; fon
             <button id="btnRouteAnalyze" onclick="runRouteDetailedAnalysis()" style="padding: 8px 16px; background: #ffffff; color: #f5576c; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 10pt;">
                 🔍 Анализировать
             </button>
+            <button id="btnExportPDF" onclick="exportAnalysisToPDF()" style="padding: 8px 16px; background: #ffffff; color: #2c3e50; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 10pt; margin-left: 10px;">
+                📄 Экспорт в PDF
+            </button>
             <span id="routeAnalysisStatus" style="margin-left: 15px; font-size: 10pt;"></span>
         </div>
     </div>
@@ -2704,6 +2707,7 @@ function renderConnectedAccordions() {
             '<input type="checkbox" class="chk-recalc" title="Показать Пересчитать" onchange="toggleRecalcBtn(this)">' +
             '<button class="recalc-btn" type="button" onclick="startCalc(\'connected_' + safeId + '\', true)">🔄 Пересчитать</button>' +
             '<button class="open-costs-btn" onclick="openModal(\'connected_' + safeId + '\')">💰 Настроить стоимости</button>' +
+            '<button class="open-costs-btn" style="background:#3498db;" onclick="analyzeConnectedRoute(\'connected_' + safeId + '\')">📊 Анализ</button>' +
             '<label>Километры (норма):</label>' +
             '<input type="text" class="route-km-input" data-route="connected_' + escapeAttr(cr.id) + '" value="">' +
             '<span class="route-km-avg" data-route="connected_' + escapeAttr(cr.id) + '" title="Среднее по всем расчётам">≈ —</span>';
@@ -2863,6 +2867,9 @@ function renderConnectedAccordions() {
             // Создаём новую строку
             var newRow = firstRow.cloneNode(true);
             
+            // Удаляем класс text-danger если он был у исходной строки
+            newRow.classList.remove('text-danger');
+            
             newRow.setAttribute('data-original-sum', totalSum);
             newRow.setAttribute('data-clients-count', totalClients);
             newRow.setAttribute('data-clients', allClients.join('|'));
@@ -2871,6 +2878,16 @@ function renderConnectedAccordions() {
             newRow.setAttribute('data-clients-json', clientsJsonStr); // Сохраняем полные данные клиентов
             newRow.setAttribute('data-base-cost', totalRouteCost); // Сохраняем стоимость маршрута
             newRow.setAttribute('data-client-cost', totalClientCost); // Сохраняем клиентские расходы
+            
+            // Собираем адреса клиентов для расчёта КМ объединённого маршрута
+            var allAddresses = [];
+            group.rows.forEach(function(row) {
+                var addresses = row.getAttribute('data-clients-addresses') || '';
+                if (addresses) {
+                    allAddresses = allAddresses.concat(addresses.split('||').filter(Boolean));
+                }
+            });
+            newRow.setAttribute('data-clients-addresses', allAddresses.join('||'));
             
             // Обновляем все числовые ячейки
             var sumCell = newRow.querySelector('td[data-col-key="sum-route"]');
@@ -2896,6 +2913,11 @@ function renderConnectedAccordions() {
             
             var dohodCell = newRow.querySelector('td[data-col-key="dohod"]');
             if (dohodCell) dohodCell.textContent = fmt(totalDohod);
+            
+            // Добавляем класс text-danger только если объединённая строка убыточна
+            if (totalDohod < 0) {
+                newRow.classList.add('text-danger');
+            }
             
             var returnsCell = newRow.querySelector('td[data-col-key="returns"]');
             if (returnsCell) {
@@ -5227,6 +5249,99 @@ document.addEventListener('DOMContentLoaded', function() {
         populateRouteAnalysisSelect();
     }, 1000);
 });
+
+// ============================================================
+// === НОВОЕ: АНАЛИЗ ОБЪЕДИНЁННЫХ МАРШРУТОВ ===
+// ============================================================
+
+function analyzeConnectedRoute(connectedRouteName) {
+    // Находим аккордеон объединённого маршрута
+    var acc = document.querySelector('.connected-accordion');
+    if (!acc) {
+        alert('Объединённый маршрут не найден');
+        return;
+    }
+    
+    // Выбираем маршрут в выпадающем списке анализа
+    var select = document.getElementById('routeAnalysisSelect');
+    if (!select) {
+        alert('Список маршрутов для анализа не найден');
+        return;
+    }
+    
+    // Устанавливаем выбранный маршрут
+    select.value = connectedRouteName;
+    
+    // Прокручиваем к блоку анализа
+    var analysisSection = document.getElementById('routeDetailedAnalysisSection');
+    if (analysisSection) {
+        analysisSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    // Запускаем анализ
+    runRouteDetailedAnalysis();
+}
+
+// ============================================================
+// === НОВОЕ: ЭКСПОРТ АНАЛИЗА В PDF ===
+// ============================================================
+
+function exportAnalysisToPDF() {
+    var resultEl = document.getElementById('routeAnalysisResult');
+    if (!resultEl || resultEl.style.display === 'none') {
+        alert('Сначала выполните анализ маршрута');
+        return;
+    }
+    
+    var routeName = document.getElementById('routeAnalysisSelect').value;
+    if (!routeName) {
+        alert('Выберите маршрут для анализа');
+        return;
+    }
+    
+    // Создаём новое окно для печати
+    var printWindow = window.open('', '_blank');
+    
+    // Получаем содержимое анализа
+    var content = resultEl.innerHTML;
+    
+    // Формируем HTML для печати
+    var html = '<!DOCTYPE html>';
+    html += '<html lang="ru">';
+    html += '<head>';
+    html += '<meta charset="UTF-8">';
+    html += '<title>Анализ маршрута: ' + routeName + '</title>';
+    html += '<style>';
+    html += 'body { font-family: Arial, sans-serif; padding: 20px; color: #1a1a1a; }';
+    html += 'h3, h4, h5 { color: #2c3e50; }';
+    html += 'table { width: 100%; border-collapse: collapse; margin: 15px 0; }';
+    html += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }';
+    html += 'th { background-color: #2c3e50; color: white; }';
+    html += 'tr:nth-child(even) { background-color: #f8f9fa; }';
+    html += '.metric-box { background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #3498db; }';
+    html += '.metric-label { font-size: 11px; color: #5a5a5a; text-transform: uppercase; margin-bottom: 6px; }';
+    html += '.metric-value { font-size: 18px; font-weight: 700; color: #1a1a1a; }';
+    html += 'svg { max-width: 100%; height: auto; }';
+    html += '@media print { body { padding: 0; } }';
+    html += '</style>';
+    html += '</head>';
+    html += '<body>';
+    html += '<h2>Анализ маршрута: ' + routeName + '</h2>';
+    html += '<p>Дата формирования: ' + new Date().toLocaleString('ru-RU') + '</p>';
+    html += '<hr>';
+    html += content;
+    html += '</body>';
+    html += '</html>';
+    
+    printWindow.document.write(html);
+    printWindow.document.close();
+    
+    // Ждём загрузки и вызываем печать
+    printWindow.onload = function() {
+        printWindow.focus();
+        printWindow.print();
+    };
+}
 
 </script>
 </body>
